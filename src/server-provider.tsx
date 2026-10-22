@@ -68,6 +68,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
       return send({ type: 'commit', db: data }, message);
     },
     saveUser: (user, password) => send({ type: 'user', user }, 'Naudotojas išsaugotas', password),
+    operationalCommand: command => send(command, command.type === 'reviewTrip' ? 'Reiso suvestinė išsaugota' : 'Naujas reisas sukurtas'),
     driverCommand: command => send({ type: 'driver', command }, 'Veiksmas patvirtintas'),
     financeCommand: command => send({ type: 'finance', command }, 'Mokėjimų ir išlaidų duomenys atnaujinti'),
     readNotifications: ids => send({ type: 'read', ids: typeof ids === 'string' ? [ids] : ids }),

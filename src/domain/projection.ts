@@ -15,6 +15,7 @@ export function projectSnapshot(snapshot: ReviewSnapshot, user: WorkspaceUser): 
   s.db.expenses = own.recordExpenses ? s.db.expenses.filter(e => s.workspace.expenseSubmissions?.some(r => r.expenseId === e.id && r.actorId === user.id)) : [];
   if (!own.collectPayments) s.db.orders = s.db.orders.map(o => ({ ...o, price: 0, paid: 0, priceSet: false }));
   s.workspace.users = [user];
+  s.workspace.tripReviews = s.workspace.tripReviews?.filter(review => trips.has(review.tripId));
   s.workspace.notifications = s.workspace.notifications.filter(n => n.recipientId === user.id);
   s.workspace.confirmations = s.workspace.confirmations.filter(c => trips.has(c.tripId) && orders.has(c.orderId));
   s.workspace.receipts = own.collectPayments ? s.workspace.receipts?.filter(r => r.actorId === user.id && orders.has(r.orderId)) : [];

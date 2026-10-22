@@ -1,3 +1,4 @@
+import type { TripReview } from './trip-operations.ts';
 import {tripOutcomeLabels} from './terminology.ts';
 import type {ModuleId} from './modules.ts';
 import {validateFinanceRecords,type DriverPermissions,type PaymentReceipt,type ExpenseSubmission} from './trip-finance.ts';
@@ -36,6 +37,7 @@ export interface AppNotification {
   readAt?: string;
 }
 export interface TaskConfirmation {
+  source?: 'manager' | 'driver';
   id: string;
   tripId: string;
   orderId: string;
@@ -50,6 +52,7 @@ export interface Workspace {
   users: WorkspaceUser[];
   notifications: AppNotification[];
   confirmations: TaskConfirmation[];
+  tripReviews?: TripReview[];
   receipts?:PaymentReceipt[];
   expenseSubmissions?:ExpenseSubmission[];
   printMode?: 'monochrome' | 'color';
@@ -169,9 +172,15 @@ export function validateWorkspace(workspace: Workspace, db: Database) {
   if (!workspace.users.some(u => u.active && u.role === 'admin')) throw new Error('Turi likti bent vienas aktyvus administratorius.');
   const validDate = (value: unknown) => typeof value === 'string' && Number.isFinite(Date.parse(value));
   for (const n of workspace.notifications) if (!ids.has(n.recipientId) || typeof n.id !== 'string' || typeof n.title !== 'string' || typeof n.body !== 'string' || !['assignment', 'trip', 'task', 'finance'].includes(n.type) || !n.entity || typeof n.entity.id !== 'string' || !['trip', 'order', 'finance'].includes(n.entity.type) || !validDate(n.createdAt) || n.readAt !== undefined && !validDate(n.readAt)) throw new Error('Netinkamas pranešimas.');
+  if (workspace.tripReviews !== undefined && (!Array.isArray(workspace.tripReviews) || workspace.tripReviews.some(review =>
+    !review || typeof review.id !== 'string' || !ids.has(review.actorId) || !validDate(review.createdAt) || !db.trips.some(trip => trip.id === review.tripId) ||
+    typeof review.finish !== 'boolean' || typeof review.note !== 'string' || review.note.length > 1000 || !Array.isArray(review.completedOrderIds) ||
+    review.completedOrderIds.some(id => !db.orders.some(order => order.id === id && order.tripId === review.tripId))
+  ))) throw new Error('Netinkama reiso suvestinė.');
   const confirmations = new Set<string>();
   for (const c of workspace.confirmations) {
     const key = `${c.tripId}:${c.orderId}:${c.kind}`;
+    if (c.source !== undefined && !['manager', 'driver'].includes(c.source)) throw new Error('Netinkamas patvirtinimo šaltinis.');
     if (typeof c.id !== 'string' || confirmations.has(key) || !ids.has(c.actorId) || !validDate(c.createdAt) || !['pickup', 'delivery'].includes(c.kind) || !db.trips.some(t => t.id === c.tripId) || !db.orders.some(o => o.id === c.orderId && o.tripId === c.tripId)) throw new Error('Netinkamas užduoties patvirtinimas.');
     if(c.arrivalStopIds!==undefined&&(!Array.isArray(c.arrivalStopIds)||c.arrivalStopIds.some(id=>typeof id!=='string')))throw new Error('Netinkamas atvykimo patvirtinimas.');
     confirmations.add(key);

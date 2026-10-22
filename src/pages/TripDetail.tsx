@@ -1,3 +1,5 @@
+import { TripReview } from '../components/TripReview';
+import { RepeatTrip } from '../components/RepeatTrip';
 import { useConfirm } from '../components/Feedback';
 import {contactWarnings} from '../domain/planning';
 import {TripPhotos} from '../components/OrderPhotos';
@@ -9,6 +11,7 @@ import { routeVisits } from "../domain/route-plan";
 import { useState } from "react";
 import {
   ArrowLeft,
+  Copy,
   SquarePen,
   CheckCircle2,
   X,
@@ -55,6 +58,8 @@ export function TripDetail({ id }: { id: string }) {
   const { db, commit, navigate, busy, modules } = useApp();
   const trip = db.trips.find((t) => t.id === id);
   const [edit, setEdit] = useState(false);
+  const [review, setReview] = useState(false);
+  const [repeat, setRepeat] = useState(false);
   const [orderEdit, setOrderEdit] = useState<Order | undefined>();
   const [orderForm, setOrderForm] = useState(false);
   const [tab, setTab] = useState("route");
@@ -107,13 +112,14 @@ export function TripDetail({ id }: { id: string }) {
         description={`${dateLabel(t.departure, true)} → ${dateLabel(t.arrival, true)} · Lietuvos laiku`}
       >
         <PdfMenu trip={t} />
+        <Button variant="secondary" onClick={() => setRepeat(true)}><Copy size={16} />Kartoti</Button>
         <Button variant="secondary" onClick={() => setEdit(true)}>
           <SquarePen size={16} />
           Redaguoti
         </Button>
         {!closed &&
           (t.status === "active" ? (
-            <Button disabled={busy} onClick={() => status("completed")}>
+            <Button disabled={busy} onClick={() => setReview(true)}>
               <CheckCircle2 size={16} />
               Užbaigti reisą
             </Button>
@@ -140,6 +146,10 @@ export function TripDetail({ id }: { id: string }) {
         </span>
       </div>
       <Journey trip={t} />
+      {!closed && <div className="trip-delivery-progress">
+        <span><CheckCircle2 size={18} /><b>Pristatyta {orders.filter(order => order.status === 'completed').length} / {orders.length}</b></span>
+        <Button variant="secondary" disabled={busy} onClick={() => setReview(true)}>Reiso suvestinė</Button>
+      </div>}
       <TripActivity tripId={t.id}/>
       <div className="operational-warnings">{contactWarnings(db,t.id).map(w=><p key={w.orderId+w.message}>{w.message}</p>)}</div>
       <div className="trip-kpis">
@@ -391,7 +401,7 @@ export function TripDetail({ id }: { id: string }) {
         </div><TripFinance tripId={t.id}/></>
       )}
       <TripPhotos tripId={t.id}/>
-      {edit && <TripForm trip={t} onClose={() => setEdit(false)} />}{" "}
+      {review && <TripReview tripId={t.id} onClose={() => setReview(false)} />}{repeat && <RepeatTrip sourceId={t.id} onClose={() => setRepeat(false)} />}{edit && <TripForm trip={t} onClose={() => setEdit(false)} />}{" "}
       {orderForm && (
         <OrderForm
           order={orderEdit}

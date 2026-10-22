@@ -49,6 +49,8 @@ Configuration variables are documented in [.env.example](.env.example). The serv
 
 Companies can enable finance, private order photos, vehicle reminders and manually saved freight opportunities. Operations is the shared prerequisite; permissions are checked separately from module availability. Turning a module off retains its history. Photos support phone capture/upload, private enlarged viewing and explicit deletion. Reminders use user-entered dates and appear in the day plan when relevant vehicles are scheduled. No legal expiry interval is invented.
 
+Managers can register delivery progress in one trip summary, save a partial result, or close the trip after confirming every delivery. These are retrospective manager confirmations, with their author and registration time, not invented driver arrival times. Closing a trip never changes payments. Repeat Trip copies the route/resources and only selected bookings to new dates; prices are optional and all new paid amounts are zero. Expenses, receipts and execution history stay on the original trip. Resource and load validation apply to the new trip.
+
 Notifications state the actual trip outcome and show current status and driver in the group header. Per-recipient read state and expandable history are preserved. A transaction-date payment journal records receipts and reversals separately from the established booking-date aggregate reports; historical paid totals are never converted into invented transactions.
 
 Freight opportunities are manual notes and HTTPS links. Live exchange access, provider terms and APIs have not been verified from this environment because those destinations are blocked. No restricted exchange is scraped and no fictional offers are presented as live data.

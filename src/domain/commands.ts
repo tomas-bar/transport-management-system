@@ -1,3 +1,4 @@
+import { reviewTrip, repeatTrip, type TripReviewInput, type RepeatTripInput } from './trip-operations.ts';
 import type { Database } from './models.ts';
 import { validateDatabase } from './logic.ts';
 import { createWorkspace, validateWorkspace, applyDriverCommand, notificationChanges, type DriverCommand, type ReviewSnapshot, type WorkspaceUser } from './workspace.ts';
@@ -8,6 +9,8 @@ import type { ModuleId } from './modules.ts';
 
 export type WorkspaceCommand =
   | { type: 'commit'; db: Database }
+  | { type: 'reviewTrip'; input: TripReviewInput }
+  | { type: 'repeatTrip'; input: RepeatTripInput }
   | { type: 'driver'; command: DriverCommand }
   | { type: 'finance'; command: FinanceCommand }
   | { type: 'read'; ids?: string[] }
@@ -41,6 +44,13 @@ export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, c
       }
       break;
     }
+    case 'reviewTrip':
+      reviewTrip(next, user, command.input);
+      break;
+    case 'repeatTrip':
+      if (command.input.copyPrices && !modules.includes('finance')) throw new Error('Finansų modulis išjungtas.');
+      repeatTrip(next, user, command.input);
+      break;
     case 'driver': {
       applyDriverCommand(next, user, command.command);
       const action = command.command;

@@ -216,7 +216,7 @@ export function saveTrip(db: Database, trip: Trip) {
         throw new Error(
           "Reisui priskirtų užsakymų data nesutampa. Pirmiausia pakeiskite užsakymus arba juos atskirkite.",
         );
-      o.status = trip.status === "active" ? "active" : "assigned";
+      if (o.status !== "completed") o.status = trip.status === "active" ? "active" : "assigned";
     }
   }
   if (trip.status === "cancelled")

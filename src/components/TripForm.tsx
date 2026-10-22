@@ -129,7 +129,7 @@ export function TripForm({
                 <option value="local">Vietinis</option>
               </select>
             </Field>
-            <Field label="Būsena">
+            <Field label="Būsena" hint={trip?.status !== "completed" ? "Pristatymus patvirtinkite reiso suvestinėje." : undefined}>
               <select
                 value={form.status}
                 onChange={(e) =>
@@ -137,7 +137,7 @@ export function TripForm({
                 }
               >
                 {Object.entries(tripStatuses).map(([k, v]) => (
-                  <option key={k} value={k}>
+                  <option key={k} value={k} disabled={k === "completed" && trip?.status !== "completed"}>
                     {v}
                   </option>
                 ))}

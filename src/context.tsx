@@ -1,3 +1,4 @@
+import { applyWorkspaceCommand, type WorkspaceCommand } from './domain/commands';
 import { Toast } from './components/Feedback';
 import { ServerProvider } from './server-provider';
 import { serverRuntime, demoRuntime } from './services/server-api';
@@ -35,6 +36,7 @@ export interface Context {
   financeCommand:(command:FinanceCommand)=>Promise<boolean>;
   setPrintMode: (mode: 'monochrome'|'color')=>Promise<boolean>;
   setInApp: (enabled: boolean) => Promise<boolean>;
+  operationalCommand: (command: Extract<WorkspaceCommand, {type: 'reviewTrip' | 'repeatTrip'}>) => Promise<boolean>;
   driverCommand: (command: DriverCommand) => Promise<boolean>;
   replaceData: (data: Database, workspace?: Workspace) => Promise<boolean>;
 }
@@ -244,6 +246,7 @@ function LocalProvider({
     setInApp,
     setPrintMode,
     financeCommand,
+    operationalCommand: command => update((next, user) => { Object.assign(next, applyWorkspaceCommand(next, user.id, command, ['operations', 'finance', 'photos', 'maintenance', 'freight'])); }, command.type === 'reviewTrip' ? 'Reiso suvestinė išsaugota' : 'Naujas reisas sukurtas', false),
     driverCommand,
     replaceData
   }}>{children}{toast && <Toast message={toast.message} error={toast.error} onClose={() => setToast(null)} />}</AppContext.Provider>;
