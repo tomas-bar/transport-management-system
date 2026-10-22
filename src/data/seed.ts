@@ -1,4 +1,5 @@
-import type { Database, Place, Stop } from "../domain/models";
+import type { Database, Place, Stop, Settings } from "../domain/models";
+import { setVisitCompleted } from "../domain/route-plan.ts";
 import { today, syncOrderStops } from "../domain/logic.ts";
 export const cities: Place[] = [
   {
@@ -46,17 +47,25 @@ export const cities: Place[] = [
 ];
 const stops = (indices: number[], prefix: string): Stop[] =>
   indices.map((i, n) => ({ ...cities[i], id: `${prefix}-${n}` }));
-const day = (offset: number) => {
-  const d = new Date(today() + "T12:00:00");
-  d.setDate(d.getDate() + offset);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-};
-export function createSeed(): Database {
+/** Versioned fixtures are recreated from source, never from a previously edited store. */
+export const demoDatasetVersion = "2";
+export function createSeed(baseDate = today()): Database {
+  if (
+    !/^\d{4}-\d{2}-\d{2}$/.test(baseDate) ||
+    !Number.isFinite(Date.parse(baseDate + "T12:00:00Z")) ||
+    new Date(baseDate + "T12:00:00Z").toISOString().slice(0, 10) !== baseDate
+  ) {
+    throw new Error("Neteisinga bandomųjų duomenų pradžios data.");
+  }
+  const day = (offset: number) =>
+    new Date(Date.parse(baseDate + "T12:00:00Z") + offset * 86400000)
+      .toISOString()
+      .slice(0, 10);
   const db: Database = {
     version: 1,
     settings: {
-      company: "Mano transporto įmonė",
-      email: "info@example.com",
+      company: "Šilo pervežimai",
+      email: "info@silo.example.test",
       phone: "",
       routingUrl: "https://router.project-osrm.org",
       geocodingUrl: "https://photon.komoot.io",
@@ -76,7 +85,7 @@ export function createSeed(): Database {
         consumption: 9.5,
         mileage: 187420,
         status: "active",
-        notes: "Demonstracinė transporto priemonė.",
+        notes: "Ilgiems reisams: papildomos bagažo lentynos, USB įkrovimas.",
       },
       {
         id: "v2",
@@ -98,20 +107,20 @@ export function createSeed(): Database {
     drivers: [
       {
         id: "d1",
-        firstName: "Tomas",
-        lastName: "Pavyzdinis",
+        firstName: "Gediminas",
+        lastName: "Stankevičius",
         phone: "+370 000 00001",
-        email: "tomas@example.com",
+        email: "gediminas@example.test",
         categories: "B, D1",
         status: "active",
-        notes: "Fiktyvus kontaktas.",
+        notes: "Vykdo tarptautinius reisus.",
       },
       {
         id: "d2",
         firstName: "Mantas",
-        lastName: "Demonstracinis",
+        lastName: "Žukauskas",
         phone: "+370 000 00002",
-        email: "mantas@example.com",
+        email: "mantas@example.test",
         categories: "B",
         status: "active",
         notes: "",
@@ -120,31 +129,51 @@ export function createSeed(): Database {
     customers: [
       {
         id: "c1",
-        name: "Ieva Pavyzdinė",
+        name: "Ieva Petrauskienė",
         type: "person",
         phone: "+370 000 00003",
-        email: "ieva@example.com",
+        email: "ieva@example.test",
         address: "Kaunas",
-        notes: "Fiktyvūs demonstraciniai duomenys.",
+        notes: "Apie paėmimą pranešti prieš 30 min.",
         status: "active",
       },
       {
         id: "c2",
-        name: "UAB Pavyzdinė siunta",
+        name: "MB Šilo dirbtuvės",
         type: "company",
         phone: "+370 000 00004",
-        email: "siuntos@example.com",
+        email: "uzsakymai@dirbtuves.example.test",
         address: "Vilnius",
-        notes: "Fiktyvi įmonė.",
+        notes: "Siuntas priima darbo dienomis iki 17:00.",
         status: "active",
       },
       {
         id: "c3",
-        name: "Lukas Demonstracinis",
+        name: "Lukas Kazlauskas",
         type: "person",
         phone: "+370 000 00005",
-        email: "lukas@example.com",
+        email: "lukas@example.test",
         address: "Marijampolė",
+        notes: "",
+        status: "active",
+      },
+      {
+        id: "c4",
+        name: "Eglė Jankauskaitė",
+        type: "person",
+        phone: "+370 000 00007",
+        email: "egle@example.test",
+        address: "Kaunas",
+        notes: "",
+        status: "active",
+      },
+      {
+        id: "c5",
+        name: "Darius Vaitkus",
+        type: "person",
+        phone: "+370 000 00008",
+        email: "darius@example.test",
+        address: "Berlynas",
         notes: "",
         status: "active",
       },
@@ -222,6 +251,20 @@ export function createSeed(): Database {
         notes: "",
         stops: stops([0, 1, 2], "t4"),
       },
+      {
+        id: "t5",
+        number: "KR-1005",
+        name: "Marijampolė → Vilnius",
+        type: "local",
+        departure: day(-2) + "T09:00",
+        arrival: day(-2) + "T13:30",
+        vehicleId: "v2",
+        driverId: "d2",
+        routeId: "r2",
+        status: "completed",
+        notes: "Visi keleiviai ir siuntos pristatyti.",
+        stops: stops([0, 1, 2], "t5"),
+      },
     ],
     orders: [
       {
@@ -229,7 +272,7 @@ export function createSeed(): Database {
         number: "UZ-2001",
         type: "passenger",
         customerId: "c1",
-        name: "Ieva Pavyzdinė",
+        name: "Ieva Petrauskienė",
         phone: "+370 000 00003",
         recipient: "",
         recipientPhone: "",
@@ -252,9 +295,9 @@ export function createSeed(): Database {
         number: "UZ-2002",
         type: "parcel",
         customerId: "c2",
-        name: "Dokumentai ir atsarginės dalys",
+        name: "Automobilių atsarginės dalys",
         phone: "+370 000 00004",
-        recipient: "Gavėjas Pavyzdinis",
+        recipient: "Jonas Navickas",
         recipientPhone: "+49 000 00000",
         pickup: cities[0],
         delivery: cities[4],
@@ -275,7 +318,7 @@ export function createSeed(): Database {
         number: "UZ-2003",
         type: "passenger",
         customerId: "c3",
-        name: "Lukas Demonstracinis",
+        name: "Lukas Kazlauskas",
         phone: "+370 000 00005",
         recipient: "",
         recipientPhone: "",
@@ -298,9 +341,9 @@ export function createSeed(): Database {
         number: "UZ-2004",
         type: "parcel",
         customerId: "c2",
-        name: "Biuro įrangos siunta",
+        name: "Du biuro monitoriai",
         phone: "+370 000 00004",
-        recipient: "Biuras Pavyzdinis",
+        recipient: "Rūta Balčiūnienė",
         recipientPhone: "+370 000 00006",
         pickup: cities[1],
         delivery: cities[2],
@@ -321,7 +364,7 @@ export function createSeed(): Database {
         number: "UZ-2005",
         type: "passenger",
         customerId: "c1",
-        name: "Ieva Pavyzdinė",
+        name: "Ieva Petrauskienė",
         phone: "+370 000 00003",
         recipient: "",
         recipientPhone: "",
@@ -344,23 +387,93 @@ export function createSeed(): Database {
         number: "UZ-2006",
         type: "parcel",
         customerId: "c2",
-        name: "Smulkių prekių siunta",
+        name: "Tekstilės pavyzdžiai",
         phone: "+370 000 00004",
-        recipient: "Sandėlis Pavyzdinis",
+        recipient: "Andrius Kavaliauskas",
         recipientPhone: "",
         pickup: cities[0],
         delivery: cities[2],
         date: day(1),
         quantity: 1,
         luggage: "",
-        description: "Prekių dėžė",
+        description: "Audinių katalogai ir pavyzdžiai",
         weight: null,
         dimensions: "",
-        price: 3500,
+        price: 0,
+        priceSet: false,
         paid: 0,
         status: "new",
         tripId: "",
         notes: "Svoris dar nepatikslintas.",
+      },
+      {
+        id: "o7",
+        number: "UZ-2007",
+        type: "passenger",
+        customerId: "c5",
+        name: "Darius Vaitkus",
+        phone: "+370 000 00008",
+        recipient: "",
+        recipientPhone: "",
+        pickup: cities[4],
+        delivery: cities[1],
+        date: day(2),
+        quantity: 1,
+        luggage: "1 lagaminas ir rankinis bagažas",
+        description: "",
+        weight: null,
+        dimensions: "",
+        price: 11500,
+        paid: 3000,
+        status: "assigned",
+        tripId: "t3",
+        notes: "Susitikimas prie pagrindinio stoties įėjimo.",
+      },
+      {
+        id: "o8",
+        number: "UZ-2008",
+        type: "passenger",
+        customerId: "c4",
+        name: "Eglė Jankauskaitė",
+        phone: "+370 000 00007",
+        recipient: "",
+        recipientPhone: "",
+        pickup: cities[1],
+        delivery: cities[2],
+        date: day(-2),
+        quantity: 1,
+        luggage: "1 nedidelis lagaminas",
+        description: "",
+        weight: null,
+        dimensions: "",
+        price: 2500,
+        paid: 2500,
+        status: "completed",
+        tripId: "t5",
+        notes: "",
+      },
+      {
+        id: "o9",
+        number: "UZ-2009",
+        type: "parcel",
+        customerId: "c2",
+        name: "Įrankių dėžė",
+        phone: "+370 000 00004",
+        recipient: "Rūta Balčiūnienė",
+        recipientPhone: "+370 000 00006",
+        pickup: cities[0],
+        delivery: cities[2],
+        date: day(-2),
+        quantity: 1,
+        luggage: "",
+        description: "Rankiniai įrankiai dėžėje",
+        weight: 5.5,
+        dimensions: "45 × 30 × 20 cm",
+        price: 3500,
+        paid: 3500,
+        status: "completed",
+        tripId: "t5",
+        notes: "Perduota gavėjai.",
       },
     ],
     expenses: [
@@ -391,8 +504,45 @@ export function createSeed(): Database {
         vehicleId: "v2",
         description: "Vietinis reisas",
       },
+      {
+        id: "e4",
+        date: day(-2),
+        category: "Degalai",
+        amount: 3100,
+        tripId: "t5",
+        vehicleId: "v2",
+        description: "Vietinio reiso degalai",
+      },
+      {
+        id: "e5",
+        date: day(-2),
+        category: "Parkavimas",
+        amount: 400,
+        tripId: "t5",
+        vehicleId: "v2",
+        description: "Stovėjimas prie pristatymo vietos",
+      },
     ],
   };
   for (const order of db.orders) if (order.tripId) syncOrderStops(db, order);
-  return db;
+  db.trips[0].stops = setVisitCompleted(db.trips[0].stops, 0, true);
+  for (const trip of db.trips.filter((t) => t.status === "completed"))
+    trip.stops = trip.stops.map((stop) => ({ ...stop, completed: true }));
+  // Each store gets independent objects, including booking places and route templates.
+  return structuredClone(db);
+}
+
+/** Clear operational records while retaining company and service configuration. */
+export function createEmptyDatabase(settings: Settings): Database {
+  return {
+    version: 1,
+    settings: structuredClone(settings),
+    trips: [],
+    routes: [],
+    orders: [],
+    vehicles: [],
+    drivers: [],
+    customers: [],
+    expenses: [],
+  };
 }

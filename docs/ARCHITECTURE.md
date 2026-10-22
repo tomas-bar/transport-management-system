@@ -76,3 +76,16 @@ Phone trip lists use a card projection of the same records and filters as the de
 Embedded maps disable one-finger dragging on coarse-pointer devices until the user enables control or enters full-screen mode. Full-screen mode locks page scrolling, traps keyboard focus, restores it on close and keeps controls outside the map viewport. Imagery uses the public Esri World Imagery raster endpoint with source attribution; no imagery is requested until explicitly selected. Providers may rate-limit or change availability.
 
 `insertOrderStops` is a geographic minimum-added-distance heuristic. It evaluates pickup/delivery insertion positions while preserving the driver's existing stop order and confirmed arrival prefix, and always places pickup before delivery. It does not optimize the whole route or claim road-network distance savings. Final road geometry/distance still comes from OSRM after the sequence changes. Existing stop address edits retain their position and progress metadata.
+
+## Repeatable fixtures
+
+`createSeed(anchorDate)` builds versioned, independent fixture objects with UTC
+calendar arithmetic. The default anchor is today's date in Europe/Vilnius.
+Settings exposes explicit restore, fixed-date export and clearing actions. A
+source update never resets an existing store automatically.
+
+`scripts/data.ts` shares the same factory and schema validator. SQLite seed and
+clear commands require `--confirm`, hold an immediate transaction, write a JSON
+backup of the previous validated state, and increment its revision. Clearing
+retains settings. Export produces a fresh fixture without reading a live store.
+Backups and exports are runtime artifacts, excluded from source control.

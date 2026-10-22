@@ -2,5 +2,5 @@
 export const product = {
   name: "Krypta",
   wordmark: "krypta",
-  version: "1.2",
+  version: "1.3",
 };

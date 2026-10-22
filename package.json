@@ -1,6 +1,6 @@
 {
   "name": "krypta-tms",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -9,6 +9,9 @@
     "preview": "vite preview --host 0.0.0.0 --port 4173",
     "test": "node --experimental-strip-types --test tests/*.test.ts",
     "check:documents": "node --experimental-strip-types scripts/check-documents.ts",
+    "data:seed": "node --experimental-strip-types scripts/data.ts seed",
+    "data:clear": "node --experimental-strip-types scripts/data.ts clear",
+    "data:export": "node --experimental-strip-types scripts/data.ts export",
     "build:local": "tsc -b && vite build --mode server",
     "local": "npm run build:local && node --experimental-strip-types server/index.ts",
     "server": "node --experimental-strip-types server/index.ts",

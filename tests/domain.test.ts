@@ -49,6 +49,10 @@ test("order date must match trip departure date", () => {
 test("assignment connects the order, stops and load", () => {
   const db = createSeed();
   const order = { ...db.orders.find((o) => o.id === "o5")!, tripId: "t3" };
+  const previousLoad = loadInfo(
+    db,
+    db.trips.find((t) => t.id === "t3")!,
+  ).passengers;
   saveOrder(db, order);
   assert.equal(db.orders.find((o) => o.id === order.id)!.status, "assigned");
   assert.equal(
@@ -59,7 +63,7 @@ test("assignment connects the order, stops and load", () => {
   );
   assert.equal(
     loadInfo(db, db.trips.find((t) => t.id === "t3")!).passengers,
-    2,
+    previousLoad + order.quantity,
   );
   validateDatabase(db);
 });

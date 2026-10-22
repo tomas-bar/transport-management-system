@@ -11,13 +11,14 @@ import type { Database as Data } from "../domain/models";
 import { useApp } from "../context";
 import { PageHeading, Button, Panel, Field } from "../components/ui";
 import { storageDescription, serverMode } from "../services/repository";
-import { createSeed } from "../data/seed";
+import { createSeed, createEmptyDatabase } from "../data/seed";
 import { download } from "../services/export";
 import { today, validateDatabase } from "../domain/logic";
 
 export function Settings() {
   const { db, commit, busy, notify } = useApp();
   const [form, setForm] = useState({ ...db.settings });
+  const [seedDate, setSeedDate] = useState(today());
   const input = useRef<HTMLInputElement>(null);
   async function importFile(file: File) {
     if (file.size > 15 * 1024 * 1024) {
@@ -169,18 +170,37 @@ export function Settings() {
               />
             </div>
           </Panel>
-          <Panel title="Duomenų atkūrimas">
+          <Panel title="Bandomieji duomenys">
+            <div className="settings-form">
+              <Field label="Pradžios data">
+                <input
+                  type="date"
+                  required
+                  value={seedDate}
+                  onChange={(e) => setSeedDate(e.target.value)}
+                />
+              </Field>
+              <p className="muted">
+                5 reisai · 9 užsakymai · 2 automobiliai · 2 vairuotojai
+              </p>
+            </div>
             <div className="stack-actions">
               <Button
                 variant="secondary"
-                disabled={busy}
+                disabled={busy || !seedDate}
                 onClick={async () => {
                   if (
                     confirm(
                       "Pakeisti visus dabartinius įrašus demonstraciniais duomenimis?",
                     )
                   ) {
-                    const seed = createSeed();
+                    let seed: Data;
+                    try {
+                      seed = createSeed(seedDate);
+                    } catch {
+                      notify("Pasirinkite tinkamą pradžios datą.", true);
+                      return;
+                    }
                     if (
                       await commit(
                         (d) => Object.assign(d, seed),
@@ -195,6 +215,24 @@ export function Settings() {
                 Atkurti demonstracinius duomenis
               </Button>
               <Button
+                variant="secondary"
+                disabled={busy || !seedDate}
+                onClick={() => {
+                  try {
+                    const seed = createSeed(seedDate);
+                    download(
+                      JSON.stringify(seed, null, 2),
+                      `krypta-bandomieji-${seedDate}.json`,
+                      "application/json;charset=utf-8",
+                    );
+                  } catch {
+                    notify("Pasirinkite tinkamą pradžios datą.", true);
+                  }
+                }}
+              >
+                <Download size={16} /> Atsisiųsti bandomąjį rinkinį
+              </Button>
+              <Button
                 variant="danger"
                 disabled={busy}
                 onClick={async () => {
@@ -204,13 +242,7 @@ export function Settings() {
                     )
                   )
                     await commit((d) => {
-                      d.trips = [];
-                      d.routes = [];
-                      d.orders = [];
-                      d.vehicles = [];
-                      d.drivers = [];
-                      d.customers = [];
-                      d.expenses = [];
+                      Object.assign(d, createEmptyDatabase(d.settings));
                     }, "Įrašai išvalyti");
                 }}
               >

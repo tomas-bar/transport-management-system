@@ -95,7 +95,8 @@ function table(
     .finalY;
 }
 function section(doc: jsPDF, title: string, y: number) {
-  if (y > 252) {
+  // Reserve space for the section title, table header and first data row.
+  if (y > 240) {
     doc.addPage();
     y = 20;
   }
@@ -293,7 +294,7 @@ export function buildFinancePdf(
       db.customers.find((c) => c.id === o.customerId)?.name ?? o.name,
       hasAgreedPrice(o) ? money(o.price) : "-",
       money(o.paid),
-      money(o.price - o.paid),
+      hasAgreedPrice(o) ? money(o.price - o.paid) : "-",
     ]),
     y,
   );

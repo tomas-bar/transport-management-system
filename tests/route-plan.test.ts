@@ -33,7 +33,10 @@ test("completed visits mark every underlying stop and keep their numeric identit
   assert.equal(routeVisits(updated)[0].completed, true);
   assert.equal(routeVisits(updated)[0].number, 1);
   assert(routeVisits(updated)[0].stops.every((s) => s.completed));
-  assert.equal(routeVisits(stops)[0].completed, false);
+  assert.equal(routeVisits(stops)[0].completed, true);
+  const reverted = setVisitCompleted(updated, 0, false);
+  assert.equal(routeVisits(reverted)[0].completed, false);
+  assert.equal(routeVisits(stops)[0].completed, true);
 });
 test("a return to the same location remains a separate visit", () => {
   const stops = createSeed().routes[1].stops;
@@ -121,8 +124,12 @@ test("map task projection exposes optional pickup/delivery details and no financ
   assert.equal(tasks.length, 6);
   assert(tasks.some((t) => t.type === "passenger" && t.kind === "delivery"));
   assert(tasks.some((t) => t.type === "parcel" && t.kind === "pickup"));
-  const parcel = db.orders.find((o) => o.type === "parcel" && o.tripId === db.trips[0].id)!;
-  const delivery = tasks.find((t) => t.orderId === parcel.id && t.kind === "delivery")!;
+  const parcel = db.orders.find(
+    (o) => o.type === "parcel" && o.tripId === db.trips[0].id,
+  )!;
+  const delivery = tasks.find(
+    (t) => t.orderId === parcel.id && t.kind === "delivery",
+  )!;
   assert.equal(delivery.name, parcel.recipient || parcel.name);
   assert.equal(delivery.phone, parcel.recipientPhone);
   assert(tasks.every((t) => !("paid" in t) && !("price" in t)));

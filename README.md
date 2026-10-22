@@ -53,11 +53,49 @@ For frontend development against SQLite, run `npm run server` in a second termin
 
 ## Data and backups
 
-`src/data/seed.ts` defines the fictional sample dataset. Dates are relative to the first launch date. A new store contains two vehicles, two drivers, three customers, two routes, four trips, six bookings and three expense entries. Existing data is never replaced on application upgrade. A small idempotent migration updates only exact legacy sample registrations, preserving custom values.
+`src/data/seed.ts` defines the fictional sample dataset. Dates are relative to the first launch date. A new store contains two vehicles, two drivers, five customers, two routes, five trips, nine bookings and five expense entries. Existing data is never replaced on application upgrade. A small idempotent migration updates only exact legacy sample registrations, preserving custom values.
 
 In Settings, export/import a JSON backup, restore samples or clear all operational records. SQLite and IndexedDB are separate stores; move data between them with JSON export/import. Back up a SQLite file with the server stopped by copying the entire `data` directory, including any remaining WAL files.
 
 To start with real records, use the local SQLite mode, export a backup, clear the sample dataset, enter company details and populate customers, fleet, drivers and routes. Real remote use needs authentication and authorization first. Address searches and route coordinates are sent to the selected external map services.
+
+### Repeatable test data
+
+Settings lets you select an anchor date, restore the sample dataset or download
+that same dataset as an importable JSON file. The sample contains an active trip
+with arrival progress, planned and confirmed trips, completed history, passenger
+and parcel bookings, partial payments, an unknown price and an unknown weight.
+All people and businesses are fictional. Email addresses use reserved test
+names and phone numbers are deliberately non-dialable.
+
+`createSeed(date)` in `src/data/seed.ts` is the versioned source of truth. Passing
+the same `YYYY-MM-DD` anchor recreates the same records, identifiers and dates;
+each call returns independent objects. Application upgrades never automatically
+replace records in an existing browser or SQLite store. To see a newer sample,
+restore it explicitly in Settings.
+
+For local SQLite testing, stop the server and run:
+
+```sh
+npm run data:seed -- --confirm
+npm run local
+```
+
+The seed command replaces the local dataset and makes a JSON backup beside the
+database in `data/backups/` first. Other useful commands:
+
+```sh
+npm run data:seed -- --date 2026-10-22 --confirm
+npm run data:clear -- --confirm
+npm run data:export -- --date 2026-10-22
+```
+
+Clear removes operational records and preserves company/service settings.
+Export writes `tmp/demo-data.json` without changing a database; import that file
+through Settings. Pass `--confirm` to overwrite an existing export. Seed and
+clear accept `--db path` or `KRYPTA_DB_PATH`; export accepts `--out path`. Commands
+print their actual paths. CLI backups use the same validated JSON format as UI
+backups and can be restored through Settings. Refresh open tabs after CLI writes.
 
 ## PDF output
 

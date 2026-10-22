@@ -23,3 +23,5 @@ This is a transport management product for small passenger and parcel operators.
 - Keep phone trip statuses visible in the card view. Desktop tables and mobile cards must use the same filtered records.
 - Use `visitTasks` for optional passenger/parcel and pickup/delivery markers. Operational map details exclude financial data. Keep map controls outside the viewport and preserve normal phone page scrolling until map interaction is enabled.
 - New stop insertion may suggest geographic proximity only. Preserve existing order, confirmed prefix and pickup-before-delivery precedence; never label this heuristic as road optimization.
+
+- Demo fixtures are versioned in `src/data/seed.ts`. Keep `createSeed(anchorDate)` deterministic and isolated from edited stores. Never silently replace existing data on upgrade. Local reset tools must validate data, require explicit confirmation, increment the SQLite revision, and back up the previous state before replacement.
