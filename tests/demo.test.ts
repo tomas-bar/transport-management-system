@@ -138,3 +138,19 @@ test('demo owner can inspect company users and act as a driver without losing th
   const original = client(storage); await login(original.api);
   await assert.rejects(original.api.request('/api/preview', 'POST', { companyId: 'unrelated', id: 'admin', mode: 'act' }), /Kitos įmonės/);
 });
+
+test('demo upgrades old link-only opportunities without resetting records and rejects stale edits', async () => {
+  const { storage, api } = await fixture();
+  const companyId = storage.state.companies[0].id;
+  storage.state.opportunities.push({ id: 'legacy', companyId, title: 'Existing note', url: 'https://example.test/offer', notes: 'Retain this contact', created_at: '2026-10-22T10:00:00Z' });
+  await login(api);
+  const rows = await api.request<any[]>('/api/opportunities');
+  assert.equal(rows[0].details.price, null);
+  assert.equal(rows[0].details.weight, null);
+  assert.equal(rows[0].notes, 'Retain this contact');
+  await api.request('/api/opportunities', 'PUT', { ...rows[0], details: { ...rows[0].details, status: 'contacted', contact: '+370 600 00000' } });
+  await assert.rejects(api.request('/api/opportunities', 'PUT', rows[0]), /kitame lange/);
+  const updated = (await api.request<any[]>('/api/opportunities'))[0];
+  assert.equal(updated.details.status, 'contacted');
+  assert.equal(updated.notes, 'Retain this contact');
+});

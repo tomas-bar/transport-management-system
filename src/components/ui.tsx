@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import type { ReactNode, ButtonHTMLAttributes } from "react";
+import { useEffect, useRef, useId, isValidElement, cloneElement } from "react";
+import type { ReactNode, ButtonHTMLAttributes, HTMLAttributes, ReactElement } from "react";
 import { X, ArrowUpRight, Search, Inbox, ChevronDown } from "lucide-react";
 import { tripStatuses, orderStatuses, entityStatuses } from "../domain/models";
 export function Button({
@@ -284,11 +284,21 @@ export function Field({
   hint?: string;
   full?: boolean;
 }) {
+  const labelId = useId();
+  const hintId = useId();
+  const control = isValidElement(children)
+    && typeof children.type === 'string'
+    && ['input', 'select', 'textarea'].includes(children.type)
+    ? cloneElement(children as ReactElement<HTMLAttributes<HTMLElement>>, {
+      'aria-labelledby': labelId,
+      ...(hint ? { 'aria-describedby': hintId } : {}),
+    })
+    : children;
   return (
     <label className={`field ${full ? "full" : ""}`}>
-      <span>{label}</span>
-      {children}
-      {hint && <small>{hint}</small>}
+      <span id={labelId}>{label}</span>
+      {control}
+      {hint && <small id={hintId}>{hint}</small>}
     </label>
   );
 }

@@ -266,3 +266,29 @@ test('an owner can leave an unavailable preview without gaining permission to mu
     assert.equal((await f.request('/api/preview', 'POST', { id: null }, owner)).status, 200);
   } finally { await f.close(); }
 });
+
+test('freight opportunities persist validated details with company scope, revision protection and module checks', async () => {
+  const f = await fixture();
+  try {
+    const first = await f.login(), second = await f.login('two-admin@example.test');
+    const posted = await f.request('/api/opportunities', 'POST', { title: 'Manual inquiry', url: '', notes: 'Contact by phone', details: { date: '2026-10-23', weight: 25, price: 8500, tripId: 't1', contact: '+370 600 00000' } }, first);
+    assert.equal(posted.status, 201, await posted.clone().text());
+    const rows = await (await f.request('/api/opportunities', 'GET', undefined, first)).json();
+    assert.equal(rows[0].details.price, 8500);
+    assert.equal(rows[0].details.weight, 25);
+    assert.equal(rows[0].revision, 1);
+    assert.deepEqual(await (await f.request('/api/opportunities', 'GET', undefined, second)).json(), []);
+    assert.equal((await f.request('/api/opportunities', 'PUT', { ...rows[0], notes: 'Foreign overwrite' }, second)).status, 404);
+    assert.equal((await f.request('/api/opportunities', 'PUT', { ...rows[0], notes: 'Updated contact' }, first)).status, 200);
+    assert.equal((await f.request('/api/opportunities', 'PUT', { ...rows[0], notes: 'Stale overwrite' }, first)).status, 409);
+    const updated = (await (await f.request('/api/opportunities', 'GET', undefined, first)).json())[0];
+    f.db.prepare("UPDATE companies SET modules='[\"operations\",\"freight\"]' WHERE id='one'").run();
+    assert.equal((await f.request('/api/opportunities', 'PUT', { ...updated, details: { ...updated.details, price: 999 } }, first)).status, 403);
+    assert.equal((await f.request('/api/opportunities', 'PUT', { ...updated, notes: 'Finance module off, price retained' }, first)).status, 200);
+    const driver = await f.login('one-user-d1@example.test');
+    assert.equal((await f.request('/api/opportunities', 'GET', undefined, driver)).status, 403);
+    f.db.prepare("UPDATE companies SET modules='[\"operations\"]' WHERE id='one'").run();
+    assert.equal((await f.request('/api/opportunities', 'GET', undefined, first)).status, 403);
+    assert.equal(f.db.prepare('SELECT count(*) AS n FROM opportunities').get()!.n, 1);
+  } finally { await f.close(); }
+});

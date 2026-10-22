@@ -11,7 +11,7 @@ npm ci
 npm run dev
 ```
 
-This starts the complete browser demo on port 4173. `npm run build` produces the same demo for static hosting, without requiring an API. All implemented screens are available: companies and modules, company users and role workspaces, profile/password/session flows, order photos, reminders, manually saved freight opportunities, notifications and finance. These are device-local test workflows, not production authentication or shared storage.
+This starts the complete browser demo on port 4173. `npm run build` produces the same demo for static hosting, without requiring an API. All implemented screens are available: companies and modules, company users and role workspaces, profile/password/session flows, order photos, reminders, freight opportunities and external search, notifications and finance. These are device-local test workflows, not production authentication or shared storage.
 
 Demo accounts, with empty login fields:
 
@@ -43,17 +43,17 @@ The local server listens on loopback port 4174 and stores records in `data/serve
 
 For frontend development against the API, run the server with `KRYPTA_PUBLIC_ORIGIN=http://127.0.0.1:5173`, then run `npm run dev:server` on port 5173 in another terminal. All frontend build modes write to `dist/`; rebuild for the intended mode before starting or publishing it. The server application never falls back to prototype authentication if the API is unavailable. Other devices load shared changes when refreshed; stale writes are rejected. No live push transport is implemented.
 
-Configuration variables are documented in [.env.example](.env.example). The server reads `KRYPTA_PUBLIC_ORIGIN`, `KRYPTA_HOST`, `KRYPTA_PORT`, `KRYPTA_DB_PATH` and `NODE_ENV` from its process. No external API key or runtime application secret is required: passwords are provisioned into the private database, and sessions use random server-generated tokens. Production requires HTTPS, a reverse proxy and persistent private SQLite storage. See [security and deployment](docs/SECURITY.md). Static hosting alone cannot run the shared backend. Sites supports the static demo. The current Node/SQLite server requires a compatible Node host; it is not deployed by uploading the static bundle.
+Configuration variables are documented in [.env.example](.env.example). The server reads `KRYPTA_PUBLIC_ORIGIN`, `KRYPTA_HOST`, `KRYPTA_PORT`, `KRYPTA_DB_PATH` and `NODE_ENV` from its process. No new environment variables or external API keys are required for the current freight tools. No runtime application secret is required: passwords are provisioned into the private database, and sessions use random server-generated tokens. Production requires HTTPS, a reverse proxy and persistent private SQLite storage. See [security and deployment](docs/SECURITY.md). Static hosting alone cannot run the shared backend. Sites supports the static demo. The current Node/SQLite server requires a compatible Node host; it is not deployed by uploading the static bundle.
 
 ## Optional modules
 
-Companies can enable finance, private order photos, vehicle reminders and manually saved freight opportunities. Operations is the shared prerequisite; permissions are checked separately from module availability. Turning a module off retains its history. Photos support phone capture/upload, private enlarged viewing and explicit deletion. Reminders use user-entered dates and appear in the day plan when relevant vehicles are scheduled. No legal expiry interval is invented.
+Companies can enable finance, private order photos, vehicle reminders and freight opportunities and external search. Operations is the shared prerequisite; permissions are checked separately from module availability. Turning a module off retains its history. Photos support phone capture/upload, private enlarged viewing and explicit deletion. Reminders use user-entered dates and appear in the day plan when relevant vehicles are scheduled. No legal expiry interval is invented.
 
 Managers can register delivery progress in one trip summary, save a partial result, or close the trip after confirming every delivery. These are retrospective manager confirmations, with their author and registration time, not invented driver arrival times. Closing a trip never changes payments. Repeat Trip copies the route/resources and only selected bookings to new dates; prices are optional and all new paid amounts are zero. Expenses, receipts and execution history stay on the original trip. Resource and load validation apply to the new trip.
 
 Notifications state the actual trip outcome and show current status and driver in the group header. Per-recipient read state and expandable history are preserved. A transaction-date payment journal records receipts and reversals separately from the established booking-date aggregate reports; historical paid totals are never converted into invented transactions.
 
-Freight opportunities are manual notes and HTTPS links. Live exchange access, provider terms and APIs have not been verified from this environment because those destinations are blocked. No restricted exchange is scraped and no fictional offers are presented as live data.
+Freight discovery prepares external web searches using a selected trip's cities/date and optional source domain. Saved opportunities contain addresses, shipment weight/dimensions, price, contact, negotiation status and a trip reference, with date/status/text filters and stale-edit protection. Their route comparison reuses OSRM to compare the existing route with a geographic insertion suggestion. Additional-cost estimates require entered vehicle/labor rates, handling time and other expenses; they are not market prices or full business profit. Fixed Lithuanian/German/English contact drafts can be copied manually. There is no live exchange feed or AI integration. See [verified access findings and limitations](docs/FREIGHT_SOURCES.md).
 
 ## Data, accounts and backups
 

@@ -3,7 +3,7 @@ export const moduleCatalog = {
   finance: { label: 'Reiso finansai', requires: ['operations'] },
   photos: { label: 'Užsakymų nuotraukos', requires: ['operations'] },
   maintenance: { label: 'Transporto priminimai', requires: ['operations'] },
-  freight: { label: 'Krovinių paieška', requires: ['operations'] },
+  freight: { label: 'Krovinių galimybės', requires: ['operations'] },
 } as const;
 export type ModuleId = keyof typeof moduleCatalog;
 export function validateModules(input: unknown): ModuleId[] {

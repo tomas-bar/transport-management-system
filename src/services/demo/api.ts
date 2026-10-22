@@ -1,3 +1,4 @@
+import { validateOpportunity, freightDetails } from '../../domain/freight.ts';
 import { createEmptyDatabase, createSeed } from '../../data/seed.ts';
 import { applyWorkspaceCommand, type WorkspaceCommand } from '../../domain/commands.ts';
 import { validateModules, type ModuleId } from '../../domain/modules.ts';
@@ -252,7 +253,19 @@ export class DemoApi {
       const reminder = endpoint === '/api/reminders', current = companyAccess();
       moduleAccess(reminder ? 'maintenance' : 'freight'); manager();
       const rows = reminder ? state.reminders : state.opportunities;
-      if (method === 'GET') return rows.filter(r => r.companyId === current.id);
+      if (method === 'GET') {
+        const rows = reminder ? state.reminders : state.opportunities.map(row => ({ ...row, revision: row.revision ?? 1, details: freightDetails(row.details) }));
+        return rows.filter(row => row.companyId === current.id);
+      }
+      if (!reminder && method === 'PUT') {
+        const row = state.opportunities.find(row => row.companyId === current.id && row.id === input.id);
+        requireThat(row, 404, 'Galimybė nerasta.');
+        requireThat(input.revision === (row.revision ?? 1), 409, 'Pasiūlymas pakeistas kitame lange. Atnaujinkite sąrašą.');
+        const value = validateOpportunity(input, current.snapshot.db);
+        requireThat(current.modules.includes('finance') || value.details.price === freightDetails(row.details).price, 403, 'Finansų modulis išjungtas.');
+        Object.assign(row, value, { revision: (row.revision ?? 1) + 1 });
+        await save(); return { ok: true };
+      }
       if (method === 'POST') {
         const id = crypto.randomUUID(), title = text(input.title);
         if (reminder) {
@@ -260,10 +273,9 @@ export class DemoApi {
           requireThat(typeof input.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate) && Number.isFinite(Date.parse(input.dueDate + 'T12:00:00Z')) && new Date(input.dueDate + 'T12:00:00Z').toISOString().slice(0, 10) === input.dueDate, 400, 'Patikrinkite datą.');
           state.reminders.push({ id, companyId: current.id, title, vehicle_id: input.vehicleId, due_date: input.dueDate, done: 0 });
         } else {
-          let link: URL; try { link = new URL(text(input.url, 2000)); } catch { throw new ApiError(400, 'Naudokite HTTPS nuorodą.'); }
-          requireThat(link.protocol === 'https:' && !link.username && !link.password, 400, 'Naudokite HTTPS nuorodą.');
-          requireThat(typeof input.notes === 'string' && input.notes.length <= 2000, 400, 'Pastabos per ilgos.');
-          state.opportunities.push({ id, companyId: current.id, title, url: link.href, notes: input.notes.trim(), created_at: new Date().toISOString() });
+          const value = validateOpportunity(input, current.snapshot.db);
+          requireThat(value.details.price === null || current.modules.includes('finance'), 403, 'Finansų modulis išjungtas.');
+          state.opportunities.push({ id, companyId: current.id, revision: 1, ...value, created_at: new Date().toISOString() });
         }
         await save(); return { id };
       }

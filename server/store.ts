@@ -11,7 +11,7 @@ export class Store {
     if (path !== ':memory:') chmodSync(path, 0o600);
     this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;');
     const version = Number((this.db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version);
-    if (version > 2) throw new Error('The database was created by a newer server.');
+    if (version > 3) throw new Error('The database was created by a newer server.');
     if (version === 0) this.transaction(() => {
       this.db.exec(`
         CREATE TABLE companies (id TEXT PRIMARY KEY, name TEXT NOT NULL, modules TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1) STRICT;
@@ -36,6 +36,9 @@ export class Store {
         ALTER TABLE audit ADD COLUMN effective_user_id TEXT;
         PRAGMA user_version=2;
       `);
+    });
+    if (version < 3) this.transaction(() => {
+      this.db.exec("ALTER TABLE opportunities ADD COLUMN details TEXT NOT NULL DEFAULT '{}'; ALTER TABLE opportunities ADD COLUMN revision INTEGER NOT NULL DEFAULT 1; PRAGMA user_version=3;");
     });
   }
   transaction<T>(run: () => T): T {

@@ -1,3 +1,4 @@
+import { FreightWorkspace } from './pages/FreightWorkspace';
 import { ActAsButton } from './components/UserPreview';
 import { readOnlySession } from './domain/access';
 import { ConfirmationProvider } from './components/Feedback';
@@ -68,7 +69,7 @@ const navigation = [{id:'platform',label:'Įmonės',icon:ShieldCheck,group:'PLAT
   group: 'PASKYRA'
 }, {
   id:'maintenance',label:'Transporto priminimai',icon:Truck
-}, {id:'freight',label:'Krovinių paieška',icon:Search
+}, {id:'freight',label:'Kroviniai',icon:Search
 }, {
   id: 'users',
   label: 'Naudotojai',
@@ -165,7 +166,7 @@ function Shell() {
    </div>
  </div>}
  <main id="main-content" className="main-content" key={`${user.id}-${path}`}>
- {!canOpen(user, section, modules) ? <Empty title="Puslapis nepasiekiamas" description="Jūsų rolei ši prieiga nesuteikta."><Button onClick={() => navigate(user.role === 'driver' ? 'my-trips' : user.role === 'owner' ? 'platform' : 'overview')}>Į darbo erdvę</Button></Empty> : section === 'maintenance' || section === 'freight' ? <OperationalTools kind={section}/> : section === 'platform' ? <Platform/> : section === 'profile' ? <Profile/> : section === 'overview' ? <Overview /> : section === 'my-trips' ? <DriverWorkspace id={path.startsWith('my-trips/') ? path.split('/')[1] : undefined} /> : section === 'trips' && path.startsWith('trips/') ? <TripDetail id={path.split('/')[1]} /> : section === 'trips' ? <Trips /> : section === 'orders' ? <Orders /> : section === 'routes' ? <Routes /> : ['vehicles', 'drivers', 'customers'].includes(section) ? <Registry kind={section as 'vehicles' | 'drivers' | 'customers'} /> : section === 'finances' ? <Finances /> : section === 'settings' ? <Settings /> : section === 'users' ? <WorkspaceUsers /> : section === 'notifications' ? <Notifications /> : <Empty title="Puslapis nerastas" />}
+ {!canOpen(user, section, modules) ? <Empty title="Puslapis nepasiekiamas" description="Jūsų rolei ši prieiga nesuteikta."><Button onClick={() => navigate(user.role === 'driver' ? 'my-trips' : user.role === 'owner' ? 'platform' : 'overview')}>Į darbo erdvę</Button></Empty> : section === 'freight' ? <FreightWorkspace/> : section === 'maintenance' ? <OperationalTools/> : section === 'platform' ? <Platform/> : section === 'profile' ? <Profile/> : section === 'overview' ? <Overview /> : section === 'my-trips' ? <DriverWorkspace id={path.startsWith('my-trips/') ? path.split('/')[1] : undefined} /> : section === 'trips' && path.startsWith('trips/') ? <TripDetail id={path.split('/')[1]} /> : section === 'trips' ? <Trips /> : section === 'orders' ? <Orders /> : section === 'routes' ? <Routes /> : ['vehicles', 'drivers', 'customers'].includes(section) ? <Registry kind={section as 'vehicles' | 'drivers' | 'customers'} /> : section === 'finances' ? <Finances /> : section === 'settings' ? <Settings /> : section === 'users' ? <WorkspaceUsers /> : section === 'notifications' ? <Notifications /> : <Empty title="Puslapis nerastas" />}
  <footer className="review-footer"><span>krypta.</span></footer></main></div>
  <nav className="review-bottom-nav" aria-label="Greitoji navigacija">{(user.role === 'driver' ? [{
         id: 'my-trips',

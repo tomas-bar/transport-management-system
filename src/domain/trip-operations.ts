@@ -33,6 +33,7 @@ function manager(snapshot: ReviewSnapshot, user: WorkspaceUser) {
 /** Register the manager's retrospective summary without inventing driver arrival times. */
 export function reviewTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input: TripReviewInput) {
   manager(snapshot, user);
+  if (!input || typeof input !== 'object') throw new Error('Patikrinkite reiso suvestinę.');
   const trip = snapshot.db.trips.find(record => record.id === input.tripId);
   if (!trip || ['completed', 'cancelled'].includes(trip.status)) throw new Error('Reisas nepasiekiamas arba jau uždarytas.');
   if (!Array.isArray(input.completedOrderIds) || new Set(input.completedOrderIds).size !== input.completedOrderIds.length || typeof input.finish !== 'boolean' || typeof input.note !== 'string' || input.note.length > 1000) {
@@ -69,6 +70,7 @@ export function nextReference(records: { number: string }[], prefix: string, min
 /** Copy explicit bookings, route and resources; financial and execution history stay on the source. */
 export function repeatTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input: RepeatTripInput) {
   manager(snapshot, user);
+  if (!input || typeof input !== 'object' || typeof input.departure !== 'string' || typeof input.arrival !== 'string') throw new Error('Patikrinkite naujo reiso duomenis.');
   const db = snapshot.db;
   const source = db.trips.find(trip => trip.id === input.sourceId);
   if (!source) throw new Error('Pradinis reisas nerastas.');

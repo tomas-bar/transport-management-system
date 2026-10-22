@@ -18,12 +18,17 @@ test('version-one database upgrade retains company records, existing sessions an
   old.db.prepare("INSERT INTO accounts VALUES('a',NULL,NULL,'owner@example.test','Owner','owner','fixture-hash',1)").run();
   old.db.prepare('INSERT INTO sessions(token_hash,account_id,csrf,created_at,last_at,preview_id,user_agent) VALUES(?,?,?,?,?,?,?)').run('token', 'a', 'csrf', 100, 100, null, 'Old browser');
   old.audit('one', 'a', 'company.created');
+  old.db.prepare('INSERT INTO opportunities(id,company_id,title,url,notes,created_at) VALUES(?,?,?,?,?,?)').run('offer', 'one', 'Retained lead', 'https://example.test', 'Original contact note', '2026-10-22T10:00:00Z');
   // Restore the actual version-one column shape before opening the newer application.
-  old.db.exec('ALTER TABLE sessions DROP COLUMN preview_company_id; ALTER TABLE sessions DROP COLUMN preview_mode; ALTER TABLE audit DROP COLUMN effective_user_id; PRAGMA user_version=1;');
+  old.db.exec('ALTER TABLE sessions DROP COLUMN preview_company_id; ALTER TABLE sessions DROP COLUMN preview_mode; ALTER TABLE audit DROP COLUMN effective_user_id; ALTER TABLE opportunities DROP COLUMN details; ALTER TABLE opportunities DROP COLUMN revision; PRAGMA user_version=1;');
   old.close();
   const upgraded = new Store(path);
   try {
     assert.deepEqual(upgraded.snapshot('one'), { snapshot, revision: 7 });
+    const lead = upgraded.db.prepare('SELECT * FROM opportunities').get()!;
+    assert.equal(lead.notes, 'Original contact note');
+    assert.equal(lead.details, '{}');
+    assert.equal(lead.revision, 1);
     const session = upgraded.db.prepare('SELECT * FROM sessions').get()!;
     assert.equal(session.token_hash, 'token');
     assert.equal(session.preview_company_id, null);

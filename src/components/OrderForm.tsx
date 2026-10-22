@@ -1,3 +1,4 @@
+import { useConfirm } from './Feedback';
 import {OrderPhotos} from './OrderPhotos';
 import { useState } from "react";
 import type { Order, Place } from "../domain/models";
@@ -16,6 +17,7 @@ export function OrderForm({
   onClose: () => void;
   tripId?: string;
 }) {
+  const confirm = useConfirm();
   const { db, commit, busy, notify, modules, serverMode } = useApp();
   const selected = db.trips.find((t) => t.id === tripId);
   const [form, setForm] = useState<Order>(
@@ -309,7 +311,19 @@ export function OrderForm({
               <select
                 disabled={locked}
                 value={form.tripId}
-                onChange={(e) => set("tripId", e.target.value)}
+                onChange={async (event) => {
+                  const tripId = event.target.value;
+                  const trip = db.trips.find(record => record.id === tripId);
+                  const date = trip?.departure.slice(0, 10);
+                  if (date && date !== form.date) {
+                    const accepted = await confirm(
+                      `Reisas išvyksta ${date}. Pakeisti užsakymo datą iš ${form.date} į ${date} ir priskirti šiam reisui?`,
+                      { title: 'Užsakymo ir reiso datos skiriasi', confirmLabel: 'Keisti datą ir priskirti' },
+                    );
+                    if (!accepted) return;
+                  }
+                  setForm(value => ({ ...value, tripId, ...(date ? { date } : {}) }));
+                }}
               >
                 <option value="">Kol kas nepriskirti</option>
                 {db.trips

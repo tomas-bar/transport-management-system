@@ -25,6 +25,8 @@ The established relationship is `Customer -> Order -> Trip -> Driver + Vehicle`.
 
 Physical visits group adjacent stops at the same coordinates while retaining order references. Arrival and handover remain distinct. A next-visit pickup/delivery can record arrival atomically, delivery requires pickup, and corrections preserve dependencies. Trip completion requires all visits and active orders to be completed. Driver actions are limited to explicitly permitted actions on assigned work.
 
+Manager delivery summaries use typed `reviewTrip` commands and optional `workspace.tripReviews`. They record manager-source pickup/delivery confirmations without fabricating arrival events. Partial summaries leave unresolved work active; final closure requires all deliveries. Typed `repeatTrip` commands generate new booking/stop identities, reset execution and payments, optionally retain quoted prices, and pass the existing scheduling/load validators. These commands are shared by all adapters.
+
 ## Complete browser demo
 
 `src/services/demo/api.ts` implements the existing UI request contract with device-local data. It uses the same domain commands, module checks and driver projection as the server. Companies, memberships, test credential verifiers, sessions, optional records and snapshots reside in `krypta-demo` IndexedDB. Photo blobs occupy a separate object store and are saved atomically with their metadata. A global generation rejects competing writes; company revisions reject stale operational commands.
@@ -49,12 +51,10 @@ The existing Node/SQLite runtime needs an appropriate persistent Node host. Site
 
 Finance commands preserve receipt/reversal history, integer cents, actor attribution and payment limits. `payment-report.ts` reports transaction dates for new receipts/reversals; older cumulative paid values keep their booking-date reporting convention. Historical totals are never converted into invented payments.
 
-Order photos, vehicle reminders and manually saved HTTPS freight opportunities are independent optional records, retained when their modules are disabled. Date-based vehicle reminders supplement existing scheduling/capacity checks. Freight opportunities are user-entered notes and links, not a live exchange feed.
+Order photos, vehicle reminders and manually saved HTTPS freight opportunities are independent optional records, retained when their modules are disabled. Date-based vehicle reminders supplement existing scheduling/capacity checks. Freight opportunities retain structured contact, location, price and negotiation details, with per-record revision checks. SQL migration 3 preserves legacy notes/links. External search is a normal generated web-search URL; road comparison and additional-cost estimates live in `domain/freight.ts` and `components/FreightReview.tsx`. See `FREIGHT_SOURCES.md` for source access and calculation limits.
 
 ## Appearance and documents
 
 The shared appearance service persists light/dark mode. Semantic surfaces, text and status colors live in `src/styles/appearance.css`. PDF options use the company print preference and remain independent of UI theme and viewport.
 
 PDF templates are data-driven A4 documents. Operational documents exclude finance. Printable maps use real OSRM geometry and bundled Natural Earth country/city data, preserving geographic aspect ratio and fitting the whole route. Bundled source/asset terms are documented with the assets. Standard OpenStreetMap community tiles are not fetched for offline print export. Routing failure is reported, with the ordinary route sheet still available. Existing PDF rendering checks cover pagination and fonts.
-
-Manager delivery summaries use typed `reviewTrip` commands and optional `workspace.tripReviews`. They record manager-source pickup/delivery confirmations without fabricating arrival events. Partial summaries leave unresolved work active; final closure requires all deliveries. Typed `repeatTrip` commands generate new booking/stop identities, reset execution and payments, optionally retain quoted prices, and pass the existing scheduling/load validators. These commands are shared by all adapters.

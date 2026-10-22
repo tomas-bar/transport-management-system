@@ -75,3 +75,57 @@
   .review-selection-heading { flex-wrap:wrap; }
   .trip-delivery-progress { flex-wrap:wrap; }
 }
+
+.freight-search-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(240px,320px); gap:24px; align-items:start; }
+.freight-search-form { padding:0 24px 24px; }
+.freight-search-submit { grid-column:1/-1; }
+.freight-search-help { padding:24px; }
+.freight-search-help > svg { color:#5471ad; margin-bottom:14px; }
+.freight-search-help h2 { font-size:16px; }
+.freight-search-help p { font-size:13px; color:var(--text-secondary); line-height:1.8; margin:12px 0 20px; }
+.freight-saved-filters { display:flex; align-items:end; gap:16px; flex-wrap:wrap; margin-bottom:20px; }
+.freight-saved-filters > .search-input { flex:1; min-width:230px; }
+.freight-saved-filters .field { min-width:160px; }
+.freight-opportunities { display:grid; grid-template-columns:repeat(auto-fill,minmax(310px,1fr)); gap:20px; }
+.freight-opportunity { padding:22px; border-left:3px solid #bac7dd; }
+.freight-opportunity h2 { font-size:17px; margin-top:12px; overflow-wrap:anywhere; }
+.freight-status { display:inline-block; font-size:12px; padding:5px 9px; border-radius:6px; background:#eef2fa; color:#385987; }
+.freight-status.contacted { background:#fff4dd; color:#795415; }
+.freight-status.agreed { background:#eaf5ee; color:#2e6442; }
+.freight-status.dismissed { background:var(--surface-raised); color:var(--text-secondary); }
+.freight-agreed { border-left-color:#639775; }
+.freight-contacted { border-left-color:#c19a4c; }
+.freight-facts { margin:20px 0; }
+.freight-facts p { display:flex; gap:9px; align-items:center; font-size:13px; color:var(--text-secondary); margin:10px 0; overflow-wrap:anywhere; }
+.freight-facts svg { flex:0 0 17px; }
+.freight-facts .freight-price { color:var(--ink); font-size:20px; font-weight:600; }
+.freight-notes { color:var(--text-secondary); font-size:13px; line-height:1.7; white-space:pre-wrap; overflow-wrap:anywhere; }
+.freight-opportunity footer { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:20px; padding-top:16px; border-top:1px solid var(--line); }
+.freight-opportunity footer .danger-icon { margin-left:auto; }
+.freight-place-fields > details { border:1px solid var(--line); border-radius:8px; padding:12px 14px; margin:8px 0; }
+.freight-place-fields summary { display:flex; align-items:center; gap:8px; cursor:pointer; min-height:30px; font-size:13px; color:var(--text-secondary); }
+.freight-place-fields summary b { margin-left:auto; color:var(--ink); }
+.freight-place-fields .place-picker { margin-top:14px; }
+.freight-warnings { margin:18px 0; padding:16px 18px 16px 32px; border:1px solid #decda8; border-radius:8px; color:var(--ink); font-size:13px; line-height:1.8; }
+.freight-route-result { display:flex; gap:32px; margin:22px 0 12px; flex-wrap:wrap; }
+.freight-route-result small { display:block; color:var(--text-secondary); font-size:12px; }
+.freight-route-result b { display:block; margin-top:6px; font-size:24px; color:var(--ink); }
+.freight-review > .muted { font-size:12px; line-height:1.7; margin:14px 0 24px; }
+.freight-estimate,.freight-draft { border-top:1px solid var(--line); padding-top:24px; margin-top:24px; }
+.freight-estimate h3,.freight-draft h3 { display:flex; gap:9px; align-items:center; font-size:16px; margin-bottom:20px; }
+.freight-estimate .review-finance { margin-top:20px; font-size:13px; }
+.freight-draft textarea { width:100%; min-height:130px; line-height:1.7; margin:16px 0; }
+.freight-draft .field { max-width:240px; }
+:root[data-theme=dark] .freight-status { background:#263c5b; color:#cee0ff; }
+:root[data-theme=dark] .freight-status.agreed { background:#244534; color:#c0e5cc; }
+:root[data-theme=dark] .freight-status.contacted { background:#483b25; color:#ead3a6; }
+@media(max-width:900px) { .freight-search-layout { grid-template-columns:minmax(0,1fr); } }
+@media(max-width:650px) {
+  .freight-opportunities { grid-template-columns:minmax(0,1fr); }
+  .freight-search-form { padding:0 18px 20px; }
+  .freight-saved-filters > .search-input { flex-basis:100%; }
+  .freight-saved-filters > .field { min-width:0; flex:1; }
+  .freight-estimate .review-finance > div { flex-wrap:wrap; }
+}
+
+.freight-place-fields { grid-column:1/-1; }

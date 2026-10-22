@@ -1,3 +1,4 @@
+import type { FreightOpportunity } from '../../domain/freight.ts';
 import { createSeed } from '../../data/seed.ts';
 import { createWorkspace, type ReviewSnapshot } from '../../domain/workspace.ts';
 import { moduleCatalog, type ModuleId } from '../../domain/modules.ts';
@@ -22,7 +23,7 @@ export interface DemoState {
   version: 1; generation: number; companies: DemoCompany[]; accounts: DemoAccount[]; sessions: DemoSession[];
   photos: DemoPhoto[];
   reminders: { id: string; companyId: string; vehicle_id: string; title: string; due_date: string; done: number }[];
-  opportunities: { id: string; companyId: string; title: string; url: string; notes: string; created_at: string }[];
+  opportunities: (Omit<FreightOpportunity, 'details'> & { companyId: string; details?: FreightOpportunity['details'] })[];
   backups: { id: string; companyId: string; revision: number; created_at: string; snapshot: ReviewSnapshot }[];
 }
 export interface DemoStorage {

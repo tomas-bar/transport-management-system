@@ -91,3 +91,12 @@ span.plate > b.plate-number {
   .app-toast .app-toast-message { font-size: 15px; }
 }
 @media print { .app-toast { display: none; } }
+.notification-group-summary .notification-preview,
+.notification-group-summary > small,
+.notification-group-reference,
+.notification-event p,
+.notification-event small { color: #53657f; }
+.notification-event p { font-size: 13px; }
+.notification-groups.compact .notification-group-summary > b { font-size: 14px; }
+.notification-groups.compact .notification-preview { font-size: 13px; }
+:root[data-theme=dark] :is(.notification-group-summary .notification-preview,.notification-group-summary > small,.notification-group-reference,.notification-event p,.notification-event small) { color: #b3c2d8; }

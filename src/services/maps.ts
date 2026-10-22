@@ -26,6 +26,20 @@ export async function roadRoute(
   if (data.code !== "Ok" || !data.routes?.[0])
     throw new Error("Kelių maršrutas nerastas.");
   const r = data.routes[0];
+  const validCoordinates = Array.isArray(r.geometry?.coordinates)
+    && r.geometry.coordinates.length >= 2
+    && r.geometry.coordinates.every((point: unknown) => Array.isArray(point)
+      && point.length >= 2
+      && point.slice(0, 2).every((value: unknown) => typeof value === 'number' && Number.isFinite(value))
+      && Math.abs(point[0]) <= 180
+      && Math.abs(point[1]) <= 90);
+  if (
+    typeof r.distance !== 'number' || !Number.isFinite(r.distance) || r.distance < 0
+    || typeof r.duration !== 'number' || !Number.isFinite(r.duration) || r.duration < 0
+    || !validCoordinates
+  ) {
+    throw new Error('Maršrutų paslauga grąžino netinkamus duomenis.');
+  }
   const result = {
     distance: r.distance,
     duration: r.duration,

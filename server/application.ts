@@ -1,3 +1,4 @@
+import { validateOpportunity, freightDetails } from '../src/domain/freight.ts';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFileSync, existsSync, statSync } from 'node:fs';
 import { resolve, extname, sep } from 'node:path';
@@ -147,7 +148,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
     const unsafe = !['GET', 'HEAD', 'OPTIONS'].includes(method);
     if (path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
     if (unsafe) requireThat(req.headers.origin === origin.origin && req.headers['sec-fetch-site'] !== 'cross-site', 403, 'Užklausa iš kitos svetainės neleidžiama.');
-    if (path === '/api/health' && method === 'GET') return json(res, 200, { ok: true, schema: 2 });
+    if (path === '/api/health' && method === 'GET') return json(res, 200, { ok: true, schema: 3 });
     if (path === '/api/login' && method === 'POST') {
       const input = await body(req), email = emailAddress(input.email);
       db.prepare('DELETE FROM login_limits WHERE started_at<?').run(now() - 24 * 60 * 60 * 1000);
@@ -302,7 +303,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
           }
           // A restore may disable a driver whose operational record was removed.
           db.prepare('DELETE FROM sessions WHERE account_id IN (SELECT id FROM accounts WHERE company_id=? AND member_id NOT IN (SELECT value FROM json_each(?)))').run(companyId, JSON.stringify(next.workspace.users.filter(u => u.active).map(u => u.id)));
-          audit('workspace.' + command.type, command.type==='user'?command.user.id:command.type==='driver'||command.type==='finance'?command.command.tripId:'');
+          audit('workspace.' + command.type, command.type==='user'?command.user.id:command.type==='driver'||command.type==='finance'?command.command.tripId:command.type==='reviewTrip'||command.type==='repeatTrip'?command.input.tripId:'');
         });
         return json(res, 200, payload(account, session));
       }
@@ -368,7 +369,24 @@ export function createApplication(options: { dbPath: string; distPath: string; o
         const reminders = path === '/api/reminders', table = reminders ? 'reminders' : 'opportunities';
         moduleAccess(companyId, user, reminders ? 'maintenance' : 'freight');
         requireThat(user.role === 'admin' || user.role === 'dispatcher', 403, 'Prieiga nesuteikta.');
-        if (method === 'GET') return json(res, 200, db.prepare(`SELECT * FROM ${table} WHERE company_id=?`).all(companyId!));
+        if (method === 'GET') {
+          const rows = db.prepare(`SELECT * FROM ${table} WHERE company_id=?`).all(companyId!);
+          return json(res, 200, reminders ? rows : rows.map(row => ({ id: row.id, revision: row.revision, title: row.title, url: row.url, notes: row.notes, created_at: row.created_at, details: freightDetails(JSON.parse(String(row.details))) })));
+        }
+        if (!reminders && method === 'PUT') {
+          const input = await readBody(), id = text(input.id, 100);
+          const value = validateOpportunity(input, store.snapshot(companyId!).snapshot.db);
+          const previous = db.prepare('SELECT details,revision FROM opportunities WHERE company_id=? AND id=?').get(companyId!, id);
+          requireThat(previous, 404, 'Galimybė nerasta.');
+          requireThat(input.revision === previous.revision, 409, 'Pasiūlymas pakeistas kitame lange. Atnaujinkite sąrašą.');
+          if (!JSON.parse(company(companyId!).modules).includes('finance')) requireThat(value.details.price === freightDetails(JSON.parse(String(previous.details))).price, 403, 'Finansų modulis išjungtas.');
+          store.transaction(() => {
+            const updated = db.prepare('UPDATE opportunities SET title=?,url=?,notes=?,details=?,revision=revision+1 WHERE company_id=? AND id=? AND revision=?').run(value.title, value.url, value.notes, JSON.stringify(value.details), companyId!, id, input.revision);
+            requireThat(updated.changes === 1, 409, 'Pasiūlymas pakeistas kitame lange. Atnaujinkite sąrašą.');
+            audit('opportunities.updated', id);
+          });
+          return json(res, 200, { ok: true });
+        }
         if (method === 'POST') {
           const input = await readBody(), id = randomUUID(), title = text(input.title);
           store.transaction(() => {
@@ -377,9 +395,9 @@ export function createApplication(options: { dbPath: string; distPath: string; o
             requireThat(typeof input.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate) && Number.isFinite(Date.parse(input.dueDate+'T12:00:00Z')) && new Date(input.dueDate + 'T12:00:00Z').toISOString().slice(0, 10) === input.dueDate, 400, 'Patikrinkite datą.');
             db.prepare('INSERT INTO reminders VALUES(?,?,?,?,?,0)').run(id, companyId!, input.vehicleId, title, input.dueDate);
           } else {
-            const link = new URL(text(input.url, 2000)); requireThat(link.protocol === 'https:' && !link.username && !link.password, 400, 'Naudokite HTTPS nuorodą.');
-            const notes = typeof input.notes === 'string' && input.notes.length <= 2000 ? input.notes.trim() : '';
-            db.prepare('INSERT INTO opportunities VALUES(?,?,?,?,?,?)').run(id, companyId!, title, link.href, notes, new Date().toISOString());
+            const value = validateOpportunity(input, store.snapshot(companyId!).snapshot.db);
+            requireThat(value.details.price === null || JSON.parse(company(companyId!).modules).includes('finance'), 403, 'Finansų modulis išjungtas.');
+            db.prepare('INSERT INTO opportunities(id,company_id,title,url,notes,created_at,details) VALUES(?,?,?,?,?,?,?)').run(id, companyId!, value.title, value.url, value.notes, new Date().toISOString(), JSON.stringify(value.details));
           }
           audit(table + '.created', id); }); return json(res, 201, { id });
         }
