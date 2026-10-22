@@ -18,15 +18,20 @@ import { OrderForm } from "../components/OrderForm";
 import { csv } from "../services/export";
 export function Orders() {
   const { db, commit, busy, path } = useApp();
-  const initialOrder = db.orders.find(
-    (o) => o.id === new URLSearchParams(path.split("?")[1]).get("order"),
-  );
+  const params = new URLSearchParams(path.split("?")[1]);
+  const initialOrder = db.orders.find((o) => o.id === params.get("order"));
   const [edit, setEdit] = useState<Order | undefined>(initialOrder);
   const [form, setForm] = useState(!!initialOrder);
   const [query, setQuery] = useState("");
   const [type, setType] = useState("");
   const [status, setStatus] = useState("");
-  const [payment, setPayment] = useState("");
+  const [payment, setPayment] = useState(() => {
+    const value = params.get("payment") ?? "";
+    return ["paid", "unpaid", "unpriced"].includes(value) ? value : "";
+  });
+  const [unassigned, setUnassigned] = useState(
+    params.get("assignment") === "unassigned",
+  );
   const [sort, setSort] = useState("date");
   const [selected, setSelected] = useState<string[]>([]);
   const [assignment, setAssignment] = useState(false);
@@ -40,12 +45,16 @@ export function Orders() {
             .includes(query.toLocaleLowerCase("lt"))) &&
         (!type || o.type === type) &&
         (!status || o.status === status) &&
+        (!unassigned ||
+          (!o.tripId && ["new", "confirmed"].includes(o.status))) &&
         (!payment ||
           (payment === "paid"
             ? hasAgreedPrice(o) && o.paid >= o.price
             : payment === "unpriced"
               ? !hasAgreedPrice(o)
-              : hasAgreedPrice(o) && o.paid < o.price)),
+              : o.status !== "cancelled" &&
+                hasAgreedPrice(o) &&
+                o.paid < o.price)),
     )
     .sort((a, b) =>
       sort === "price"
@@ -121,6 +130,11 @@ export function Orders() {
       </div>
       <Panel>
         <div className="toolbar">
+          {unassigned && (
+            <Button variant="secondary" onClick={() => setUnassigned(false)}>
+              Nepriskirti reisui <X size={14} />
+            </Button>
+          )}
           <SearchInput
             value={query}
             onChange={setQuery}

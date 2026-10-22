@@ -9,7 +9,6 @@ import {
   Wallet,
   CalendarDays,
   Clock3,
-  Truck,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -58,6 +57,7 @@ export function Overview() {
       .reduce((s, o) => s + o.quantity, 0),
   };
   const finances = totals(activeOrders);
+  const outstandingPayments = totals(db.orders).balance;
   const days = Array.from({ length: 7 }, (_, i) => {
     const date = new Date(today() + "T12:00:00");
     date.setDate(date.getDate() - ((date.getDay() + 6) % 7) + i + week * 7);
@@ -110,7 +110,7 @@ export function Overview() {
           value={waiting.length.toString().padStart(2, "0")}
           icon={<Clock3 size={19} />}
           detail={
-            <button onClick={() => navigate("orders")}>
+            <button onClick={() => navigate("orders?assignment=unassigned")}>
               Peržiūrėti užsakymus <ArrowUpRight size={14} />
             </button>
           }
@@ -275,42 +275,44 @@ export function Overview() {
           )}
         </Panel>
         <Panel title="Neatlikti veiksmai" className="attention-panel">
-          <button className="attention-item" onClick={() => navigate("orders")}>
-            <span className="attention-icon amber">
-              <Package size={19} />
-            </span>
-            <span>
-              <b>{waiting.length} nepriskirti užsakymai</b>
-            </span>
-            <ArrowUpRight size={17} />
-          </button>
-          <button
-            className="attention-item"
-            onClick={() => navigate("finances")}
-          >
-            <span className="attention-icon teal">
-              <Wallet size={19} />
-            </span>
-            <span>
-              <b>{money(totals(db.orders).balance)} laukiama mokėjimų</b>
-            </span>
-            <ArrowUpRight size={17} />
-          </button>
-          <button
-            className="attention-item"
-            onClick={() => navigate("vehicles")}
-          >
-            <span className="attention-icon blue">
-              <Truck size={19} />
-            </span>
-            <span>
-              <b>
-                {db.vehicles.filter((v) => v.status === "active").length}{" "}
-                aktyvios transporto priemonės
-              </b>
-            </span>
-            <ArrowUpRight size={17} />
-          </button>
+          {waiting.length > 0 && (
+            <button
+              className="attention-item"
+              onClick={() => navigate("orders?assignment=unassigned")}
+            >
+              <span className="attention-icon amber">
+                <Package size={19} />
+              </span>
+              <span>
+                <b>Nepriskirti užsakymai: {waiting.length}</b>
+              </span>
+              <ArrowUpRight size={17} />
+            </button>
+          )}
+          {outstandingPayments > 0 && (
+            <button
+              className="attention-item"
+              onClick={() => navigate("orders?payment=unpaid")}
+            >
+              <span className="attention-icon teal">
+                <Wallet size={19} />
+              </span>
+              <span>
+                <b>Laukiama mokėjimų: {money(outstandingPayments)}</b>
+              </span>
+              <ArrowUpRight size={17} />
+            </button>
+          )}
+          {waiting.length === 0 && outstandingPayments === 0 && (
+            <div className="attention-item">
+              <span className="attention-icon blue">
+                <Check size={19} />
+              </span>
+              <span>
+                <b>Neatliktų veiksmų nėra</b>
+              </span>
+            </div>
+          )}
         </Panel>
       </div>
       {tripForm && <TripForm onClose={() => setTripForm(false)} />}{" "}
