@@ -1,3 +1,4 @@
+import { routeVisits } from '../src/domain/route-plan.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -199,5 +200,69 @@ test('restoring data creates a recoverable backup without changing authenticatio
     const backups = await (await f.request('/api/backups', 'GET', undefined, auth)).json(); assert.equal(backups.length, 1);
     const old = await (await f.request('/api/backups/' + backups[0].id, 'GET', undefined, auth)).json();
     assert.equal(old.db.settings.company, auth.data.snapshot.db.settings.company);
+  } finally { await f.close(); }
+});
+
+test('owner lists company memberships without credentials and explicitly enters a scoped acting session', async () => {
+  const f = await fixture();
+  try {
+    const owner = await f.login('owner@example.test');
+    const members = await f.request('/api/companies/one/users', 'GET', undefined, owner);
+    assert.equal(members.status, 200);
+    const list = await members.json();
+    assert(list.some((u: any) => u.role === 'admin' && u.hasLogin));
+    assert(list.some((u: any) => u.role === 'dispatcher'));
+    assert(list.some((u: any) => u.role === 'driver' && u.driverName));
+    assert(!JSON.stringify(list).includes('password'));
+    const admin = await f.login();
+    assert.equal((await f.request('/api/companies/two/users', 'GET', undefined, admin)).status, 403);
+    assert.equal((await f.request('/api/preview', 'POST', { id: 'user-d1', companyId: 'two', mode: 'act' }, admin)).status, 403);
+
+    const entered = await f.request('/api/preview', 'POST', { id: 'user-d1', companyId: 'one', mode: 'act' }, owner);
+    assert.equal(entered.status, 200);
+    const view = await entered.json();
+    assert.equal(view.session.returnRole, 'owner');
+    assert.equal(view.session.mode, 'act');
+    assert(view.snapshot.db.trips.every((t: any) => t.driverId === 'd1'));
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 1, command: { type: 'driver', command: { type: 'arrive', tripId: 't1', visitIndex: routeVisits(f.store.snapshot('one').snapshot.db.trips.find(t => t.id === 't1')!.stops).findIndex(v => !v.completed) } } }, owner)).status, 200);
+    assert.equal(f.store.snapshot('one').revision, 2);
+    assert.equal(f.store.snapshot('two').revision, 1);
+    const event = f.db.prepare("SELECT actor_id,effective_user_id FROM audit WHERE action='workspace.driver'").get();
+    assert.equal(event?.actor_id, 'owner');
+    assert.equal(event?.effective_user_id, 'user-d1');
+    assert.equal((await f.request('/api/profile', 'POST', { name: 'Forged' }, owner)).status, 403);
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 2, command: { type: 'commit', db: f.store.snapshot('one').snapshot.db } }, owner)).status, 400);
+    assert.equal((await f.request('/api/companies', 'GET', undefined, owner)).status, 403);
+    const returned = await f.request('/api/preview', 'POST', { id: null }, owner);
+    assert.equal((await returned.json()).user.role, 'owner');
+    assert.equal((await f.request('/api/session', 'GET', undefined, owner)).status, 200);
+  } finally { await f.close(); }
+});
+
+test('acting preview retains driver permission limits and cannot change account credentials', async () => {
+  const f = await fixture();
+  try {
+    const admin = await f.login();
+    assert.equal((await f.request('/api/preview', 'POST', { id: 'user-d1', mode: 'act' }, admin)).status, 200);
+    const denied = await f.request('/api/commands', 'POST', { revision: 1, command: { type: 'finance', command: { type: 'receipt', tripId: 't1', orderId: 'o1', amount: 100, method: 'cash' } } }, admin);
+    assert.equal(denied.status, 400);
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 1, command: { type: 'user', user: f.store.snapshot('one').snapshot.workspace.users[0] } }, admin)).status, 403);
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 1, command: { type: 'preference', enabled: false } }, admin)).status, 200);
+    assert.equal(f.store.snapshot('one').snapshot.workspace.preferences['user-d1'].inApp, false);
+    assert.notEqual(f.store.snapshot('one').snapshot.workspace.preferences.admin?.inApp, false);
+  } finally { await f.close(); }
+});
+
+test('an owner can leave an unavailable preview without gaining permission to mutate a disabled company', async () => {
+  const f = await fixture();
+  try {
+    const owner = await f.login('owner@example.test');
+    assert.equal((await f.request('/api/preview', 'POST', { id: 'admin', companyId: 'one', mode: 'act' }, owner)).status, 200);
+    f.db.prepare("UPDATE companies SET active=0 WHERE id='one'").run();
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 1, command: { type: 'read' } }, owner)).status, 403);
+    const restored = await f.request('/api/session', 'GET', undefined, owner);
+    assert.equal((await restored.json()).user.role, 'owner');
+    assert.equal(f.store.snapshot('one').revision, 1);
+    assert.equal((await f.request('/api/preview', 'POST', { id: null }, owner)).status, 200);
   } finally { await f.close(); }
 });

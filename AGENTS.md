@@ -18,7 +18,7 @@ This is a transport management product for small passenger and parcel operators.
 - PDF templates are data-driven A4 documents in `src/services/pdf`, independent of the selected UI tab or viewport. Operational documents exclude financial data. Verify generated PDFs with embedded fonts and pagination before delivery.
 
 - Anchor the runtime data ignore rule as `/data/`. Never ignore `src/data/`; seed data and compatibility migrations must be included in the source repository and downloadable package.
-- Keep environment overrides, runtime data and hosting identity out of clean GitHub imports. `.env.server` is tracked public build configuration and must never contain secrets. Run the checks listed in `CONTRIBUTING.md` before submitting changes; keep the CI workflow aligned with those commands. Do not select a project license on the owner's behalf.
+- Keep environment overrides, runtime data and hosting identity out of clean GitHub imports. `.env.server` is tracked public build configuration and must never contain secrets. Run the checks listed in `README.md` before submitting changes; keep the CI workflow aligned with those commands. Do not select a project license on the owner's behalf.
 
 - Keep phone trip statuses visible in the card view. Desktop tables and mobile cards must use the same filtered records.
 - Use `visitTasks` for optional passenger/parcel and pickup/delivery markers. Operational map details exclude financial data. Keep map controls outside the viewport and enable direct touch dragging and pinch zoom as requested; keep controls outside the map viewport.
@@ -35,3 +35,5 @@ This is a transport management product for small passenger and parcel operators.
 
 - Server commands: `npm run check:server`, `npm run build:server`, `npm run server`, `npm run dev:server`. Read `docs/SECURITY.md` before changing session, company or upload behavior. Never expose a server-mode build without its API.
 - Cloud tasks are already isolated. Use the existing checkout; do not create a Git worktree unless explicitly requested.
+
+- User preview is read-only by default. Acting mode requires explicit selection, stays within the effective user permissions, and retains the real account in server audit. Owners enter a company explicitly; company administrators cannot cross companies. Preserve return navigation and the separation from account credential changes.

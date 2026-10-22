@@ -1,5 +1,6 @@
+import { Toast } from './components/Feedback';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AlertCircle, CheckCircle2, X } from 'lucide-react';
+
 import { AppContext, type Context } from './context';
 import { api, ApiError, demoRuntime, setCsrf, type ServerSession } from './services/server-api';
 import { createEmptyDatabase, createSeed } from './data/seed';
@@ -36,7 +37,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     window.addEventListener('hashchange', changed); window.addEventListener('krypta-session-ended', ended);
     return () => { window.removeEventListener('hashchange', changed); window.removeEventListener('krypta-session-ended', ended); };
   }, []);
-  useEffect(() => { if (!toast) return; const id = setTimeout(() => setToast(null), 6500); return () => clearTimeout(id); }, [toast]);
+  useEffect(() => { if (!toast || toast.error) return; const id = setTimeout(() => setToast(null), 6500); return () => clearTimeout(id); }, [toast]);
   async function run(action: () => Promise<void>, message?: string) {
     if (lock.current) return false;
     lock.current = true; setBusy(true);
@@ -59,8 +60,8 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     },
     quickLogin: () => {},
     logout: () => { void run(async () => { try { await api('/api/logout', 'POST', {}); } catch (e) { if (!(e instanceof ApiError && e.status === 401)) throw e; } accept(null); navigate('overview'); }); },
-    previewUser: id => { void run(async () => { const session = await api<ServerSession>('/api/preview', 'POST', { id }); accept(session); navigate(home(session.user.role)); }); },
-    returnToAdmin: () => { void run(async () => { accept(await api<ServerSession>('/api/preview', 'POST', { id: null })); navigate('users'); }); },
+    previewUser: (id, options = {}) => { void run(async () => { const session = await api<ServerSession>('/api/preview', 'POST', { id, ...options }); accept(session); navigate(home(session.user.role)); }); },
+    returnToAdmin: () => { void run(async () => { const session = await api<ServerSession>('/api/preview', 'POST', { id: null }); accept(session); navigate(session.user.role === 'owner' ? 'platform' : 'users'); }); },
     commit: (mutate, message = 'Pakeitimai išsaugoti') => {
       const data = structuredClone(current.current!.snapshot!.db);
       try { mutate(data); } catch (e) { notify(String((e as Error).message), true); return Promise.resolve(false); }
@@ -76,5 +77,5 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   };
   if (loading) return <div className="loading"><p>Ruošiama darbo erdvė...</p></div>;
   if (error) return <div className="boot-error"><h1>{demoRuntime ? 'Nepavyko atidaryti saugyklos' : 'Nepavyko prisijungti prie serverio'}</h1><p>{error}</p><Button onClick={() => location.reload()}>Bandyti dar kartą</Button></div>;
-  return <AppContext.Provider value={value}>{children}{toast && <div className={`toast ${toast.error ? 'error' : ''}`} role={toast.error ? 'alert' : 'status'}>{toast.error ? <AlertCircle /> : <CheckCircle2 />}<span>{toast.text}</span><button aria-label="Uždaryti pranešimą" onClick={() => setToast(null)}><X size={18}/></button></div>}</AppContext.Provider>;
+  return <AppContext.Provider value={value}>{children}{toast && <Toast message={toast.text} error={toast.error} onClose={() => setToast(null)} />}</AppContext.Provider>;
 }

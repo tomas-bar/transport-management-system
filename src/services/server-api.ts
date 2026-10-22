@@ -1,12 +1,13 @@
 import type { ModuleId } from '../domain/modules';
 import type { ReviewSnapshot, WorkspaceUser } from '../domain/workspace';
+import type { WorkspaceSession } from '../domain/access';
 export const serverRuntime = import.meta.env?.VITE_RUNTIME === 'server';
 export const demoRuntime = import.meta.env?.VITE_RUNTIME === 'demo';
 import { ApiError } from './api-error';
 export { ApiError } from './api-error';
 export interface ServerSession {
   user: WorkspaceUser;
-  session: { userId: string; returnTo?: string };
+  session: WorkspaceSession;
   csrf: string;
   modules: ModuleId[];
   revision?: number;

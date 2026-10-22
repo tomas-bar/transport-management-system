@@ -11,7 +11,7 @@ export class Store {
     if (path !== ':memory:') chmodSync(path, 0o600);
     this.db.exec('PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;');
     const version = Number((this.db.prepare('PRAGMA user_version').get() as { user_version: number }).user_version);
-    if (version > 1) throw new Error('The database was created by a newer server.');
+    if (version > 2) throw new Error('The database was created by a newer server.');
     if (version === 0) this.transaction(() => {
       this.db.exec(`
         CREATE TABLE companies (id TEXT PRIMARY KEY, name TEXT NOT NULL, modules TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1) STRICT;
@@ -29,6 +29,14 @@ export class Store {
         PRAGMA user_version=1;
       `);
     });
+    if (version < 2) this.transaction(() => {
+      this.db.exec(`
+        ALTER TABLE sessions ADD COLUMN preview_company_id TEXT REFERENCES companies(id);
+        ALTER TABLE sessions ADD COLUMN preview_mode TEXT NOT NULL DEFAULT 'read' CHECK(preview_mode IN ('read','act'));
+        ALTER TABLE audit ADD COLUMN effective_user_id TEXT;
+        PRAGMA user_version=2;
+      `);
+    });
   }
   transaction<T>(run: () => T): T {
     this.db.exec('BEGIN IMMEDIATE');
@@ -40,8 +48,8 @@ export class Store {
     if (!row) throw new Error('Įmonė nerasta.');
     return { snapshot: JSON.parse(row.data), revision: row.revision };
   }
-  audit(companyId: string | null, actorId: string | null, action: string, entityId = '') {
-    this.db.prepare('INSERT INTO audit(company_id,actor_id,action,entity_id,created_at) VALUES(?,?,?,?,?)').run(companyId, actorId, action, entityId, new Date().toISOString());
+  audit(companyId: string | null, actorId: string | null, action: string, entityId = '', effectiveUserId: string | null = null) {
+    this.db.prepare('INSERT INTO audit(company_id,actor_id,action,entity_id,created_at,effective_user_id) VALUES(?,?,?,?,?,?)').run(companyId, actorId, action, entityId, new Date().toISOString(), effectiveUserId);
   }
   close() { this.db.close(); }
 }

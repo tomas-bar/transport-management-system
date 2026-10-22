@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/Feedback';
 import {TripPhotos} from '../components/OrderPhotos';
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Clock3, MapPin, Package, Play, Truck, UserRound, Navigation, ChevronDown, Users, Undo2 } from 'lucide-react';
@@ -11,6 +12,7 @@ import { routeVisits, visitTasks } from '../domain/route-plan';
 import type { Trip } from '../domain/models';
 
 export function DriverWorkspace({id}:{id?:string}) {
+  const confirm = useConfirm();
   const {db,user,navigate,driverCommand,busy,workspace}=useApp();
   const [history,setHistory]=useState(false);
   const [showMap,setShowMap]=useState(false);
@@ -43,7 +45,7 @@ export function DriverWorkspace({id}:{id?:string}) {
           :singleTask&&taskReady?<Button disabled={busy} onClick={()=>driverCommand({type:'task',tripId:trip.id,orderId:singleTask.orderId,kind:singleTask.kind})}><Check size={18}/>{singleTask.kind==='pickup'?'Paėmiau':'Pristačiau'}</Button>
           :pendingTasks.length>0?<Button onClick={scrollToVisit}>Užduotys ({pendingTasks.length})<ArrowRight size={18}/></Button>
           :next>=0?<Button disabled={busy} onClick={()=>driverCommand({type:'arrive',tripId:trip.id,visitIndex:next})}><MapPin size={18}/>Atvykau</Button>
-          :<Button disabled={busy||unfinished.length>0} onClick={()=>{if(confirm('Užbaigti šį reisą?'))driverCommand({type:'finish',tripId:trip.id});}}><CheckCircle2 size={18}/>Užbaigti reisą</Button>}
+          :<Button disabled={busy||unfinished.length>0} onClick={async ()=>{if(await confirm('Užbaigti šį reisą?'))driverCommand({type:'finish',tripId:trip.id});}}><CheckCircle2 size={18}/>Užbaigti reisą</Button>}
       </div>}
       <div className="driver-section-heading"><h2>Sustojimai ir užduotys</h2><button className="text-link" onClick={()=>setShowMap(!showMap)}><MapPin size={17}/>{showMap?'Slėpti žemėlapį':'Rodyti žemėlapį'}<ChevronDown size={15}/></button></div>
       {showMap&&<div className="panel driver-map"><MapView stops={trip.stops}/></div>}
@@ -61,12 +63,12 @@ export function DriverWorkspace({id}:{id?:string}) {
             return <div className={`driver-task ${done?'done':''}`} key={task.stopId}>
               <span className={`task-symbol ${task.kind}`}>{task.type==='passenger'?<UserRound size={20}/>:<Package size={20}/>}</span>
               <div><span className="task-kind">{task.kind==='pickup'?'Paėmimas':'Pristatymas'} · {task.type==='passenger'?'Keleiviai':'Siuntos'}: {task.quantity}</span><b>{task.name}</b>{task.phone&&<small>{task.phone}</small>}</div>
-              {done?<div className="task-result"><span className="task-done"><Check size={16}/>Atlikta</span>{canUndo&&<button className="undo-action" disabled={busy} onClick={()=>{if(confirm('Atšaukti šį patvirtinimą?'))driverCommand({type:'undoTask',tripId:trip.id,confirmationId:event!.id});}}><Undo2 size={14}/>Atšaukti</button>}</div>
+              {done?<div className="task-result"><span className="task-done"><Check size={16}/>Atlikta</span>{canUndo&&<button className="undo-action" disabled={busy} onClick={async ()=>{if(await confirm('Atšaukti šį patvirtinimą?'))driverCommand({type:'undoTask',tripId:trip.id,confirmationId:event!.id});}}><Undo2 size={14}/>Atšaukti</button>}</div>
                 :!closed&&<Button variant="secondary" disabled={busy||!allowed} title={task.kind==='delivery'&&!confirmation(task.orderId,'pickup')?'Pirmiausia patvirtinkite paėmimą':index!==next&&!visit.completed?'Laukia ankstesnių sustojimų':undefined} onClick={()=>driverCommand({type:'task',tripId:trip.id,orderId:task.orderId,kind:task.kind})}>{task.kind==='pickup'?'Paėmiau':'Pristačiau'}</Button>}
             </div>;
           })}</div>}
           {index===next&&trip.status==='active'&&<div className="visit-action"><a target="_blank" rel="noreferrer" className="button secondary" href={`https://www.google.com/maps/dir/?api=1&destination=${visit.place.lat},${visit.place.lng}&travelmode=driving`}><Navigation size={17}/>Naviguoti</a><Button variant={tasks.length?'secondary':'primary'} disabled={busy} onClick={()=>driverCommand({type:'arrive',tripId:trip.id,visitIndex:index})}><MapPin size={17}/>Atvykau</Button></div>}
-          {canUndoArrival&&<button className="undo-action undo-arrival" disabled={busy} onClick={()=>{if(confirm('Atšaukti atvykimo patvirtinimą?'))driverCommand({type:'undoArrival',tripId:trip.id,visitIndex:index});}}><Undo2 size={14}/>Atšaukti atvykimą</button>}
+          {canUndoArrival&&<button className="undo-action undo-arrival" disabled={busy} onClick={async ()=>{if(await confirm('Atšaukti atvykimo patvirtinimą?'))driverCommand({type:'undoArrival',tripId:trip.id,visitIndex:index});}}><Undo2 size={14}/>Atšaukti atvykimą</button>}
         </article>;
       })}</div>
       <TripPhotos tripId={trip.id}/><TripFinance tripId={trip.id} driverMode/>

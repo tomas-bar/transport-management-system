@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/Feedback';
 import {ReceiptJournal} from '../components/ReceiptJournal';
 import { PdfMenu } from "../components/PdfMenu";
 import { useState } from "react";
@@ -31,6 +32,7 @@ import { OrderForm } from "../components/OrderForm";
 import { today, totals, money, dateLabel, uid } from "../domain/logic";
 import { csv } from "../services/export";
 export function Finances() {
+  const confirm = useConfirm();
   const { db, commit, busy } = useApp();
   const [from, setFrom] = useState(today().slice(0, 7) + "-01");
   const [to, setTo] = useState(() => {
@@ -302,8 +304,8 @@ export function Finances() {
                               aria-label={`Ištrinti išlaidas ${e.description}`}
                               onClick={async () => {
                                 if (
-                                  confirm(
-                                    "Ištrinti šį išlaidų įrašą? Veiksmą galėsite atšaukti pranešime.",
+                                  await confirm(
+                                    "Ištrinti šį išlaidų įrašą? Šis įrašas bus pašalintas.",
                                   )
                                 )
                                   await commit((d) => {

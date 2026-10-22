@@ -1,3 +1,4 @@
+import { readOnlySession } from '../domain/access';
 import {useEffect,useRef,useState} from 'react';
 import {Bell,Route,Wallet,MapPin,ArrowUpRight,ArrowDownRight,Undo2,ReceiptText,CheckCheck,ChevronDown,ArrowRight,ClipboardList} from 'lucide-react';
 import {useApp} from '../context';
@@ -22,7 +23,7 @@ export function NotificationGroups({compact=false,unreadOnly=false}:{compact?:bo
      return <section key={group.key} className={`notification-group ${group.unread?'has-unread':''}`}>
        <button className="notification-group-toggle" aria-expanded={open} onClick={()=>{
          setExpanded(open?expanded.filter(key=>key!==group.key):[...expanded,group.key]);
-         if(!open&&group.unread&&!session?.returnTo)void readNotifications(group.events.map(e=>e.id));
+         if(!open&&group.unread&&!readOnlySession(session))void readNotifications(group.events.map(e=>e.id));
        }}>
          <span className={`notification-group-icon ${latest.entity.type==='finance'?'finance':''}`}>{latest.entity.type==='finance'?<Wallet size={20}/>:latest.entity.type==='order'?<ClipboardList size={20}/>:<Route size={20}/>}</span>
          <span className="notification-group-summary"><span className="notification-group-reference">{group.reference||'Įmonės veikla'}{group.status&&<Badge status={group.status}/>}</span><b>{group.title}</b>{group.driverName&&<small>{group.driverName}</small>}<span className="notification-preview">{latest.title}</span><small>{formatTime(latest.createdAt)} · Įvykių: {group.events.length}</small></span>
@@ -32,9 +33,9 @@ export function NotificationGroups({compact=false,unreadOnly=false}:{compact?:bo
          {group.events.map(event=>{const {Icon,activity}=eventStyle(event);const detail=notificationDetail(event,workspace,group);return <div className={`notification-event ${!event.readAt?'unread':''}`} key={event.id}>
            <span className={`event-icon ${activity}`}><Icon size={16}/></span>
            <div><b>{event.title}</b>{detail.body&&<p>{detail.body}</p>}{detail.actorName&&<small>{detail.actorName}</small>}<small>{formatTime(event.createdAt)}</small></div>
-           {!event.readAt&&<button className="event-read" aria-label="Pažymėti pranešimą perskaitytu" disabled={busy||!!session?.returnTo} onClick={()=>readNotifications(event.id)}><CheckCheck size={16}/></button>}
+           {!event.readAt&&<button className="event-read" aria-label="Pažymėti pranešimą perskaitytu" disabled={busy||readOnlySession(session)} onClick={()=>readNotifications(event.id)}><CheckCheck size={16}/></button>}
          </div>;})}
-         <div className="notification-group-footer">{group.unread>0&&<button disabled={busy||!!session?.returnTo} onClick={()=>readNotifications(group.events.map(e=>e.id))}><CheckCheck size={15}/>Perskaityta</button>}{group.path&&<button onClick={()=>navigate(group.path)}>{group.path.startsWith('trips/')||group.path.startsWith('my-trips/')?'Atidaryti reisą':'Atidaryti'}<ArrowUpRight size={15}/></button>}</div>
+         <div className="notification-group-footer">{group.unread>0&&<button disabled={busy||readOnlySession(session)} onClick={()=>readNotifications(group.events.map(e=>e.id))}><CheckCheck size={15}/>Perskaityta</button>}{group.path&&<button onClick={()=>navigate(group.path)}>{group.path.startsWith('trips/')||group.path.startsWith('my-trips/')?'Atidaryti reisą':'Atidaryti'}<ArrowUpRight size={15}/></button>}</div>
        </div>}
      </section>;
    })}
@@ -55,6 +56,6 @@ export function NotificationBell() {
  },[open]);
  return <div className="notification-anchor" ref={container}>
    <button ref={trigger} className="notification-button icon-button" aria-label={`Pranešimai, neskaitytų: ${unread}`} aria-expanded={open} aria-controls="notification-popover" onClick={()=>setOpen(!open)}><Bell size={21}/>{unread>0&&<span className="bell-count">{unread>99?'99+':unread}</span>}</button>
-   {open&&<section id="notification-popover" className="notification-popover" aria-label="Pranešimai"><header><h2>Pranešimai</h2><button disabled={busy||!unread||!!session?.returnTo} onClick={()=>readNotifications()} aria-label="Pažymėti visus perskaitytais"><CheckCheck size={19}/></button></header><div className="notification-popover-body"><NotificationGroups compact/></div><footer><button onClick={()=>navigate('notifications')}>Visi pranešimai<ArrowRight size={16}/></button></footer></section>}
+   {open&&<section id="notification-popover" className="notification-popover" aria-label="Pranešimai"><header><h2>Pranešimai</h2><button disabled={busy||!unread||readOnlySession(session)} onClick={()=>readNotifications()} aria-label="Pažymėti visus perskaitytais"><CheckCheck size={19}/></button></header><div className="notification-popover-body"><NotificationGroups compact/></div><footer><button onClick={()=>navigate('notifications')}>Visi pranešimai<ArrowRight size={16}/></button></footer></section>}
  </div>;
 }

@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/Feedback';
 import {contactWarnings} from '../domain/planning';
 import {TripPhotos} from '../components/OrderPhotos';
 import { TripFinance } from "../components/TripFinance";
@@ -50,6 +51,7 @@ import {
 import { googleMapsParts } from "../services/maps";
 import type { Order, TripStatus } from "../domain/models";
 export function TripDetail({ id }: { id: string }) {
+  const confirm = useConfirm();
   const { db, commit, navigate, busy, modules } = useApp();
   const trip = db.trips.find((t) => t.id === id);
   const [edit, setEdit] = useState(false);
@@ -82,7 +84,7 @@ export function TripDetail({ id }: { id: string }) {
   async function status(next: TripStatus) {
     if (
       (next === "completed" || next === "cancelled") &&
-      !confirm(
+      !await confirm(
         next === "completed"
           ? "Užbaigti reisą ir pažymėti jo užsakymus įvykdytais?"
           : "Atšaukti reisą? Jo užsakymai bus grąžinti į nepriskirtų užsakymų sąrašą.",

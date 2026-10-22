@@ -1,6 +1,7 @@
 import { createSeed } from '../../data/seed.ts';
 import { createWorkspace, type ReviewSnapshot } from '../../domain/workspace.ts';
 import { moduleCatalog, type ModuleId } from '../../domain/modules.ts';
+import type { PreviewMode } from '../../domain/access.ts';
 
 export interface DemoPassword { salt: string; hash: string }
 export interface DemoAccount {
@@ -8,7 +9,8 @@ export interface DemoAccount {
   password: DemoPassword; alias?: string;
 }
 export interface DemoSession {
-  id: string; accountId: string; createdAt: number; lastAt: number; device: string; previewId?: string;
+  id: string; accountId: string; createdAt: number; lastAt: number; device: string;
+  previewId?: string; previewCompanyId?: string; previewMode?: PreviewMode;
 }
 export interface DemoCompany {
   id: string; name: string; modules: ModuleId[]; active: number; revision: number; snapshot: ReviewSnapshot;

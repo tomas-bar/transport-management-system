@@ -1,3 +1,4 @@
+import { useConfirm } from './Feedback';
 import { useState } from "react";
 import type { Trip } from "../domain/models";
 import { useApp } from "../context";
@@ -11,6 +12,7 @@ export function TripForm({
   trip?: Trip;
   onClose: () => void;
 }) {
+  const confirm = useConfirm();
   const { db, commit, busy } = useApp();
   const [form, setForm] = useState<Trip>(
     trip
@@ -52,7 +54,7 @@ export function TripForm({
             trip &&
             form.status !== trip.status &&
             ["completed", "cancelled"].includes(form.status) &&
-            !confirm(
+            !await confirm(
               form.status === "completed"
                 ? "Užbaigti reisą ir jo užsakymus?"
                 : "Atšaukti reisą ir atskirti jo užsakymus?",

@@ -30,7 +30,7 @@ export function Login() {
     <form onSubmit={async e=>{e.preventDefault();setError('');if(!await login(username,password))setError('Prisijungti nepavyko. Patikrinkite duomenis ir bandykite dar kartą.');}}>
      <Field label={serverMode&&!demoRuntime?"El. paštas":"Naudotojo vardas arba el. paštas"}><input type={serverMode&&!demoRuntime?"email":"text"} placeholder={serverMode&&!demoRuntime?"vardas@imone.lt":"Naudotojo vardas"} autoComplete="username" required value={username} onChange={e=>setUsername(e.target.value)}/></Field>
      <Field label="Slaptažodis"><input type="password" placeholder="Slaptažodis" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></Field>
-     {error&&<p role="alert" className="form-error">{error}</p>}<Button type="submit" disabled={busy}>Prisijungti<ArrowRight size={18}/></Button>
+     {error&&!serverMode&&<p role="alert" className="form-error">{error}</p>}<Button type="submit" disabled={busy}>Prisijungti<ArrowRight size={18}/></Button>
     </form>
    </div>
   </section>

@@ -1,3 +1,5 @@
+import { readOnlySession } from '../domain/access';
+import { useConfirm } from './Feedback';
 import {photoStageLabels as stages} from '../domain/terminology';
 import { useEffect, useRef, useState } from 'react';
 import { Camera, ImagePlus, Trash2 } from 'lucide-react';
@@ -7,11 +9,12 @@ import { Button, Field, Modal, Panel } from './ui';
 
 interface Photo { id: string; stage: keyof typeof stages; actor_id: string; created_at: string; url?: string }
 export function OrderPhotos({ orderId }: { orderId: string }) {
+  const confirm = useConfirm();
   const { notify, user, session, workspace } = useApp();
   const [photos, setPhotos] = useState<Photo[]>([]), [stage, setStage] = useState<keyof typeof stages>('pickup');
   const [busy, setBusy] = useState(false), [selected, setSelected] = useState<Photo | null>(null);
   const input = useRef<HTMLInputElement>(null), camera = useRef<HTMLInputElement>(null);
-  const readOnly = !!session?.returnTo;
+  const readOnly = readOnlySession(session);
   const load = () => api<Photo[]>('/api/photos?order=' + encodeURIComponent(orderId)).then(setPhotos).catch(e => notify(e.message, true));
   useEffect(() => { void load(); }, [orderId]);
   async function upload(file?: File) {
@@ -24,7 +27,7 @@ export function OrderPhotos({ orderId }: { orderId: string }) {
   return <div className="order-photos"><div className="photo-controls"><Field label="Paskirtis"><select value={stage} onChange={e => setStage(e.target.value as keyof typeof stages)}>{Object.entries(stages).map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select></Field>
     <Button variant="secondary" disabled={busy || readOnly} onClick={() => camera.current?.click()}><Camera size={18}/>Nufotografuoti</Button><Button variant="secondary" disabled={busy || readOnly} onClick={() => input.current?.click()}><ImagePlus size={18}/>Pasirinkti nuotrauką</Button>
     <input hidden type="file" accept="image/jpeg,image/png,image/webp" capture="environment" ref={camera} aria-label="Fotografuoti užsakymą" onChange={e => void upload(e.target.files?.[0])}/><input hidden type="file" accept="image/jpeg,image/png,image/webp" ref={input} aria-label="Įkelti užsakymo nuotrauką" onChange={e => void upload(e.target.files?.[0])}/>
-  </div><div className="photo-grid">{photos.map(photo => <article key={photo.id}><button type="button" className="photo-open" onClick={() => setSelected(photo)} aria-label={`Atidaryti nuotrauką: ${stages[photo.stage]}`}><img loading="lazy" src={photo.url ?? '/api/photos/' + photo.id} alt={stages[photo.stage]}/></button><div><b>{stages[photo.stage]}</b><small>{new Intl.DateTimeFormat('lt-LT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(photo.created_at))}</small><small>{workspace.users.find(u => u.id === photo.actor_id)?.name}</small></div>{!readOnly && (user?.role !== 'driver' || photo.actor_id === user.id) && <button type="button" className="text-link" disabled={busy} onClick={async () => { if (!confirm('Ištrinti šią nuotrauką?')) return; try { await api('/api/photos/' + photo.id, 'DELETE'); await load(); } catch (e) { notify((e as Error).message, true); } }}><Trash2 size={16}/>Ištrinti</button>}</article>)}</div>{!photos.length && <p className="inline-empty">Nuotraukų nėra.</p>}
+  </div><div className="photo-grid">{photos.map(photo => <article key={photo.id}><button type="button" className="photo-open" onClick={() => setSelected(photo)} aria-label={`Atidaryti nuotrauką: ${stages[photo.stage]}`}><img loading="lazy" src={photo.url ?? '/api/photos/' + photo.id} alt={stages[photo.stage]}/></button><div><b>{stages[photo.stage]}</b><small>{new Intl.DateTimeFormat('lt-LT', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(photo.created_at))}</small><small>{workspace.users.find(u => u.id === photo.actor_id)?.name}</small></div>{!readOnly && (user?.role !== 'driver' || photo.actor_id === user.id) && <button type="button" className="text-link" disabled={busy} onClick={async () => { if (!(await confirm('Ištrinti šią nuotrauką?'))) return; try { await api('/api/photos/' + photo.id, 'DELETE'); await load(); } catch (e) { notify((e as Error).message, true); } }}><Trash2 size={16}/>Ištrinti</button>}</article>)}</div>{!photos.length && <p className="inline-empty">Nuotraukų nėra.</p>}
     {selected && <Modal title={stages[selected.stage]} onClose={() => setSelected(null)}><div className="modal-body"><img className="photo-expanded" src={selected.url ?? '/api/photos/' + selected.id} alt={stages[selected.stage]}/></div></Modal>}
   </div>;
 }

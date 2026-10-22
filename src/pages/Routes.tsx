@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/Feedback';
 import { useState } from "react";
 import {
   Plus,
@@ -25,6 +26,7 @@ import { StopEditor } from "../components/StopEditor";
 import { googleMapsParts } from "../services/maps";
 import { uid } from "../domain/logic";
 export function Routes() {
+  const confirm = useConfirm();
   const { db, commit, busy } = useApp();
   const [query, setQuery] = useState("");
   const [type, setType] = useState("");
@@ -158,7 +160,7 @@ export function Routes() {
                   variant="ghost"
                   onClick={async () => {
                     if (
-                      confirm(
+                      await confirm(
                         "Archyvuoti maršruto šabloną? Esamų reisų sustojimai išliks.",
                       )
                     )

@@ -47,20 +47,26 @@ export class DemoApi {
     requireThat(session, 401, 'Prisijunkite iš naujo.');
     const account = state.accounts.find(a => a.id === session.accountId);
     requireThat(account, 401, 'Prisijunkite iš naujo.');
-    if (!account.companyId) return { account, session, user: { id: account.id, companyId: '', name: account.name, email: account.email, role: 'owner', active: true, driverId: '' } };
-    const company = state.companies.find(c => c.id === account.companyId);
+    if (!account.companyId && !session.previewId) {
+      return { account, session, user: { id: account.id, companyId: '', name: account.name, email: account.email, role: 'owner', active: true, driverId: '' } };
+    }
+    if (account.companyId) {
+      const original = state.companies.find(c => c.id === account.companyId);
+      const actual = original?.snapshot.workspace.users.find(u => u.id === account.memberId && u.active);
+      requireThat(original?.active && actual, 401, 'Prisijunkite iš naujo.');
+      requireThat(!session.previewId || actual.role === 'admin' && (!session.previewCompanyId || session.previewCompanyId === account.companyId), 403, 'Naudotojo peržiūra neleidžiama.');
+    }
+    const company = state.companies.find(c => c.id === (session.previewId ? session.previewCompanyId ?? account.companyId : account.companyId));
     requireThat(company?.active, 403, 'Įmonės prieiga išjungta.');
-    const actual = company.snapshot.workspace.users.find(u => u.id === account.memberId && u.active);
-    requireThat(actual, 401, 'Prisijunkite iš naujo.');
-    const user = session.previewId ? company.snapshot.workspace.users.find(u => u.id === session.previewId && u.active) : actual;
-    requireThat(user && (!session.previewId || actual.role === 'admin'), 403, 'Naudotojo peržiūra neleidžiama.');
+    const user = company.snapshot.workspace.users.find(u => u.id === (session.previewId ?? account.memberId) && u.active);
+    requireThat(user, 401, 'Prisijunkite iš naujo.');
     return { account, session, company, user };
   }
   private payload(state: DemoState): ServerSession {
     const { user, session, account, company } = this.identity(state);
     return {
       user: structuredClone(user), csrf: '', modules: company?.modules ?? [],
-      session: { userId: user.id, ...(session.previewId ? { returnTo: account.memberId } : {}) },
+      session: { userId: user.id, ...(session.previewId ? { returnTo: account.memberId || account.id, returnRole: account.companyId ? 'admin' as const : 'owner' as const, actorName: account.name, mode: session.previewMode ?? 'read' } : {}) },
       revision: company?.revision, snapshot: company ? projectSnapshot(structuredClone(company.snapshot), user) : null,
     };
   }
@@ -85,9 +91,23 @@ export class DemoApi {
       try { const result = this.payload(state); await save(); return result; }
       catch (error) { this.session.set(old); throw error; }
     }
-    const { account, session, company, user } = this.identity(state);
+    let access: Identity;
+    try { access = this.identity(state); }
+    catch (error) {
+      const expired = state.sessions.find(s => s.id === this.session.get());
+      if (!expired?.previewId || !(method === 'GET' || ['/api/preview', '/api/logout'].includes(endpoint))) throw error;
+      expired.previewId = undefined;
+      expired.previewCompanyId = undefined;
+      expired.previewMode = 'read';
+      access = this.identity(state);
+      if (method === 'GET') await save();
+    }
+    const { account, session, company, user } = access;
     const unsafe = method !== 'GET';
-    if (unsafe && session.previewId && !['/api/preview', '/api/logout'].includes(endpoint)) throw new ApiError(403, 'Peržiūros režimu pakeitimai neleidžiami.');
+    if (unsafe && session.previewId && !['/api/preview', '/api/logout'].includes(endpoint)) {
+      requireThat(session.previewMode === 'act', 403, 'Peržiūros režimu pakeitimai neleidžiami. Pasirinkite „Dirbti kaip naudotojas“.');
+      requireThat(['/api/commands', '/api/photos', '/api/reminders', '/api/opportunities'].some(p => endpoint === p || endpoint.startsWith(p + '/')), 403, 'Paskyros nustatymus keiskite grįžę į savo paskyrą.');
+    }
     const moduleAccess = (id: ModuleId) => {
       requireThat(company?.modules.includes(id), 403, 'Šis modulis išjungtas.');
     };
@@ -104,11 +124,21 @@ export class DemoApi {
       state.sessions = state.sessions.filter(s => s.id !== session.id); await save(); this.session.set(null); return { ok: true };
     }
     if (endpoint === '/api/preview' && method === 'POST') {
-      const current = companyAccess();
-      const actual = current.snapshot.workspace.users.find(u => u.id === account.memberId);
-      requireThat(actual?.role === 'admin', 403, 'Peržiūra neleidžiama.');
-      if (input.id !== null) requireThat(current.snapshot.workspace.users.some(u => u.id === input.id && u.active), 404, 'Naudotojas nerastas.');
-      session.previewId = input.id ?? undefined; await save(); return this.payload(state);
+      const original = state.companies.find(c => c.id === account.companyId);
+      const actual = original?.snapshot.workspace.users.find(u => u.id === account.memberId && u.active);
+      requireThat(!account.companyId || actual?.role === 'admin', 403, 'Peržiūra neleidžiama.');
+      const mode = input.mode ?? 'read';
+      requireThat(['read', 'act'].includes(mode), 400, 'Pasirinkite peržiūros režimą.');
+      if (input.id !== null) {
+        const targetId = input.companyId ?? company?.id;
+        requireThat(typeof targetId === 'string' && (!account.companyId || targetId === account.companyId), 403, 'Kitos įmonės peržiūra neleidžiama.');
+        const target = state.companies.find(c => c.id === targetId && c.active);
+        requireThat(target?.snapshot.workspace.users.some(u => u.id === input.id && u.active), 404, 'Naudotojas nerastas.');
+        session.previewCompanyId = targetId;
+      } else session.previewCompanyId = undefined;
+      session.previewId = input.id ?? undefined;
+      session.previewMode = mode;
+      await save(); return this.payload(state);
     }
     if (endpoint === '/api/sessions' && method === 'GET') return state.sessions.filter(s => s.accountId === account.id).map(s => ({ id: s.id, createdAt: s.createdAt, lastAt: s.lastAt, device: s.device, current: s.id === session.id }));
     if (endpoint === '/api/sessions/revoke' && method === 'POST') {
@@ -141,6 +171,17 @@ export class DemoApi {
         await save(); return { id };
       }
     }
+    const companyUsers = /^\/api\/companies\/([^/]+)\/users$/.exec(endpoint);
+    if (companyUsers && method === 'GET') {
+      requireThat(user.role === 'owner' && !session.previewId, 403, 'Prieiga nesuteikta.');
+      const target = state.companies.find(c => c.id === companyUsers[1]);
+      requireThat(target, 404, 'Įmonė nerasta.');
+      return target.snapshot.workspace.users.map(member => ({
+        ...member,
+        hasLogin: state.accounts.some(a => a.companyId === target.id && a.memberId === member.id),
+        driverName: target.snapshot.db.drivers.filter(d => d.id === member.driverId).map(d => d.firstName + ' ' + d.lastName)[0] ?? '',
+      }));
+    }
     if (endpoint.startsWith('/api/companies/') && method === 'PUT') {
       requireThat(user.role === 'owner', 403, 'Prieiga nesuteikta.');
       const current = state.companies.find(c => c.id === endpoint.split('/')[3]);
@@ -153,6 +194,7 @@ export class DemoApi {
       const current = companyAccess(), command = input.command as WorkspaceCommand;
       requireThat(input.revision === current.revision, 409, 'Duomenys pakeisti kitame lange. Atnaujinkite puslapį.');
       requireThat(command && typeof command.type === 'string', 400, 'Netinkamas veiksmas.');
+      requireThat(!session.previewId || !['user', 'restore'].includes(command.type), 403, 'Naudotojus ir kopijas valdykite grįžę į savo paskyrą.');
       if (command.type === 'restore') requireThat(!state.photos.some(p => p.companyId === current.id), 409, 'Prieš atkurdami JSON kopiją pašalinkite užsakymų nuotraukas. JSON kopijoje jų nėra.');
       const next = applyWorkspaceCommand(current.snapshot, user.id, command, current.modules);
       if (command.type === 'user') {

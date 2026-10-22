@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/Feedback';
 import { useState } from "react";
 import {
   Plus,
@@ -51,6 +52,7 @@ const pageInfo = {
   },
 };
 export function Registry({ kind }: { kind: RegistryKind }) {
+  const confirm = useConfirm();
   const { db, commit, path } = useApp();
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("active");
@@ -258,7 +260,7 @@ export function Registry({ kind }: { kind: RegistryKind }) {
                   variant="ghost"
                   onClick={async () => {
                     if (
-                      confirm(
+                      await confirm(
                         "Archyvuoti įrašą? Istorija išliks, naujiems reisams jo pasirinkti negalėsite.",
                       )
                     ) {

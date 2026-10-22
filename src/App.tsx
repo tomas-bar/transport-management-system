@@ -1,3 +1,6 @@
+import { ActAsButton } from './components/UserPreview';
+import { readOnlySession } from './domain/access';
+import { ConfirmationProvider } from './components/Feedback';
 import {OperationalTools} from './pages/OperationalTools';
 import {Platform} from './pages/Platform';
 import {Profile} from './pages/Profile';
@@ -147,14 +150,20 @@ function Shell() {
   }))].slice(0, 12) : [];
   return <div className={`review-shell ${user.role === 'driver' ? 'driver-shell' : ''}`}>
  {mobile && <div className="review-scrim" onClick={() => setMobile(false)} />}
- <aside className={`review-sidebar ${mobile ? 'open' : ''}`}><button className="review-brand" onClick={() => navigate(user.role === 'driver' ? 'my-trips' : user.role === 'owner' ? 'platform' : 'overview')}><span className="review-mark"><Route size={22} /></span>krypta<span className="brand-period">.</span></button><button className="review-sidebar-close icon-button" aria-label="Uždaryti meniu" onClick={() => setMobile(false)}><X /></button><div className="company-label"><span className="company-icon"><Truck size={18} /></span><span><b>{db.settings.company}</b><small>Įmonės darbo erdvė</small></span></div><nav aria-label="Pagrindinė navigacija">{allowed.map(({
+ <aside className={`review-sidebar ${mobile ? 'open' : ''}`}><button className="review-brand" onClick={() => navigate(user.role === 'driver' ? 'my-trips' : user.role === 'owner' ? 'platform' : 'overview')}><span className="review-mark"><Route size={22} /></span>krypta<span className="brand-period">.</span></button><button className="review-sidebar-close icon-button" aria-label="Uždaryti meniu" onClick={() => setMobile(false)}><X /></button><div className="company-label"><span className="company-icon"><Truck size={18} /></span><span><b>{user.role === 'owner' ? 'Krypta' : db.settings.company}</b><small>{user.role === 'owner' ? 'Platformos valdymas' : 'Įmonės darbo erdvė'}</small></span></div><nav aria-label="Pagrindinė navigacija">{allowed.map(({
           id,
           label,
           icon: Icon,
           group
         }) => <div key={id}>{group && <span className="review-nav-group">{group}</span>}<button aria-current={section === id ? 'page' : undefined} className={section === id ? 'active' : ''} onClick={() => navigate(id)}><Icon size={19} /><span>{label}</span>{id === 'notifications' && unread > 0 && <b>{unread}</b>}{id === 'orders' && db.orders.filter(o => !o.tripId && !['completed', 'cancelled'].includes(o.status)).length > 0 && <i />}</button></div>)}</nav><div className="review-sidebar-bottom"><button className="review-profile" onClick={() => setAccount(true)}><Avatar name={user.name} /><span><b>{user.name}</b><small>{roleLabels[user.role]}</small></span><ChevronDown size={15} /></button></div></aside>
- <div className="review-main"><header className="review-topbar"><div><button className="review-mobile-menu icon-button" aria-label="Atidaryti meniu" onClick={() => setMobile(true)}><Menu /></button><span className="review-breadcrumb-company">{db.settings.company}<ChevronRight size={14} /></span><b>{current}</b></div><div>{user.role !== 'driver' && user.role !== 'owner' && <button className="review-search-button" onClick={() => setSearch(true)}><Search size={18} /><span>Paieška</span><kbd>⌘ K</kbd></button>}<button className="theme-toggle icon-button" title={theme==='light'?'Tamsus režimas':'Šviesus režimas'} aria-label={theme==='light'?'Įjungti tamsų režimą':'Įjungti šviesų režimą'} onClick={toggleTheme}>{theme==='light'?<Moon size={20}/>:<Sun size={20}/>}</button>{user.role !== 'owner' && <NotificationBell/>}{serverMode && <button className="icon-button runtime-refresh" aria-label="Atnaujinti duomenis" title="Atnaujinti duomenis" disabled={busy} onClick={() => void refresh()}><RefreshCw size={18}/></button>}<button className="topbar-profile" aria-label="Naudotojo meniu" onClick={() => setAccount(true)}><Avatar name={user.name} small /><ChevronDown size={15} /></button></div></header>
- {session?.returnTo && <div className="impersonation-banner"><span><ShieldCheck size={17} />{serverMode?'Peržiūra be pakeitimų: ':'Peržiūrite kaip '}<b>{user.name}</b><small>{roleLabels[user.role]}</small></span><button disabled={false} onClick={returnToAdmin}><ArrowLeft size={17} />Grįžti į administratorių</button></div>}
+ <div className="review-main"><header className="review-topbar"><div><button className="review-mobile-menu icon-button" aria-label="Atidaryti meniu" onClick={() => setMobile(true)}><Menu /></button><span className="review-breadcrumb-company">{user.role === 'owner' ? 'Krypta' : db.settings.company}<ChevronRight size={14} /></span><b>{current}</b></div><div>{user.role !== 'driver' && user.role !== 'owner' && <button className="review-search-button" onClick={() => setSearch(true)}><Search size={18} /><span>Paieška</span><kbd>⌘ K</kbd></button>}<button className="theme-toggle icon-button" title={theme==='light'?'Tamsus režimas':'Šviesus režimas'} aria-label={theme==='light'?'Įjungti tamsų režimą':'Įjungti šviesų režimą'} onClick={toggleTheme}>{theme==='light'?<Moon size={20}/>:<Sun size={20}/>}</button>{user.role !== 'owner' && <NotificationBell/>}{serverMode && <button className="icon-button runtime-refresh" aria-label="Atnaujinti duomenis" title="Atnaujinti duomenis" disabled={busy} onClick={() => void refresh()}><RefreshCw size={18}/></button>}<button className="topbar-profile" aria-label="Naudotojo meniu" onClick={() => setAccount(true)}><Avatar name={user.name} small /><ChevronDown size={15} /></button></div></header>
+ {session?.returnTo && <div className={`impersonation-banner ${readOnlySession(session) ? '' : 'acting'}`}>
+   <span><ShieldCheck size={17} />{readOnlySession(session) ? 'Peržiūra: ' : 'Dirbate kaip '}<b>{user.name}</b><small>{roleLabels[user.role]}</small></span>
+   <div className="preview-banner-actions">
+     {readOnlySession(session) && <ActAsButton id={user.id} name={user.name} companyId={workspace.companyId} />}
+     <button disabled={busy} onClick={returnToAdmin}><ArrowLeft size={17} />Grįžti į savo paskyrą</button>
+   </div>
+ </div>}
  <main id="main-content" className="main-content" key={`${user.id}-${path}`}>
  {!canOpen(user, section, modules) ? <Empty title="Puslapis nepasiekiamas" description="Jūsų rolei ši prieiga nesuteikta."><Button onClick={() => navigate(user.role === 'driver' ? 'my-trips' : user.role === 'owner' ? 'platform' : 'overview')}>Į darbo erdvę</Button></Empty> : section === 'maintenance' || section === 'freight' ? <OperationalTools kind={section}/> : section === 'platform' ? <Platform/> : section === 'profile' ? <Profile/> : section === 'overview' ? <Overview /> : section === 'my-trips' ? <DriverWorkspace id={path.startsWith('my-trips/') ? path.split('/')[1] : undefined} /> : section === 'trips' && path.startsWith('trips/') ? <TripDetail id={path.split('/')[1]} /> : section === 'trips' ? <Trips /> : section === 'orders' ? <Orders /> : section === 'routes' ? <Routes /> : ['vehicles', 'drivers', 'customers'].includes(section) ? <Registry kind={section as 'vehicles' | 'drivers' | 'customers'} /> : section === 'finances' ? <Finances /> : section === 'settings' ? <Settings /> : section === 'users' ? <WorkspaceUsers /> : section === 'notifications' ? <Notifications /> : <Empty title="Puslapis nerastas" />}
  <footer className="review-footer"><span>krypta.</span></footer></main></div>
@@ -172,13 +181,13 @@ function Shell() {
         icon: Icon
       }) => <button key={id} className={section === id ? 'active' : ''} onClick={() => navigate(id)}><Icon size={22} /><span>{label}</span></button>)}<button onClick={() => setMobile(true)}><Menu size={22} /><span>Meniu</span></button></nav>
  {search && <Modal title="Paieška" onClose={() => setSearch(false)}><div className="modal-body"><SearchInput value={query} onChange={setQuery} placeholder="Reisas, užsakymas, vardas arba numeris..." /><div className="global-results">{results.map((r, i) => <button key={i} onClick={() => navigate(r.path)}><r.icon size={20} /><span><b>{r.name}</b><small>{r.sub}</small></span><ArrowUpRight size={17} /></button>)}{q.length > 1 && !results.length && <Empty title="Įrašų nerasta" description="Pabandykite kitą paiešką." />}</div></div></Modal>}
- {account && <Modal title="Naudotojo paskyra" onClose={() => setAccount(false)}><div className="modal-body account-menu"><div className="account-current"><Avatar name={user.name} /><div><h3>{user.name}</h3><p>{roleLabels[user.role]}</p><small>{user.email}</small></div></div>{user.role === 'admin' && <><h3>Peržiūrėti kaip naudotojas</h3>{workspace.users.filter(u => u.active && u.id !== user.id).map(u => <button key={u.id} onClick={() => {
+ {account && <Modal title="Naudotojo paskyra" onClose={() => setAccount(false)}><div className="modal-body account-menu"><div className="account-current"><Avatar name={user.name} /><div><h3>{user.name}</h3><p>{roleLabels[user.role]}</p><small>{user.email}</small></div></div>{user.role === 'admin' && !session?.returnTo && <><h3>Peržiūrėti kaip naudotojas</h3>{workspace.users.filter(u => u.active && u.id !== user.id).map(u => <button key={u.id} onClick={() => {
             previewUser(u.id);
             setAccount(false);
           }}><UserRound size={20} /><span><b>{u.name}</b><small>{roleLabels[u.role]}</small></span><ArrowRightIcon /></button>)}</>}{serverMode && !session?.returnTo && <Button variant="secondary" onClick={()=>{navigate('profile');setAccount(false);}}>Mano paskyra</Button>}{session?.returnTo && <Button onClick={() => {
           returnToAdmin();
           setAccount(false);
-        }}><ArrowLeft size={18} />Grįžti į administratorių</Button>}<Button variant="secondary" onClick={() => {
+        }}><ArrowLeft size={18} />Grįžti į savo paskyrą</Button>}<Button variant="secondary" onClick={() => {
           logout();
           setAccount(false);
         }}><LogOut size={18} />Atsijungti</Button></div></Modal>}
@@ -188,5 +197,5 @@ function ArrowRightIcon() {
   return <ArrowUpRight size={18} />;
 }
 export default function App() {
-  return <Provider><Shell /></Provider>;
+  return <Provider><ConfirmationProvider><Shell /></ConfirmationProvider></Provider>;
 }

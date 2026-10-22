@@ -37,10 +37,10 @@ export function Badge({ status, label }: { status: string; label?: string }) {
 export function Plate({ value }: { value: string }) {
   return (
     <span className="plate">
-      <span>
+      <span className="plate-country" aria-hidden="true">
         ★<small>LT</small>
       </span>
-      <b>{value}</b>
+      <b className="plate-number">{value}</b>
     </span>
   );
 }

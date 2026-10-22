@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/Feedback';
 import { useState } from "react";
 import { Plus, Download, CheckCircle2, X, Link2 } from "lucide-react";
 import type { Order } from "../domain/models";
@@ -17,6 +18,7 @@ import { OrderTable } from "../components/OrderTable";
 import { OrderForm } from "../components/OrderForm";
 import { csv } from "../services/export";
 export function Orders() {
+  const confirm = useConfirm();
   const { db, commit, busy, path, modules } = useApp();
   const params = new URLSearchParams(path.split("?")[1]);
   const initialOrder = db.orders.find((o) => o.id === params.get("order"));
@@ -188,7 +190,7 @@ export function Orders() {
               variant="ghost"
               onClick={async () => {
                 if (
-                  confirm(
+                  await confirm(
                     "Atšaukti pažymėtus užsakymus? Jie bus atskirti nuo reisų. Mokėjimų istorija išliks.",
                   )
                 ) {

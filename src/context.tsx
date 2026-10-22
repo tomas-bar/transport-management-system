@@ -1,9 +1,10 @@
+import { Toast } from './components/Feedback';
 import { ServerProvider } from './server-provider';
 import { serverRuntime, demoRuntime } from './services/server-api';
 import type { ModuleId } from './domain/modules';
 import {useAppearance,type Theme} from './services/appearance';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { CheckCircle2, AlertCircle, X } from 'lucide-react';
+
 import type { Database } from './domain/models';
 import { applyDriverCommand, createWorkspace, managerRole, notificationChanges, type DriverCommand, type ReviewSnapshot, type Workspace, type WorkspaceUser } from './domain/workspace';
 import { routeVisits } from './domain/route-plan';
@@ -11,10 +12,7 @@ import { markNotificationsRead } from './domain/notifications';
 import {applyFinanceCommand,type FinanceCommand} from './domain/trip-finance';
 import { reviewRepository } from './services/review-repository';
 import { Button } from './components/ui';
-interface Session {
-  userId: string;
-  returnTo?: string;
-}
+import { readOnlySession, type PreviewOptions, type WorkspaceSession as Session } from './domain/access';
 export interface Context {
   serverMode: boolean; modules: ModuleId[]; refresh: () => Promise<void>;
   theme:Theme;toggleTheme:()=>void;
@@ -30,7 +28,7 @@ export interface Context {
   login: (username: string, password: string) => boolean | Promise<boolean>;
   quickLogin: (id: string) => void;
   logout: () => void;
-  previewUser: (id: string) => void;
+  previewUser: (id: string, options?: PreviewOptions) => void;
   returnToAdmin: () => void;
   saveUser: (user: WorkspaceUser, password?: string) => Promise<boolean>;
   readNotifications: (id?: string | string[]) => Promise<boolean>;
@@ -81,7 +79,7 @@ function LocalProvider({
     return () => window.removeEventListener('hashchange', update);
   }, []);
   useEffect(() => {
-    if (!toast) return;
+    if (!toast || toast.error) return;
     const timer = setTimeout(() => setToast(null), 6000);
     return () => clearTimeout(timer);
   }, [toast]);
@@ -105,6 +103,10 @@ function LocalProvider({
   async function update(mutate: (s: ReviewSnapshot, user: WorkspaceUser) => void, message?: string, emitEvents = true) {
     if (lock.current || !current.current) return false;
     const user = actor();
+    if (readOnlySession(sessionRef.current)) {
+      notify('Peržiūros režimu pakeitimai neleidžiami. Pasirinkite „Dirbti kaip naudotojas“.', true);
+      return false;
+    }
     if (!user) {
       notify('Prisijunkite iš naujo.', true);
       return false;
@@ -157,14 +159,14 @@ function LocalProvider({
     }
     return false;
   };
-  const previewUser = (id: string) => {
+  const previewUser = (id: string, options: PreviewOptions = {}) => {
     const user = actor();
     if (user?.role !== 'admin') return;
     const next = current.current?.workspace.users.find(u => u.id === id && u.active);
     if (!next) return;
     storeSession({
       userId: id,
-      returnTo: user.id
+      returnTo: user.id, mode: options.mode ?? 'read', returnRole: 'admin', actorName: user.name
     });
     navigate(next.role === 'driver' ? 'my-trips' : 'overview');
   };
@@ -244,7 +246,7 @@ function LocalProvider({
     financeCommand,
     driverCommand,
     replaceData
-  }}>{children}{toast && <div className={`toast ${toast.error ? 'error' : ''}`} role={toast.error ? 'alert' : 'status'}>{toast.error ? <AlertCircle /> : <CheckCircle2 />}<span>{toast.message}</span><button aria-label="Uždaryti pranešimą" onClick={() => setToast(null)}><X size={18} /></button></div>}</AppContext.Provider>;
+  }}>{children}{toast && <Toast message={toast.message} error={toast.error} onClose={() => setToast(null)} />}</AppContext.Provider>;
 }
 
 export function Provider({children}: {children: ReactNode}) {

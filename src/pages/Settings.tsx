@@ -1,3 +1,4 @@
+import { useConfirm } from '../components/Feedback';
 import { demoRuntime } from '../services/server-api';
 import {ServerBackups} from '../components/ServerBackups';
 import { useRef, useState } from "react";
@@ -19,7 +20,8 @@ import { download } from "../services/export";
 import { today, validateDatabase } from "../domain/logic";
 
 export function Settings() {
-  const { db, workspace, setPrintMode, replaceData, commit, busy, notify, serverMode } = useApp();
+  const confirm = useConfirm();
+  const { db, workspace, setPrintMode, replaceData, commit, busy, notify, serverMode, session } = useApp();
   const [form, setForm] = useState({ ...db.settings });
   const [seedDate, setSeedDate] = useState(today());
   const input = useRef<HTMLInputElement>(null);
@@ -33,7 +35,7 @@ export function Settings() {
       const parsed = validateDatabase(raw.db ?? raw);
       const restoredWorkspace = raw.workspace ? validateWorkspace(raw.workspace, parsed) : undefined;
       if (
-        confirm(
+        await confirm(
           `Pakeisti dabartinius įrašus kopija? Reisų: ${parsed.trips.length}, užsakymų: ${parsed.orders.length}.`,
         )
       ) {
@@ -193,10 +195,10 @@ export function Settings() {
             <div className="stack-actions">
               <Button
                 variant="secondary"
-                disabled={busy || !seedDate}
+                disabled={busy || !seedDate || !!session?.returnTo}
                 onClick={async () => {
                   if (
-                    confirm(
+                    await confirm(
                       "Atkurti bandomuosius duomenis ir naudotojus? Dabartiniai įrašai bei patvirtinimai bus pakeisti.",
                     )
                   ) {
@@ -219,7 +221,7 @@ export function Settings() {
               </Button>
               <Button
                 variant="secondary"
-                disabled={busy || !seedDate}
+                disabled={busy || !seedDate || !!session?.returnTo}
                 onClick={() => {
                   try {
                     const seed = createSeed(seedDate);
@@ -237,10 +239,10 @@ export function Settings() {
               </Button>
               <Button
                 variant="danger"
-                disabled={busy}
+                disabled={busy || !!session?.returnTo}
                 onClick={async () => {
                   if (
-                    confirm(
+                    await confirm(
                       "Išvalyti reisus, užsakymus, registrus ir patvirtinimus? Nustatymai išliks. Prieš tęsiant atsisiųskite kopiją.",
                     )
                   )

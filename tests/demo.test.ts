@@ -1,3 +1,4 @@
+import { routeVisits } from '../src/domain/route-plan.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DemoApi } from '../src/services/demo/api.ts';
@@ -115,4 +116,25 @@ test('restoring samples retains account access and saves the previous edited sna
   assert.deepEqual(before, session.snapshot);
   const restored = await api.request<ServerSession>('/api/session');
   assert.ok(restored.snapshot!.workspace.users.some(u => u.id === 'dispatcher'));
+});
+
+test('demo owner can inspect company users and act as a driver without losing the owner return path', async () => {
+  const { storage, api } = await fixture();
+  await login(api, 'owner', 'owner');
+  const id = storage.state.companies[0].id;
+  const users = await api.request<any[]>('/api/companies/' + id + '/users');
+  assert(users.some(user => user.role === 'admin' && user.hasLogin));
+  assert(!JSON.stringify(users).includes('password'));
+  const view = await api.request<ServerSession>('/api/preview', 'POST', { companyId: id, id: 'user-d1' });
+  assert.equal(view.session.mode, 'read');
+  await assert.rejects(api.request('/api/commands', 'POST', { revision: view.revision, command: { type: 'read' } }), /Peržiūros/);
+  const acting = await api.request<ServerSession>('/api/preview', 'POST', { companyId: id, id: 'user-d1', mode: 'act' });
+  assert.equal(acting.session.returnRole, 'owner');
+  const changed = await api.request<ServerSession>('/api/commands', 'POST', { revision: acting.revision, command: { type: 'driver', command: { type: 'arrive', tripId: 't1', visitIndex: routeVisits(acting.snapshot!.db.trips.find(t => t.id === 't1')!.stops).findIndex(v => !v.completed) } } });
+  assert(changed.snapshot!.db.trips.find(t => t.id === 't1')!.stops[0].completed);
+  await assert.rejects(api.request('/api/password', 'POST', { current: 'owner', password: 'A replacement password' }), /Paskyros/);
+  const returned = await api.request<ServerSession>('/api/preview', 'POST', { id: null });
+  assert.equal(returned.user.role, 'owner');
+  const original = client(storage); await login(original.api);
+  await assert.rejects(original.api.request('/api/preview', 'POST', { companyId: 'unrelated', id: 'admin', mode: 'act' }), /Kitos įmonės/);
 });
