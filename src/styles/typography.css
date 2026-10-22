@@ -1,0 +1,598 @@
+/* Text hierarchy and contrast are shared across modules. */
+:root {
+  --muted: #71817e;
+}
+.page-heading .muted {
+  color: #70807c;
+}
+.eyebrow {
+  color: #73867c;
+}
+.stat-top {
+  font-size: 12px;
+  color: #697c73;
+}
+.stat strong {
+  font-size: 32px;
+}
+.stat-detail,
+.stat-detail button {
+  font-size: 10px;
+  color: #798b79;
+}
+.panel-heading .muted {
+  font-size: 11px;
+  color: #7e8d82;
+}
+.data-table {
+  font-size: 12px;
+}
+.data-table th {
+  font-size: 10px;
+  color: #7c8980;
+}
+.table-title {
+  font-size: 12px;
+  color: #334c44;
+}
+.data-table td > b {
+  font-size: 12px;
+}
+.table-sub,
+.table-sub > span {
+  font-size: 10px;
+  color: #81907f;
+}
+.badge {
+  font-size: 10px;
+}
+.plate > b {
+  font-size: 12px;
+}
+.sidebar nav button {
+  font-size: 14px;
+}
+.sidebar nav button svg {
+  width: 19px;
+}
+.nav-group-label {
+  font-size: 9px;
+}
+.topbar .breadcrumbs,
+.global-search {
+  font-size: 12px;
+}
+.week-grid small {
+  font-size: 9px;
+  color: #7e8d77;
+}
+.week-grid b {
+  font-size: 13px;
+}
+.week-summary {
+  font-size: 11px;
+  color: #728369;
+}
+.quick-note p {
+  font-size: 10px;
+  color: #8d9b78;
+}
+.week-range {
+  font-size: 11px;
+  color: #8b997e;
+}
+.attention-item b {
+  font-size: 12px;
+  color: #4f6647;
+}
+.attention-item small {
+  font-size: 10px;
+  color: #8d9c7a;
+}
+.attention-footer {
+  font-size: 9px;
+  color: #8a9a75;
+}
+.attention-footer > span:last-child {
+  font-size: 8px;
+}
+.route-cities {
+  font-size: 10px;
+  color: #7b8d6d;
+}
+.dashboard-date {
+  font-size: 11px;
+  color: #7d8e79;
+}
+.dashboard-date > span:last-child {
+  color: #7e8f7a;
+}
+.panel-bottom {
+  font-size: 10px;
+  color: #8b9980;
+}
+.panel-bottom button {
+  font-size: 11px;
+  color: #708961;
+}
+.text-link {
+  font-size: 11px;
+  color: #5f8152;
+}
+.button {
+  font-size: 12px;
+}
+.registry-card-name h2 {
+  color: #304a35;
+}
+.registry-card-name p {
+  font-size: 12px;
+  color: #7b8d6c;
+}
+.vehicle-specs small {
+  font-size: 10px;
+  color: #80916f;
+}
+.vehicle-specs b {
+  font-size: 14px;
+  color: #526e40;
+}
+.registry-card-bottom > span {
+  font-size: 11px;
+  color: #7c906a;
+}
+.registry-card-bottom > button {
+  font-size: 12px;
+  color: #62814d;
+}
+.contact-lines > span {
+  font-size: 12px;
+  color: #748b5c;
+}
+.route-card > b {
+  color: #3c5b30;
+  font-size: 14px;
+}
+.route-card > p {
+  color: #869b6e;
+  font-size: 11px;
+}
+.route-card-cities {
+  font-size: 11px;
+  color: #7f9567;
+}
+.stop-info > b {
+  color: #466437;
+  font-size: 12px;
+}
+.stop-info > small {
+  font-size: 10px;
+  color: #83976e;
+}
+.stop-time {
+  font-size: 10px;
+  color: #75945a;
+}
+.stops-help {
+  color: #84986d;
+  font-size: 10px;
+}
+.trip-notes h3 {
+  color: #526d40;
+}
+.trip-notes p {
+  color: #7a9164;
+  font-size: 12px;
+}
+.trip-summary-strip > span:not(.badge) {
+  color: #718766;
+  font-size: 12px;
+}
+.trip-kpis small {
+  color: #7e936c;
+  font-size: 11px;
+}
+.trip-kpis b {
+  color: #35532e;
+}
+.trip-kpis b > span {
+  color: #80976b;
+  font-size: 11px;
+}
+.field > span,
+.field-label {
+  font-size: 12px;
+  color: #5e7948;
+}
+.field input,
+.field select,
+.field textarea {
+  font-size: 13px;
+  color: #405c32;
+  border-color: #d5e0c9;
+}
+.field small {
+  font-size: 10px;
+  color: #83986d;
+}
+.field input::placeholder {
+  color: #95a783;
+}
+.form-help {
+  font-size: 11px;
+  color: #859b70;
+}
+.modal header h2 {
+  color: #3c592d;
+}
+.modal header .muted {
+  font-size: 11px;
+  color: #84986e;
+}
+.place-value b,
+.place-results b {
+  font-size: 12px;
+  color: #526f3f;
+}
+.place-value small,
+.place-results small {
+  font-size: 10px;
+  color: #8b9e76;
+}
+.place-value > svg,
+.place-results > button > svg {
+  color: #8aa16f;
+}
+.place-search > .muted {
+  color: #8b9d78;
+}
+.notice,
+.demo-notice p {
+  color: #7b945f;
+  font-size: 12px;
+}
+.settings-side .panel > .muted {
+  color: #81996a;
+  font-size: 12px;
+}
+.storage-info b {
+  font-size: 13px;
+  color: #617e49;
+}
+.storage-info p {
+  color: #8a9e74;
+  font-size: 11px;
+}
+.finance-lines > div {
+  color: #748f58;
+}
+.finance-lines b {
+  color: #43652d;
+}
+.finance-lines .total {
+  color: #5b7e40;
+}
+.footnote {
+  color: #82996b;
+  font-size: 11px;
+}
+.result-strip h3 {
+  color: #4d702f;
+  font-size: 14px;
+}
+.result-strip p {
+  color: #819b63;
+  font-size: 11px;
+}
+.result-strip > b {
+  color: #5b7e3c;
+}
+.period-filter > span,
+.period-filter label {
+  color: #7d9666;
+  font-size: 12px;
+}
+.period-filter input {
+  color: #5d7d45;
+  font-size: 12px;
+}
+.period-filter button {
+  font-size: 11px;
+  color: #70914f;
+}
+.detail-facts small {
+  font-size: 11px;
+  color: #81986b;
+}
+.detail-facts b {
+  color: #527436;
+  font-size: 14px;
+}
+.search-input input {
+  font-size: 12px;
+  color: #4f6741;
+}
+.search-input input::placeholder {
+  color: #92a182;
+}
+.filter-select select {
+  font-size: 11px;
+  color: #6b8256;
+}
+.module-tabs > button {
+  font-size: 13px;
+  color: #7b8c6a;
+}
+.section-title {
+  font-size: 14px;
+  color: #5e7b44;
+}
+.system-info p {
+  font-size: 11px;
+  color: #80986a;
+}
+.table-sub.customer-sub {
+  color: #879a73;
+}
+.settings-form > .muted {
+  color: #7f9667;
+}
+.global-results b {
+  color: #5b7c40;
+  font-size: 13px;
+}
+.global-results small {
+  color: #8ca274;
+  font-size: 11px;
+}
+@media (max-width: 1250px) {
+  .stat-top {
+    font-size: 11px;
+  }
+  .stat strong {
+    font-size: 28px;
+  }
+  .stat-detail,
+  .stat-detail button {
+    font-size: 9px;
+  }
+  .overview-main .compact-table .table-title {
+    font-size: 11px;
+  }
+  .overview-main .compact-table .table-sub {
+    font-size: 9px;
+  }
+  .panel-heading .muted {
+    font-size: 10px;
+  }
+  .text-link {
+    font-size: 10px;
+  }
+  .attention-item b {
+    font-size: 11px;
+  }
+  .attention-item small {
+    font-size: 9px;
+  }
+  .trip-kpis small {
+    font-size: 10px;
+  }
+  .trip-kpis b > span {
+    font-size: 10px;
+  }
+  .sidebar nav button {
+    font-size: 13px;
+  }
+  .finance-stats .stat strong {
+    font-size: 24px;
+  }
+}
+@media (max-width: 650px) {
+  .stat-top {
+    font-size: 11px;
+  }
+  .stat strong {
+    font-size: 29px;
+  }
+  .stat-detail,
+  .stat-detail button {
+    font-size: 9px;
+  }
+  .data-table .table-title {
+    font-size: 12px;
+  }
+  .overview-main .compact-table .table-title {
+    font-size: 11px;
+  }
+  .overview-main .compact-table .table-sub,
+  .overview-main .compact-table .table-sub > span {
+    font-size: 9px;
+  }
+  .overview-main .compact-table td > b {
+    font-size: 10px;
+  }
+  .overview-main .compact-table .badge {
+    font-size: 8px;
+  }
+  .panel-heading h2 {
+    font-size: 14px;
+  }
+  .panel-heading .muted {
+    font-size: 10px;
+  }
+  .panel-heading .text-link {
+    font-size: 10px;
+  }
+  .attention-item b {
+    font-size: 12px;
+  }
+  .attention-item small {
+    font-size: 10px;
+  }
+  .route-cities {
+    font-size: 9px;
+  }
+  .panel-bottom {
+    font-size: 9px;
+  }
+  .panel-bottom button {
+    font-size: 10px;
+  }
+  .trip-kpis small {
+    font-size: 9px;
+  }
+  .trip-kpis b > span {
+    font-size: 10px;
+  }
+  .trip-summary-strip > span:not(.badge) {
+    font-size: 11px;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    font-size: 16px;
+  }
+  .field > span,
+  .field-label {
+    font-size: 12px;
+  }
+  .field small {
+    font-size: 10px;
+  }
+  .form-help {
+    font-size: 10px;
+  }
+  .place-value b,
+  .place-results b {
+    font-size: 12px;
+  }
+  .place-value small,
+  .place-results small {
+    font-size: 10px;
+  }
+  .registry-card-name p {
+    font-size: 11px;
+  }
+  .registry-card-bottom > span {
+    font-size: 10px;
+  }
+  .vehicle-specs small {
+    font-size: 9px;
+  }
+  .vehicle-specs b {
+    font-size: 13px;
+  }
+  .contact-lines > span {
+    font-size: 12px;
+  }
+  .module-tabs > button {
+    font-size: 12px;
+  }
+  .result-strip h3 {
+    font-size: 12px;
+  }
+  .result-strip p {
+    font-size: 10px;
+  }
+  .result-strip > b {
+    font-size: 20px;
+  }
+  .period-filter label {
+    font-size: 10px;
+  }
+  .period-filter input {
+    font-size: 11px;
+  }
+  .system-info p {
+    font-size: 10px;
+  }
+  .footnote {
+    font-size: 10px;
+  }
+  .trip-notes p {
+    font-size: 11px;
+  }
+  .dashboard-date {
+    font-size: 10px;
+  }
+  .attention-footer {
+    font-size: 9px;
+  }
+}
+/* Secondary text remains readable on long working days. */
+.muted,
+.page-heading .muted,
+.panel-heading .muted,
+.table-sub,
+.table-sub > span,
+.table-sub.customer-sub,
+.stat-detail,
+.stat-detail button,
+.dashboard-date,
+.dashboard-date > span:last-child,
+.panel-bottom,
+.attention-item small,
+.attention-footer,
+.week-range,
+.week-grid small,
+.quick-note p,
+.route-cities,
+.route-card > p,
+.route-card-cities,
+.registry-card-name p,
+.vehicle-specs small,
+.registry-card-bottom > span,
+.contact-lines > span,
+.stop-info > small,
+.stops-help,
+.trip-notes p,
+.field small,
+.form-help,
+.place-value small,
+.place-results small,
+.place-search > .muted,
+.modal header .muted,
+.footnote,
+.result-strip p,
+.storage-info p,
+.settings-side .panel > .muted,
+.settings-form > .muted,
+.system-info p,
+.global-results small {
+  color: #71806d;
+}
+.sidebar .nav-group-label,
+.sidebar .workspace-label {
+  color: #88a09f;
+}
+@media (max-width: 650px) {
+  .sidebar {
+    overflow-y: auto;
+  }
+  .sidebar nav button,
+  .settings-nav {
+    min-height: 43px;
+  }
+  .sidebar-bottom {
+    padding-top: 20px;
+  }
+  .workspace-user {
+    padding-bottom: 20px;
+  }
+  .stop-actions button {
+    min-width: 31px;
+    min-height: 31px;
+  }
+  .field input,
+  .field select,
+  .field textarea {
+    min-height: 44px;
+  }
+  .registry-card-bottom > button {
+    min-height: 38px;
+  }
+  .modal .icon-button {
+    min-height: 36px;
+    min-width: 36px;
+  }
+}

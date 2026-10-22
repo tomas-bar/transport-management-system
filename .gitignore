@@ -1,0 +1,36 @@
+# Dependencies and generated output
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+
+# Runtime records and local exports. Keep src/data/ tracked.
+/data/
+/tmp/
+*.sqlite
+*.sqlite-*
+*.db
+*.db-*
+*.zip
+*.tar.gz
+
+# Environment files are private by default. Server mode is public build config.
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.server
+*.pem
+*.key
+
+# Hosting identity is retained only in the managed hosting checkout.
+.openai/
+
+# Logs, editors and operating-system files
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
