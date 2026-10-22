@@ -3,8 +3,8 @@ import {ArrowRight,Route,ClipboardList,Check,Truck,Users,Wallet,Moon,Sun} from '
 import {useApp} from '../context';
 import {Button,Field} from '../components/ui';
 export function Login() {
- const {login,busy,theme,toggleTheme}=useApp();
- const [username,setUsername]=useState('admin');const [password,setPassword]=useState('admin');const [error,setError]=useState('');
+ const {login,busy,theme,toggleTheme,serverMode}=useApp();
+ const [username,setUsername]=useState('');const [password,setPassword]=useState('');const [error,setError]=useState('');
  return <div className="login-screen product-login login-refined">
   <section className="login-visual">
    <div className="review-brand"><span className="review-mark"><Route size={23}/></span>krypta<span className="brand-period">.</span></div>
@@ -26,9 +26,9 @@ export function Login() {
   <section className="login-content"><button className="login-theme-button icon-button" onClick={toggleTheme} aria-label={theme==='light'?'Įjungti tamsų režimą':'Įjungti šviesų režimą'}>{theme==='light'?<Moon size={20}/>:<Sun size={20}/>}</button>
    <div className="login-mobile-brand review-brand"><span className="review-mark"><Route/></span>krypta.</div>
    <div className="login-form-wrap"><span className="login-form-eyebrow">DARBO ERDVĖ</span><h1>Prisijungti</h1><p className="login-description">Prisijunkite prie įmonės paskyros.</p>
-    <form onSubmit={e=>{e.preventDefault();if(!login(username,password))setError('Neteisingas naudotojo vardas arba slaptažodis.');}}>
-     <Field label="Naudotojo vardas"><input autoComplete="username" required value={username} onChange={e=>setUsername(e.target.value)}/></Field>
-     <Field label="Slaptažodis"><input type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></Field>
+    <form onSubmit={async e=>{e.preventDefault();setError('');if(!await login(username,password))setError('Prisijungti nepavyko. Patikrinkite duomenis ir bandykite dar kartą.');}}>
+     <Field label={serverMode?"El. paštas":"Naudotojo vardas"}><input type={serverMode?"email":"text"} placeholder={serverMode?"vardas@imone.lt":"Naudotojo vardas"} autoComplete="username" required value={username} onChange={e=>setUsername(e.target.value)}/></Field>
+     <Field label="Slaptažodis"><input type="password" placeholder="Slaptažodis" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></Field>
      {error&&<p role="alert" className="form-error">{error}</p>}<Button type="submit" disabled={busy}>Prisijungti<ArrowRight size={18}/></Button>
     </form>
    </div>

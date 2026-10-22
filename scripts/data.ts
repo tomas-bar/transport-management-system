@@ -67,6 +67,10 @@ function main() {
   );
   mkdirSync(dirname(dbPath), { recursive: true });
   const sqlite = new DatabaseSync(dbPath);
+  if (sqlite.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='companies'").get()) {
+    sqlite.close();
+    throw new Error("This is a shared server database. Use company Settings to restore or clear operations.");
+  }
   let transaction = false;
   try {
     sqlite.exec(

@@ -1,8 +1,10 @@
+import type {ModuleId} from './modules.ts';
 import {validateFinanceRecords,type DriverPermissions,type PaymentReceipt,type ExpenseSubmission} from './trip-finance.ts';
 import type { Database } from './models.ts';
 import { routeVisits, setVisitCompleted, visitTasks } from './route-plan.ts';
-export type Role = 'admin' | 'dispatcher' | 'driver';
+export type Role = 'owner' | 'admin' | 'dispatcher' | 'driver';
 export const roleLabels: Record<Role, string> = {
+  owner: 'Platformos savininkas',
   admin: 'Įmonės administratorius',
   dispatcher: 'Vadybininkas',
   driver: 'Vairuotojas'
@@ -20,6 +22,7 @@ export interface WorkspaceUser {
 export interface AppNotification {
   id: string;
   recipientId: string;
+  actorId?: string;
   type: 'assignment' | 'trip' | 'task' | 'finance';
   activity?: 'assignment' | 'trip' | 'arrival' | 'pickup' | 'delivery' | 'correction' | 'payment' | 'expense';
   title: string;
@@ -72,12 +75,16 @@ export type DriverCommand = {
   kind: 'pickup' | 'delivery';
 } | {type:'undoTask';tripId:string;confirmationId:string} | {type:'undoArrival';tripId:string;visitIndex:number};
 export const managerRole = (user: WorkspaceUser | null) => !!user && user.active && user.role !== 'driver';
-export function canOpen(user: WorkspaceUser | null, section: string) {
+export function canOpen(user: WorkspaceUser | null, section: string, modules?: ModuleId[]) {
   if (!user?.active) return false;
-  if (section === 'notifications') return true;
+  if (user.role === 'owner') return ['platform', 'profile'].includes(section);
+  if (modules && section === 'finances' && !modules.includes('finance')) return false;
+  if (modules && section === 'maintenance' && !modules.includes('maintenance')) return false;
+  if (modules && section === 'freight' && !modules.includes('freight')) return false;
+  if (section === 'profile' || section === 'notifications') return true;
   if (user.role === 'driver') return section === 'my-trips';
   if (['users', 'settings'].includes(section)) return user.role === 'admin';
-  return ['overview', 'trips', 'orders', 'routes', 'vehicles', 'drivers', 'customers', 'finances'].includes(section);
+  return ['overview', 'trips', 'orders', 'routes', 'vehicles', 'drivers', 'customers', 'finances', 'maintenance', 'freight'].includes(section);
 }
 export function createWorkspace(db: Database): Workspace {
   const companyId = 'company-review';
@@ -146,7 +153,7 @@ export function createWorkspace(db: Database): Workspace {
   return workspace;
 }
 export function validateWorkspace(workspace: Workspace, db: Database) {
-  if (workspace.version !== 1 || workspace.companyId !== 'company-review' || !Array.isArray(workspace.users) || !Array.isArray(workspace.notifications) || !Array.isArray(workspace.confirmations) || !workspace.preferences || typeof workspace.preferences !== 'object') throw new Error('Netinkamas darbo erdvės formatas.');
+  if (workspace.version !== 1 || typeof workspace.companyId !== 'string' || !workspace.companyId.trim() || workspace.companyId.length > 100 || !Array.isArray(workspace.users) || !Array.isArray(workspace.notifications) || !Array.isArray(workspace.confirmations) || !workspace.preferences || typeof workspace.preferences !== 'object') throw new Error('Netinkamas darbo erdvės formatas.');
   const ids = new Set<string>();
   const driverIds = new Set<string>();
   for (const u of workspace.users) {

@@ -29,7 +29,11 @@ jobs:
         run: npm ci
       - name: Run domain and API tests
         run: npm test
+      - name: Check server types
+        run: npm run check:server
       - name: Build browser application
         run: npm run build
       - name: Check PDF templates
         run: npm run check:documents
+      - name: Build server application
+        run: npm run build:server

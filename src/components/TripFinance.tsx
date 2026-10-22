@@ -7,9 +7,9 @@ import {money,today,hasAgreedPrice} from '../domain/logic';
 import {Button,Field,Modal,Panel} from './ui';
 const methods={cash:'Grynaisiais',bank:'Pavedimu',card:'Kortele'};
 export function TripFinance({tripId,driverMode=false}:{tripId:string;driverMode?:boolean}) {
- const {db,user,workspace,financeCommand,busy}=useApp();const [form,setForm]=useState<'expense'|'receipt'|null>(null);
+ const {db,user,workspace,financeCommand,busy,modules}=useApp();const [form,setForm]=useState<'expense'|'receipt'|null>(null);
  const [amount,setAmount]=useState('');const [category,setCategory]=useState('Degalai');const [date,setDate]=useState(today());const [description,setDescription]=useState('');const [orderId,setOrderId]=useState('');const [method,setMethod]=useState<'cash'|'bank'|'card'>('cash');
- if(!user)return null;const trip=db.trips.find(t=>t.id===tripId);if(!trip)return null;
+ if(!user||!modules.includes('finance'))return null;const trip=db.trips.find(t=>t.id===tripId);if(!trip)return null;
  const permissions=driverPermissions(user);const canExpense=user.role!=='driver'||permissions.recordExpenses;const canCollect=user.role!=='driver'||permissions.collectPayments;
  if(driverMode&&!canExpense&&!canCollect)return null;
  const expenses=db.expenses.filter(e=>e.tripId===tripId&&(!driverMode||(workspace.expenseSubmissions??[]).some(s=>s.expenseId===e.id&&s.actorId===user.id)));

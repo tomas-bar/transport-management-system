@@ -1,3 +1,6 @@
+import { ServerProvider } from './server-provider';
+import { serverRuntime } from './services/server-api';
+import type { ModuleId } from './domain/modules';
 import {useAppearance,type Theme} from './services/appearance';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import { CheckCircle2, AlertCircle, X } from 'lucide-react';
@@ -12,7 +15,8 @@ interface Session {
   userId: string;
   returnTo?: string;
 }
-interface Context {
+export interface Context {
+  serverMode: boolean; modules: ModuleId[]; refresh: () => Promise<void>;
   theme:Theme;toggleTheme:()=>void;
   db: Database;
   workspace: Workspace;
@@ -23,12 +27,12 @@ interface Context {
   notify: (message: string, error?: boolean) => void;
   navigate: (path: string) => void;
   path: string;
-  login: (username: string, password: string) => boolean;
+  login: (username: string, password: string) => boolean | Promise<boolean>;
   quickLogin: (id: string) => void;
   logout: () => void;
   previewUser: (id: string) => void;
   returnToAdmin: () => void;
-  saveUser: (user: WorkspaceUser) => Promise<boolean>;
+  saveUser: (user: WorkspaceUser, password?: string) => Promise<boolean>;
   readNotifications: (id?: string | string[]) => Promise<boolean>;
   financeCommand:(command:FinanceCommand)=>Promise<boolean>;
   setPrintMode: (mode: 'monochrome'|'color')=>Promise<boolean>;
@@ -36,13 +40,13 @@ interface Context {
   driverCommand: (command: DriverCommand) => Promise<boolean>;
   replaceData: (data: Database, workspace?: Workspace) => Promise<boolean>;
 }
-const AppContext = createContext<Context | null>(null);
+export const AppContext = createContext<Context | null>(null);
 export const useApp = () => {
   const value = useContext(AppContext);
   if (!value) throw new Error('Missing application context');
   return value;
 };
-export function Provider({
+function LocalProvider({
   children
 }: {
   children: ReactNode;
@@ -215,6 +219,7 @@ export function Provider({
   const user = snapshot.workspace.users.find(u => u.id === session?.userId && u.active) ?? null;
   return <AppContext.Provider value={{
     ...appearance,
+    serverMode: false, modules: ['operations', 'finance'], refresh: async () => { location.reload(); },
     db: snapshot.db,
     workspace: snapshot.workspace,
     user,
@@ -240,4 +245,8 @@ export function Provider({
     driverCommand,
     replaceData
   }}>{children}{toast && <div className={`toast ${toast.error ? 'error' : ''}`} role={toast.error ? 'alert' : 'status'}>{toast.error ? <AlertCircle /> : <CheckCircle2 />}<span>{toast.message}</span><button aria-label="Uždaryti pranešimą" onClick={() => setToast(null)}><X size={18} /></button></div>}</AppContext.Provider>;
+}
+
+export function Provider({children}: {children: ReactNode}) {
+  return serverRuntime ? <ServerProvider>{children}</ServerProvider> : <LocalProvider>{children}</LocalProvider>;
 }

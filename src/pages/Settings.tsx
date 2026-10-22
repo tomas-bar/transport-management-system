@@ -11,14 +11,13 @@ import type { Database as Data } from "../domain/models";
 import { useApp } from "../context";
 import { PageHeading, Button, Panel, Field } from "../components/ui";
 import { validateWorkspace, type ReviewSnapshot } from "../domain/workspace";
-const storageDescription = "Šios naršyklės saugykla";
-const serverMode = false;
+
 import { createSeed, createEmptyDatabase } from "../data/seed";
 import { download } from "../services/export";
 import { today, validateDatabase } from "../domain/logic";
 
 export function Settings() {
-  const { db, workspace, setPrintMode, replaceData, commit, busy, notify } = useApp();
+  const { db, workspace, setPrintMode, replaceData, commit, busy, notify, serverMode } = useApp();
   const [form, setForm] = useState({ ...db.settings });
   const [seedDate, setSeedDate] = useState(today());
   const input = useRef<HTMLInputElement>(null);
@@ -130,7 +129,7 @@ export function Settings() {
             <div className="storage-info">
               <Database size={23} />
               <div>
-                <b>{storageDescription}</b>
+                <b>{serverMode?"Įmonės duomenys serveryje":"Šios naršyklės saugykla"}</b>
                 <p>
                   Reisų: {db.trips.length} · Užsakymų: {db.orders.length}
                 </p>
@@ -138,7 +137,7 @@ export function Settings() {
             </div>
             <p className="muted">
               {serverMode
-                ? "Atsarginė kopija apima visus sistemos įrašus."
+                ? "JSON kopijoje nėra nuotraukų ir slaptažodžių. Prieš keičiant duomenis ankstesnė kopija išsaugoma serveryje."
                 : "Kopijoje yra įrašai, naudotojai ir patvirtinimai. Tarp įrenginių duomenys nesinchronizuoja."}
             </p>
             <div className="stack-actions">

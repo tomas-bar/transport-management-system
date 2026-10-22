@@ -2,7 +2,7 @@
 
 ## Runtime and boundaries
 
-React 19, TypeScript and Vite, with Lucide, Leaflet, idb and jsPDF. The application currently runs as a static browser application. The retained server/SQLite source belongs to the established version and is not used for prototype accounts or workspace persistence.
+React 19, TypeScript and Vite, with Lucide, Leaflet, idb and jsPDF. The default build remains a browser-local application. The explicit server build uses `server/application.ts` through `ServerProvider`; it does not trust browser sessions or workspace role claims. The old `server/app.ts` is a reference adapter only.
 
 - `src/domain/models.ts`: established operational database schema and entity types.
 - `src/domain/logic.ts`: validation, assignment, capacity, resource scheduling and financial rules.
@@ -58,3 +58,9 @@ Receipts are optional workspace records with integer cents, method, actor, date,
 Expense entries use the established Database collection, so fleet/trip totals and reports update together. Optional submission metadata records who entered them. Restoring an old backup remains valid. The receipt journal covers new entries only; legacy paid totals and period reports retain their documented booking-date convention until a ledger migration is implemented.
 
 The application can eventually be deployed as a dedicated installation on a company subdomain, independently of that company's public website. That production deployment still requires server authentication, authorization and shared persistence; this review remains a static browser-local application.
+
+## Shared server runtime
+
+`server/store.ts` migrates private SQLite storage with foreign-key scoped companies, accounts, sessions, audit, backup, attachment and optional module tables. Operational data stays a versioned company snapshot rather than normalized business tables. Every write verifies its revision and applies `src/domain/commands.ts` on the server. Actors come from authenticated accounts, and driver responses are reduced to assigned work and permitted financial entries. Identity and membership writes commit together.
+
+`ServerProvider` uses a same-origin API and an in-memory CSRF token; authentication uses an HttpOnly cookie. Existing IndexedDB is never migrated implicitly. The platform owner creates companies and administrators, with no implicit company data access. Module configuration belongs to the company and is checked separately from user permissions. Disabling a module preserves its data. Administrator preview is read-only and audited. See `docs/SECURITY.md` for exact controls, sources and deployment requirements.

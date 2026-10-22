@@ -11,23 +11,30 @@
     "check:documents": "node --experimental-strip-types scripts/check-documents.ts",
     "data:seed": "node --experimental-strip-types scripts/data.ts seed",
     "data:clear": "node --experimental-strip-types scripts/data.ts clear",
-    "data:export": "node --experimental-strip-types scripts/data.ts export"
+    "data:export": "node --experimental-strip-types scripts/data.ts export",
+    "build:server": "tsc -b && vite build --mode server",
+    "dev:server": "vite --mode server --host 127.0.0.1 --port 4173 --strictPort",
+    "server": "node --experimental-strip-types server/start.ts",
+    "account:owner": "node --experimental-strip-types scripts/owner.ts",
+    "check:server": "tsc -p tsconfig.server.json"
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "lucide-react": "^0.468.0",
-    "leaflet": "^1.9.4",
     "idb": "^8.0.3",
     "jspdf": "^4.2.1",
-    "jspdf-autotable": "^5.0.9"
+    "jspdf-autotable": "^5.0.9",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.468.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "sharp": "^0.35.5"
   },
   "devDependencies": {
-    "typescript": "~5.8.3",
+    "@types/leaflet": "^1.9.16",
+    "@types/node": "^24.19.2",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
-    "@types/leaflet": "^1.9.16",
     "@vitejs/plugin-react": "^4.4.1",
+    "typescript": "~5.8.3",
     "vite": "^6.3.5"
   },
   "engines": {
