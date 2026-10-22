@@ -8,4 +8,4 @@ Document current behavior and operational limits. Avoid revision logs and abando
 
 Keep secrets, runtime databases, backups, dependencies, generated output and deployment identity out of GitHub. Fixtures in `src/data/` must remain included. No project license has been selected; preserve bundled asset notices.
 
-The default build preserves the browser-local prototype. Server mode is explicit and must never use prototype sessions or accept client company/role claims. Server changes need authorization, concurrency and data-preservation tests. Configure local processes as documented in README; never commit test databases or real account credentials.
+The default build serves the complete device-local demo, with all implemented modules. `build:browser` preserves the earlier minimal prototype; `build:server` selects the real API. Demo workflow tests are in `tests/demo.test.ts`. Server mode is explicit and must never use prototype sessions or accept client company/role claims. Server changes need authorization, concurrency and data-preservation tests. Configure local processes as documented in README; never commit test databases or real account credentials.

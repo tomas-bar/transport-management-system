@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AlertCircle, CheckCircle2, X } from 'lucide-react';
 import { AppContext, type Context } from './context';
-import { api, ApiError, setCsrf, type ServerSession } from './services/server-api';
+import { api, ApiError, demoRuntime, setCsrf, type ServerSession } from './services/server-api';
 import { createEmptyDatabase, createSeed } from './data/seed';
 import { createWorkspace, type ReviewSnapshot } from './domain/workspace';
 import type { WorkspaceCommand } from './domain/commands';
@@ -75,6 +75,6 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     replaceData: (db, workspace) => send({ type: 'restore', snapshot: { db, workspace: workspace ?? createWorkspace(db) } }, 'Duomenys atkurti'),
   };
   if (loading) return <div className="loading"><p>Ruošiama darbo erdvė...</p></div>;
-  if (error) return <div className="boot-error"><h1>Nepavyko prisijungti prie serverio</h1><p>{error}</p><Button onClick={() => location.reload()}>Bandyti dar kartą</Button></div>;
+  if (error) return <div className="boot-error"><h1>{demoRuntime ? 'Nepavyko atidaryti saugyklos' : 'Nepavyko prisijungti prie serverio'}</h1><p>{error}</p><Button onClick={() => location.reload()}>Bandyti dar kartą</Button></div>;
   return <AppContext.Provider value={value}>{children}{toast && <div className={`toast ${toast.error ? 'error' : ''}`} role={toast.error ? 'alert' : 'status'}>{toast.error ? <AlertCircle /> : <CheckCircle2 />}<span>{toast.text}</span><button aria-label="Uždaryti pranešimą" onClick={() => setToast(null)}><X size={18}/></button></div>}</AppContext.Provider>;
 }

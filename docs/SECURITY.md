@@ -1,6 +1,6 @@
 # Security and deployment
 
-The browser-local application is a prototype. Its `admin / admin` login is not server authentication. Existing browser records are never uploaded or replaced automatically. The separately built server application uses cookie authentication and company-scoped persistence.
+The browser demo exercises all implemented modules using device-local IndexedDB and tab sessions. Its initial `admin / admin` and `owner / owner` accounts are test credentials, not server authentication. Client-side password hashing and company/role checks support testing only; they do not create trusted identity, company isolation or synchronization. Browser-local photos are not publicly hosted and are excluded from JSON exports. Existing browser records are never uploaded or replaced automatically. The separately built server application uses cookie authentication and company-scoped persistence.
 
 ## Decisions and sources
 
@@ -27,6 +27,6 @@ The browser policy allows HTTPS data connections because company administrators 
 
 Serve the server-mode build and API at the same HTTPS origin through a reverse proxy. Set `KRYPTA_PUBLIC_ORIGIN` to that exact origin, bind Node to loopback behind the proxy, and provide a private persistent volume for `KRYPTA_DB_PATH`. Do not point the database at temporary or static-host storage. Configure TLS, service restart, backups, operating-system security updates and monitoring. The default listener does not trust forwarding headers for authentication or throttling; behind a proxy the shared source IP limits apply conservatively. Account limits remain separate. A deployment needing higher throughput should add a documented trusted-proxy configuration.
 
-Sites deployment capabilities and persistent backend support have not been verified in this session; the Sites tools are unavailable. A static Site alone cannot run this authentication or synchronize data. The owner-private review deployment is preserved. Never advertise the static demo as the secure shared application.
+Sites hosts the complete static browser demo. Its hosted server runtime is Cloudflare Workers with D1/R2 storage, rather than the current Node process with a private SQLite file. Deploying the existing shared server therefore requires a compatible Node host or a separate runtime adaptation. The owner-private review deployment is preserved. Never advertise the static demo as the secure shared application.
 
 Before real customer use, perform an independent security review, verify the production proxy/cookie behavior, test backup restoration and company migration, and configure operational monitoring. Email verification/recovery, MFA, billing, GPS and external freight integrations are not implemented.

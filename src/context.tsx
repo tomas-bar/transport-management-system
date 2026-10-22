@@ -1,5 +1,5 @@
 import { ServerProvider } from './server-provider';
-import { serverRuntime } from './services/server-api';
+import { serverRuntime, demoRuntime } from './services/server-api';
 import type { ModuleId } from './domain/modules';
 import {useAppearance,type Theme} from './services/appearance';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -248,5 +248,5 @@ function LocalProvider({
 }
 
 export function Provider({children}: {children: ReactNode}) {
-  return serverRuntime ? <ServerProvider>{children}</ServerProvider> : <LocalProvider>{children}</LocalProvider>;
+  return serverRuntime || demoRuntime ? <ServerProvider>{children}</ServerProvider> : <LocalProvider>{children}</LocalProvider>;
 }

@@ -1,6 +1,9 @@
 import type { ModuleId } from '../domain/modules';
 import type { ReviewSnapshot, WorkspaceUser } from '../domain/workspace';
-export const serverRuntime = import.meta.env.VITE_RUNTIME === 'server';
+export const serverRuntime = import.meta.env?.VITE_RUNTIME === 'server';
+export const demoRuntime = import.meta.env?.VITE_RUNTIME === 'demo';
+import { ApiError } from './api-error';
+export { ApiError } from './api-error';
 export interface ServerSession {
   user: WorkspaceUser;
   session: { userId: string; returnTo?: string };
@@ -11,8 +14,11 @@ export interface ServerSession {
 }
 let csrf = '';
 export const setCsrf = (value: string) => { csrf = value; };
-export class ApiError extends Error { status: number; constructor(status: number, message: string) { super(message); this.status = status; } }
 export async function api<T = any>(path: string, method = 'GET', input?: unknown, raw = false): Promise<T> {
+  if (demoRuntime) {
+    const { demoApi } = await import('./demo/browser');
+    return demoApi<T>(path, method, input);
+  }
   const response = await fetch(path, {
     method,
     credentials: 'same-origin',

@@ -2,6 +2,7 @@ import {useState} from 'react';
 import {ArrowRight,Route,ClipboardList,Check,Truck,Users,Wallet,Moon,Sun} from 'lucide-react';
 import {useApp} from '../context';
 import {Button,Field} from '../components/ui';
+import {demoRuntime} from '../services/server-api';
 export function Login() {
  const {login,busy,theme,toggleTheme,serverMode}=useApp();
  const [username,setUsername]=useState('');const [password,setPassword]=useState('');const [error,setError]=useState('');
@@ -27,7 +28,7 @@ export function Login() {
    <div className="login-mobile-brand review-brand"><span className="review-mark"><Route/></span>krypta.</div>
    <div className="login-form-wrap"><span className="login-form-eyebrow">DARBO ERDVĖ</span><h1>Prisijungti</h1><p className="login-description">Prisijunkite prie įmonės paskyros.</p>
     <form onSubmit={async e=>{e.preventDefault();setError('');if(!await login(username,password))setError('Prisijungti nepavyko. Patikrinkite duomenis ir bandykite dar kartą.');}}>
-     <Field label={serverMode?"El. paštas":"Naudotojo vardas"}><input type={serverMode?"email":"text"} placeholder={serverMode?"vardas@imone.lt":"Naudotojo vardas"} autoComplete="username" required value={username} onChange={e=>setUsername(e.target.value)}/></Field>
+     <Field label={serverMode&&!demoRuntime?"El. paštas":"Naudotojo vardas arba el. paštas"}><input type={serverMode&&!demoRuntime?"email":"text"} placeholder={serverMode&&!demoRuntime?"vardas@imone.lt":"Naudotojo vardas"} autoComplete="username" required value={username} onChange={e=>setUsername(e.target.value)}/></Field>
      <Field label="Slaptažodis"><input type="password" placeholder="Slaptažodis" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)}/></Field>
      {error&&<p role="alert" className="form-error">{error}</p>}<Button type="submit" disabled={busy}>Prisijungti<ArrowRight size={18}/></Button>
     </form>

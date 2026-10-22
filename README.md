@@ -11,7 +11,22 @@ npm ci
 npm run dev
 ```
 
-This starts the browser-local application on port 4173. Its prototype account is `admin / admin`; login fields are empty. The existing `krypta-design-review` IndexedDB and `krypta-appearance` preference are preserved. This mode is suitable for fictional data and static previews. It does not provide secure authentication, company isolation or device synchronization.
+This starts the complete browser demo on port 4173. `npm run build` produces the same demo for static hosting, without requiring an API. All implemented screens are available: companies and modules, company users and role workspaces, profile/password/session flows, order photos, reminders, manually saved freight opportunities, notifications and finance. These are device-local test workflows, not production authentication or shared storage.
+
+Demo accounts, with empty login fields:
+
+| Role | Username | Password |
+| --- | --- | --- |
+| Company administrator | `admin` | `admin` |
+| Platform owner | `owner` | `owner` |
+| Dispatcher | `dispatcher` | `admin` |
+| First active driver | `driver` | `admin` |
+
+Other initial company users can sign in with their email and `admin`. New users and companies use the passwords explicitly entered in their forms. Changing a demo password persists it and revokes that account's demo sessions. The short initial credentials exist only in the demo adapter; the Node server has no default credentials.
+
+The demo uses `krypta-demo` IndexedDB and a tab-local session. On first launch it copies the existing `krypta-design-review` workspace, preserving edited records and enabling all implemented modules. It never overwrites the original store or reseeds an existing demo. Photos are stored as browser-local blobs and remain after reload. Data does not synchronize between devices. Company roles/module rules are exercised through the existing domain commands, but client checks are not a security boundary. Use fictional data.
+
+The earlier minimal browser mode remains available with `npm run dev:browser` and `npm run build:browser`. Both modes preserve `krypta-appearance`. On Windows or Ubuntu, install Node.js 24 and run the same npm commands; no database setup is needed for the demo.
 
 ## Shared server application
 
@@ -26,9 +41,9 @@ The password file must contain a unique password of at least 15 characters, prot
 
 The local server listens on loopback port 4174 and stores records in `data/server.sqlite`. Open it locally, sign in with the owner email/password, create a company, select modules and create its administrator. The administrator creates dispatchers and drivers under Users, with separate passwords. Driver accounts require a linked driver record; expense entry and payment collection are separate permissions. Administrators can preview another workspace in an audited, read-only session.
 
-For frontend development against the API, run the server with `KRYPTA_PUBLIC_ORIGIN=http://127.0.0.1:5173`, then run `npm run dev:server` on port 5173 in another terminal. Both production build modes write to `dist/`; rebuild for the intended mode before starting or publishing it. The server application never falls back to prototype authentication if the API is unavailable. Other devices load shared changes when refreshed; stale writes are rejected. No live push transport is implemented.
+For frontend development against the API, run the server with `KRYPTA_PUBLIC_ORIGIN=http://127.0.0.1:5173`, then run `npm run dev:server` on port 5173 in another terminal. All frontend build modes write to `dist/`; rebuild for the intended mode before starting or publishing it. The server application never falls back to prototype authentication if the API is unavailable. Other devices load shared changes when refreshed; stale writes are rejected. No live push transport is implemented.
 
-Configuration variables are documented in [.env.example](.env.example). The server reads `KRYPTA_PUBLIC_ORIGIN`, `KRYPTA_HOST`, `KRYPTA_PORT`, `KRYPTA_DB_PATH` and `NODE_ENV` from its process. No external API key or runtime application secret is required: passwords are provisioned into the private database, and sessions use random server-generated tokens. Production requires HTTPS, a reverse proxy and persistent private SQLite storage. See [security and deployment](docs/SECURITY.md). Static hosting alone cannot run the shared backend. Sites backend support and deployment are not verified here.
+Configuration variables are documented in [.env.example](.env.example). The server reads `KRYPTA_PUBLIC_ORIGIN`, `KRYPTA_HOST`, `KRYPTA_PORT`, `KRYPTA_DB_PATH` and `NODE_ENV` from its process. No external API key or runtime application secret is required: passwords are provisioned into the private database, and sessions use random server-generated tokens. Production requires HTTPS, a reverse proxy and persistent private SQLite storage. See [security and deployment](docs/SECURITY.md). Static hosting alone cannot run the shared backend. Sites supports the static demo. The current Node/SQLite server requires a compatible Node host; it is not deployed by uploading the static bundle.
 
 ## Optional modules
 
@@ -42,7 +57,7 @@ Freight opportunities are manual notes and HTTPS links. Live exchange access, pr
 
 Settings exports JSON operational/workspace backups. Restoring or clearing server data first retains the previous snapshot, keeps registered identities and their permissions, and increments the company revision. Administrators can retrieve prior snapshots through `GET /api/backups` and `GET /api/backups/:id` using their authenticated session. Passwords and sessions are never restored from JSON. Optional module tables and photos require an operator-level full database backup; the Settings JSON is an operational/workspace backup.
 
-The fictional fleet contains two Sprinters and one Caddy. To create deterministic fictional operations, select an anchor date in Settings and explicitly restore samples. Clear removes operational data and keeps company settings and administrator access. Imported sample user memberships have no login password until an administrator sets one under Users. Existing data is never reset on startup or deployment. Browser records must be exported and explicitly imported into the selected server company.
+The fictional fleet contains two Sprinters and one Caddy. To create deterministic fictional operations, select an anchor date in Settings and explicitly restore samples. Clear removes operational data and keeps company settings and administrator access. Imported sample user memberships have no login password until an administrator sets one under Users. Existing data is never reset on startup or deployment. Browser records must be exported and explicitly imported into the selected server company. Demo restore/clear also retains identities and saves the previous snapshot; its JSON backups exclude photos and credentials.
 
 Private photos are excluded from JSON. Before replacing server operations when photos exist, make a full SQLite backup and explicitly delete the photos; otherwise restore is refused to prevent attaching old photos to reused order IDs. For a complete backup, stop the server and copy the private database directory including any WAL files. Test restoration. Never share a database backup as a source archive.
 
@@ -52,6 +67,8 @@ The retained `data:seed` and `data:clear` CLI commands target the old reference 
 
 ```sh
 npm test
+# Focused static-demo workflow checks:
+node --experimental-strip-types --test tests/demo.test.ts
 npm run check:server
 npm run build
 npm run check:documents

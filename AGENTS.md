@@ -10,7 +10,7 @@ This is a transport management product for small passenger and parcel operators.
 - Persist through the context's validated commands; drivers use typed `driverCommand`, administrators and dispatchers use `commit`. Maintain trip/order/stop relationships, integer EUR cents, unknown weights, whole-trip capacity checks and resource scheduling conflicts.
 - Archive referenced vehicles, drivers and customers. Preserve historical IDs. Completed order route/load fields are locked; payments and notes can be corrected.
 - Browser commands: `npm ci`, `npm run dev`, `npm run build`, `npm test`, `npm run check:documents`. Legacy `server/app.ts` and `server/index.ts` are reference code; shared sessions use `server/application.ts` and `server/start.ts`.
-- Static hosting requires the default `npm run build`. Do not publish the server-mode bundle without its API. Never commit `data/`, SQLite files, runtime secrets or node_modules.
+- Static hosting uses the complete browser demo from the default `npm run build`. `build:browser` retains the earlier minimal prototype. `VITE_RUNTIME=demo` selects only the browser adapter, never server authentication. Do not publish the server-mode bundle without its API. Never commit `data/`, SQLite files, runtime secrets or node_modules.
 - The server runtime enforces authentication and authorization with company snapshots. Keep server checks authoritative and preserve migrations. No fake GPS, optimization, tax documents or accounting profit claims.
 
 - Product copy must be factual and brief. No slogans, sales language, redundant page descriptions or repeated disclaimers. Explain real constraints only where users need them.
@@ -27,6 +27,7 @@ This is a transport management product for small passenger and parcel operators.
 - Demo fixtures are versioned in `src/data/seed.ts`. Keep `createSeed(anchorDate)` deterministic and isolated from edited stores. Never silently replace existing data on upgrade. Local reset tools must validate data, require explicit confirmation, increment the SQLite revision, and back up the previous state before replacement.
 
 - Preserve the approved owner-private Site as a fallback. Browser mode uses `krypta-design-review` IndexedDB; do not reset edited browser stores. Server mode uses separate company-scoped SQLite storage. Commit and push coherent, validated milestones when authorized by the owner.
+- The complete demo adapter lives in `src/services/demo`; it reuses domain commands and company/driver projections. Copy previous browser records only on first initialization, retain demo edits and photos on upgrade, and never enable the adapter inside server mode.
 - Browser-local sessions and role checks are prototype behavior, not production authentication. Keep session, company scope, role checks and server migration boundaries explicit. Driver pages expose only explicitly permitted trip expense entry and collection of payments for assigned orders, not company financial summaries.
 - Persist operational data and workspace events atomically. Keep arrival distinct from handover, pickup before delivery, notification recipient scoping and restore validation.
 

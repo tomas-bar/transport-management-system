@@ -1,3 +1,4 @@
+import { demoRuntime } from '../services/server-api';
 import {ServerBackups} from '../components/ServerBackups';
 import { useRef, useState } from "react";
 import {
@@ -130,16 +131,16 @@ export function Settings() {
             <div className="storage-info">
               <Database size={23} />
               <div>
-                <b>{serverMode?"Įmonės duomenys serveryje":"Šios naršyklės saugykla"}</b>
+                <b>{serverMode&&!demoRuntime?"Įmonės duomenys serveryje":"Šios naršyklės saugykla"}</b>
                 <p>
                   Reisų: {db.trips.length} · Užsakymų: {db.orders.length}
                 </p>
               </div>
             </div>
             <p className="muted">
-              {serverMode
+              {serverMode && !demoRuntime
                 ? "JSON kopijoje nėra nuotraukų ir slaptažodžių. Prieš keičiant duomenis ankstesnė kopija išsaugoma serveryje."
-                : "Kopijoje yra įrašai, naudotojai ir patvirtinimai. Tarp įrenginių duomenys nesinchronizuoja."}
+                : "JSON kopijoje nėra nuotraukų ir slaptažodžių. Duomenys saugomi šioje naršyklėje ir tarp įrenginių nesinchronizuoja."}
             </p>
             <div className="stack-actions">
               <Button
