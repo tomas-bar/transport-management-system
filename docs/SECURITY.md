@@ -21,6 +21,8 @@ Company operations, generated events, revision changes, membership changes and t
 
 Photos are private JPEG derivatives stored in SQLite. Input is limited to 8 MiB and 20 million pixels, resized to at most 2400 pixels per side, with 20 photos per order and a 512 MiB live-image quota per company. Explicit deletion removes the live derivative; audit metadata remains. Photos stay until explicitly deleted. Snapshot JSON backups exclude image bytes; full SQLite backups contain photos. Operators must apply a retention policy and expire their database backups as appropriate. No end-to-end encryption, malware scanning service, or encryption at rest is claimed. Deployment should use encrypted persistent volumes and encrypted backups.
 
+The browser policy allows HTTPS data connections because company administrators can configure map-provider endpoints. Application scripts remain same-origin; map requests send only the explicitly selected addresses and coordinates. Network egress settings remain independent of this browser policy.
+
 ## Hosting requirements
 
 Serve the server-mode build and API at the same HTTPS origin through a reverse proxy. Set `KRYPTA_PUBLIC_ORIGIN` to that exact origin, bind Node to loopback behind the proxy, and provide a private persistent volume for `KRYPTA_DB_PATH`. Do not point the database at temporary or static-host storage. Configure TLS, service restart, backups, operating-system security updates and monitoring. The default listener does not trust forwarding headers for authentication or throttling; behind a proxy the shared source IP limits apply conservatively. Account limits remain separate. A deployment needing higher throughput should add a documented trusted-proxy configuration.
