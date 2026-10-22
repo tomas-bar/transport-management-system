@@ -1,4 +1,4 @@
-import { readFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { readFileSync, mkdirSync, writeFileSync, existsSync } from "node:fs";
 import { createSeed } from "../src/data/seed.ts";
 import { setVisitCompleted } from "../src/domain/route-plan.ts";
 import {
@@ -10,7 +10,7 @@ const fonts = {
   regular: readFileSync("public/fonts/DejaVuSans.ttf").toString("base64"),
   bold: readFileSync("public/fonts/DejaVuSans-Bold.ttf").toString("base64"),
 };
-const db = createSeed();
+const db = createSeed("2026-10-22");
 const trip = db.trips[0];
 trip.stops = setVisitCompleted(trip.stops, 0, true);
 mkdirSync("tmp/pdfs", { recursive: true });
@@ -33,6 +33,20 @@ writeFileSync(
   new Uint8Array(doc.output("arraybuffer")),
 );
 console.log(`finance: ${doc.getNumberOfPages()} page(s)`);
+for(const [name,options,kind] of [
+ ["expenses",{mode:"monochrome"},"expenses"],
+ ["finance-color",{mode:"color"},"finance"],
+] as const) {
+ const generated=buildFinancePdf(db,"2026-10-22","2026-10-22",fonts,options,kind);
+ writeFileSync(`tmp/pdfs/${name}.pdf`,new Uint8Array(generated.output('arraybuffer')));
+ console.log(`${name}: ${generated.getNumberOfPages()} page(s)`);
+}
+if(existsSync('tmp/road-route.json')) {
+ const road=JSON.parse(readFileSync('tmp/road-route.json','utf8'));
+ const mapped=buildTripPdf(db,trip,'route',fonts,{mode:'monochrome',route:road,basemap:JSON.parse(readFileSync('public/maps/world.json','utf8'))});
+ writeFileSync('tmp/pdfs/route-map.pdf',new Uint8Array(mapped.output('arraybuffer')));
+ console.log(`route-map: ${mapped.getNumberOfPages()} page(s)`);
+}
 // Exercise pagination without writing an additional artifact.
 const longDb = structuredClone(db);
 longDb.orders = Array.from({ length: 45 }, (_, i) => ({

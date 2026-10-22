@@ -3,13 +3,13 @@
 This is a transport management product for small passenger and parcel operators. Keep actual behavior coherent across modules. The name is provisional.
 
 - Keep domain models and business rules in `src/domain`, persistence and external adapters in `src/services`, fictional data in `src/data`, reusable controls in `src/components`, and screen composition in `src/pages`.
-- All visible text must be natural Lithuanian: reisas, maršrutas, sustojimas, paėmimo vieta, pristatymo vieta, siunta. Technical documentation, comments, development instructions, and test names must be English. The current UI locale is Lithuanian; the product is not restricted to a country or language. Do not implement multilingual UI until requested. Use normal hyphens, no em dashes.
+- All visible text must be natural Lithuanian: reisas, maršrutas, sustojimas, paėmimo vieta, pristatymo vieta, siunta. Technical documentation, comments, development instructions, and test names must be English. The current UI locale is Lithuanian; the product is not restricted to a country or language. Keep the current interface Lithuanian and make new shared terminology ready for future localization. Use normal hyphens, no em dashes.
 - Use the shared button, badge, modal, field, table, map and layout conventions. Preserve desktop and mobile behavior, accessible names, focus handling, large mobile controls, safe table scrolling and print styles.
 - New modules must join the real model, repository and navigation. Never add decorative actions or synthetic metrics presented as real.
 - Extend `Database` deliberately. Maintain `validateDatabase`, seed data, JSON backup compatibility and both storage adapters. A version change requires an explicit migration, not silent data replacement.
-- Persist through the context's validated `commit` command. Maintain trip/order/stop relationships, integer EUR cents, unknown weights, whole-trip capacity checks and resource scheduling conflicts.
+- Persist through the context's validated commands; drivers use typed `driverCommand`, administrators and dispatchers use `commit`. Maintain trip/order/stop relationships, integer EUR cents, unknown weights, whole-trip capacity checks and resource scheduling conflicts.
 - Archive referenced vehicles, drivers and customers. Preserve historical IDs. Completed order route/load fields are locked; payments and notes can be corrected.
-- Commands: `npm ci`, `npm run dev` (IndexedDB), `npm run local` (build + SQLite), `npm run server`, `npm run dev:local`, `npm run build`, `npm run build:local`, `npm test`.
+- Review commands: `npm ci`, `npm run dev`, `npm run build`, `npm test`, `npm run check:documents`. The retained SQLite server is reference code and is not wired to review sessions.
 - Static hosting requires the default `npm run build`. Do not publish the server-mode bundle without its API. Never commit `data/`, SQLite files, runtime secrets or node_modules.
 - Before real multi-user deployment add authentication, authorization and normalized server persistence. No fake GPS, optimization, tax documents or accounting profit claims.
 
@@ -21,7 +21,13 @@ This is a transport management product for small passenger and parcel operators.
 - Keep environment overrides, runtime data and hosting identity out of clean GitHub imports. `.env.server` is tracked public build configuration and must never contain secrets. Run the checks listed in `CONTRIBUTING.md` before submitting changes; keep the CI workflow aligned with those commands. Do not select a project license on the owner's behalf.
 
 - Keep phone trip statuses visible in the card view. Desktop tables and mobile cards must use the same filtered records.
-- Use `visitTasks` for optional passenger/parcel and pickup/delivery markers. Operational map details exclude financial data. Keep map controls outside the viewport and preserve normal phone page scrolling until map interaction is enabled.
+- Use `visitTasks` for optional passenger/parcel and pickup/delivery markers. Operational map details exclude financial data. Keep map controls outside the viewport and enable direct touch dragging and pinch zoom as requested; keep controls outside the map viewport.
 - New stop insertion may suggest geographic proximity only. Preserve existing order, confirmed prefix and pickup-before-delivery precedence; never label this heuristic as road optimization.
 
 - Demo fixtures are versioned in `src/data/seed.ts`. Keep `createSeed(anchorDate)` deterministic and isolated from edited stores. Never silently replace existing data on upgrade. Local reset tools must validate data, require explicit confirmation, increment the SQLite revision, and back up the previous state before replacement.
+
+- Review work lives in a separate Site and uses `krypta-design-review` IndexedDB. Never reset the established app store or update its Site. Commit and push coherent, validated milestones when authorized by the owner.
+- Browser-local sessions and role checks are prototype behavior, not production authentication. Keep session, company scope, role checks and server migration boundaries explicit. Driver pages expose only explicitly permitted trip expense entry and collection of payments for assigned orders, not company financial summaries.
+- Persist operational data and workspace events atomically. Keep arrival distinct from handover, pickup before delivery, notification recipient scoping and restore validation.
+
+- Product UI must not contain review/version/environment labels or a list of sample logins. Keep testing instructions in documentation/chat; retain administrator user preview for role testing.

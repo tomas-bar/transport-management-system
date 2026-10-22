@@ -43,6 +43,7 @@ export function Finances() {
   const [sort, setSort] = useState("date");
   const [edit, setEdit] = useState<Expense | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
+  const validPeriod=!!from&&!!to&&from<=to;
   const orders = db.orders.filter(
     (o) => o.date >= from && o.date <= to && o.status !== "cancelled",
   );
@@ -101,8 +102,8 @@ export function Finances() {
   return (
     <>
       <PageHeading title="Finansai">
-        <PdfMenu period={{ from, to }} />
-        <Button variant="secondary" onClick={exportCsv}>
+        {validPeriod&&<PdfMenu period={{ from, to }} />}
+        <Button variant="secondary" disabled={!validPeriod} onClick={exportCsv}>
           <Download size={16} />
           CSV eksportas
         </Button>
@@ -166,6 +167,7 @@ export function Finances() {
           Visas laikotarpis
         </button>
       </div>
+      {!validPeriod&&<p role="alert" className="form-error">Pasirinkite pradžios ir pabaigos datas. Pabaiga negali būti ankstesnė už pradžią.</p>}
       <div className="stats-grid finance-stats">
         <Stat
           label="Užsakymų vertė"

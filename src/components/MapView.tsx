@@ -25,8 +25,6 @@ import {
   X,
   ExternalLink,
   Layers,
-  LockKeyhole,
-  Hand,
 } from "lucide-react";
 import { Button } from "./ui";
 
@@ -52,7 +50,6 @@ export function MapView({
     [loading, setLoading] = useState(false),
     [tileError, setTileError] = useState(false);
   const [expanded, setExpanded] = useState(false),
-    [interactive, setInteractive] = useState(false),
     [filter, setFilter] = useState<TaskFilter>("all"),
     [selected, setSelected] = useState<string | null>(null),
     [layersOpen, setLayersOpen] = useState(false),
@@ -76,7 +73,7 @@ export function MapView({
         (t) => filter === "all" || t.type === filter,
       )
     : [];
-  const canInteract = interactive || expanded;
+  const canInteract = true;
   const nextVisit = visits.find((v) => !v.completed);
   useEffect(() => {
     if (!ref.current) return;
@@ -84,10 +81,10 @@ export function MapView({
     const map = L.map(element, {
       scrollWheelZoom: false,
       zoomControl: false,
-      dragging: !window.matchMedia("(pointer: coarse)").matches,
-      touchZoom: false,
-      keyboard: false,
-      doubleClickZoom: false,
+      dragging: true,
+      touchZoom: true,
+      keyboard: true,
+      doubleClickZoom: true,
       zoomSnap: 0.5,
     }).setView([53, 18], 5);
     mapRef.current = map;
@@ -472,16 +469,7 @@ export function MapView({
         {tileError && (
           <div className="tile-warning">Dalis žemėlapio neįkelta.</div>
         )}
-        {!expanded && (
-          <button
-            type="button"
-            className={`map-touch-control ${canInteract ? "unlocked" : ""}`}
-            onClick={() => setInteractive((v) => !v)}
-          >
-            {canInteract ? <LockKeyhole size={13} /> : <Hand size={13} />}{" "}
-            {canInteract ? "Baigti valdyti" : "Valdyti žemėlapį"}
-          </button>
-        )}
+
       </div>
       <div className="map-meta">
         <div className="map-metrics">{mapSummary}</div>

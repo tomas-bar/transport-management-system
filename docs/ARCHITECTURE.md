@@ -1,91 +1,60 @@
 # Architecture
 
-## Stack and layout
+## Runtime and boundaries
 
-React 19, TypeScript, Vite, Lucide, Leaflet, jsPDF and AutoTable. The hosted static build uses IndexedDB through `idb`. The local server uses Node.js 24, `node:http` and built-in `node:sqlite`, with no separate DB service or Docker.
+React 19, TypeScript and Vite, with Lucide, Leaflet, idb and jsPDF. The application currently runs as a static browser application. The retained server/SQLite source belongs to the established version and is not used for prototype accounts or workspace persistence.
 
-```
-src/
-  components/  shared controls, forms, tables, map and stop editor
-  pages/       overview, trips, orders, routes, registries, finances, settings
-  domain/      typed models, invariants, lifecycle and totals
-  data/        isolated fictional seed data and narrow compatibility migrations
-  services/    repository adapters, map APIs, exports
-  context.tsx  transactional UI commands and undo
-  styles/      layout, typography and semantic theme tokens
-  styles.css   ordered style entry point
-server/
-  app.ts       local HTTP API and SQLite state persistence
-  index.ts     loopback-only local startup
-```
+- `src/domain/models.ts`: established operational database schema and entity types.
+- `src/domain/logic.ts`: validation, assignment, capacity, resource scheduling and financial rules.
+- `src/domain/workspace.ts`: roles, page permissions, company users, notification events, handover confirmations and typed driver commands.
+- `src/services/review-repository.ts`: atomic operational + workspace snapshot in a dedicated IndexedDB namespace, with optimistic revision checks.
+- `src/context.tsx`: current session, guarded mutations, snapshot persistence, notifications and review impersonation.
+- `src/pages`: role-aware composition, including Login, WorkspaceUsers, Notifications and DriverWorkspace.
+- `src/components/Journey.tsx`: physical stop progress projection shared across director/dispatcher/driver views.
+- `src/styles/review.css`: review theme and role-specific layouts, loaded after the retained component styles.
 
-## Domain relationships
+## Data and commands
 
-`Customer -> Order -> Trip -> Vehicle + Driver`. `Route` holds a reusable ordered stop template. A trip copies template stops at creation. Template edits never silently change existing trips. Each assigned order adds two stops with `orderId` and pickup/delivery `kind`. Order address edits update those linked stops in place, preserving their sequence and progress metadata. Removing an order from a trip removes only its own linked stops.
+The operational `Database` remains version 1, so existing operational JSON exports stay compatible. A separate versioned `Workspace` contains company users, notification preferences, recipient-scoped notifications and task confirmations. The repository stores both as one `ReviewSnapshot` in a single IndexedDB transaction. Validation precedes writes. A revision mismatch rejects a stale write from another tab.
 
-`Expense` optionally references a trip and/or vehicle. Vehicle expense totals include explicit vehicle expenses and trip-linked expenses without an explicit vehicle, avoiding double counting. Revenue and received amounts come from non-cancelled orders. Currency values are integer EUR cents; weight is kg, distance is metres and duration seconds in the routing service.
+Existing domain relationships remain `Customer -> Order -> Trip -> Driver + Vehicle`. Route templates are copied into trips. Physical visits group adjacent stops at the same coordinates without dropping order references. Driver commands use this same visit projection.
 
-`Trip` and `Order` status changes are coordinated in domain commands. Completion marks linked orders completed. Cancellation returns orders to the unassigned pool while retaining payment amounts. Assigned passenger counts are conservatively compared with whole-trip seats. Known parcel mass is `weight per item * quantity`. Unknown weights remain unknown and trigger a UI warning.
+Each task confirmation records trip, order, pickup/delivery kind, actor and timestamp. Arrival and handover remain distinct facts. A task at the next visit records arrival and handover atomically; explicit arrival remains available. Delivery requires a previous pickup confirmation. Undo commands preserve delivery dependencies, record correction events and can reverse implicit arrival only when no later visit or other task depends on it. Completion requires all visits and non-cancelled orders to be complete. Generic operational mutations are rejected for drivers. Orders with handover confirmations cannot silently change trip or addresses.
 
-Dates use ISO calendar strings; planned datetime values use `YYYY-MM-DDTHH:mm` in Lithuania's civil time. Cross-zone stop scheduling is a future model change. Automatic numbering starts at KR-1001 and UZ-2001. Stable UUIDs are the actual relation keys.
+Administrator and dispatcher pages use existing validated commands. Only administrators may change company settings or users. Driver commands verify the actor's company, active state, role and trip assignment before mutation. Page guards and navigation use the same permission function. No frontend guard is represented as a production security boundary.
 
-## Storage and transactions
+## Notifications
 
-The `Repository` interface exposes `load()` and `save()`. `VITE_STORAGE_MODE=server` selects the local HTTP adapter, otherwise the IndexedDB adapter is selected. `.env.server` is a public non-secret build setting. No API secret belongs in a Vite variable.
+`notificationChanges` derives assignment, trip state, delivery and financial events from committed snapshots. Driver arrival, pickup and correction commands add their own events. `groupNotifications` projects recipient-specific history into trip groups without replacing individual notification records. Expanding a group marks only its captured event IDs read, so a newly arriving event remains unread. Another recipient’s read state is never modified. Recipients are relevant active company managers and the assigned driver; an actor is not notified about their own generic change. In-app preferences suppress new deliveries, not existing history. Read state belongs to the recipient. Operational data and resulting notification records commit atomically.
 
-UI commands clone current state, run a mutation, validate the entire schema and relationships, persist, then replace React state. Failed validation or persistence leaves current state intact. One in-memory previous snapshot supports undo through the latest notification. Undo itself is a validated persisted transaction, not a visual reversal.
+The current adapter stores notifications locally. A server implementation can persist domain events and use an outbox to deliver in-app/email notifications. Email transport, queues and delivery claims are intentionally absent from this review.
 
-IndexedDB database `krypta-tms`, object store `state`, keys `main` and `revision`. Revisions are checked within one read-write transaction to reject stale tabs. Clearing browser site data removes this database.
+## Session adapter
 
-SQLite file `data/krypta.sqlite` contains a single versioned JSON document in `app_state`, plus an integer revision. This is a deliberate lightweight v1 persistence layer, not a normalized reporting database. Bound SQL parameters and atomic conditional UPDATE prevent SQL injection and stale writes. WAL and synchronous FULL are enabled. The same validator checks HTTP payloads and JSON backup imports.
+Prototype sessions use sessionStorage; administrators can select an active sample user for role preview from inside the workspace. `admin / admin` is a deliberate review credential, not a password system. Admin impersonation records the administrator to return to and applies the selected user's permissions during preview. Sessions are not a source of trust outside the prototype.
 
-The local HTTP server listens on 127.0.0.1 only. It validates host, Origin, content type, schema, references and payload size. `GET /api/state` returns ETag; `PUT /api/state` requires If-Match and returns 409 for stale state. There is no authentication and no network deployment claim for this server. Node's SQLite API may emit an experimental warning in Node 24.
+A production adapter must authenticate on the server, use a secure session mechanism, enforce company scope and authorization on every query/command, and audit impersonation. Client-visible role labels and typed commands can stay while persistence and authentication move behind an API. Laravel/Symfony is compatible with this boundary; there is no frontend dependency on either framework.
 
-## Maps and external services
+## Compatibility and resets
 
-Leaflet renders OpenStreetMap tiles with attribution. `maps.ts` contains replaceable OSRM and Photon adapters, request caches, timeouts and error handling. Photon requests are explicit user actions, rate-limited locally, not bulk geocoding. Endpoint roots can be changed in settings. Public demo services have no SLA. Their usage is intended for modest single-user demonstration; higher-volume deployment requires a contracted or self-hosted service. Address queries and coordinates leave the device when these features are used.
+Full review backups contain `{db, workspace}`; operational-only legacy backups remain accepted. Restore validates both parts and retains a valid active administrator. Reseed/clear is explicit, replaces the workspace fixtures and removes obsolete task events. The established app's IndexedDB key and hosting identity are not touched.
 
-OSRM returns road geometry, distance and duration. No straight-line substitute is presented as a road route. Timing excludes stops, traffic and legal rest periods. Map markers represent planned stops, not GPS telemetry. Google Maps URLs are split into at most four physical visits per part with a shared boundary. Segment labels contain the actual start and end cities; latitude/longitude order, waypoints and boundaries have regression checks. The planner does not optimize stop order.
+To migrate beyond snapshots, normalize users, companies, trips, bookings, stops, task events and notification deliveries with foreign keys. Introduce explicit schema migrations and preserve record IDs. Add server concurrency, authentication and authorization before moving real records into a remotely accessible deployment.
 
-## Validation and future migration
+## Printing
 
-`npm run build` checks TypeScript and produces the static build. `npm run build:local` selects the HTTP adapter. `npm test` covers related-state transitions, load limits, dates, financial semantics, invalid backups, SQLite persistence, stale writes and foreign-origin rejection. UI preview was unavailable in the managed environment; visual and mobile browser QA is still needed.
+The optional `Workspace.printMode` defaults to monochrome for older stores. Each document has its own print options; styles are not mutable global state. Company defaults can be overridden in an individual print menu. Finance templates filter by the selected date interval and distinguish expenses-only and received-payment output. Payments remain cumulative order values attributed to the order date, not a transaction ledger.
 
-A PostgreSQL migration can keep domain types and the repository boundary while replacing snapshot persistence with normalized tables, foreign keys and per-entity commands. Add authentication, tenancy, server-side authorization, audit logs and role checks before exposing real data remotely. Introduce explicit schema migrations before changing version 1, preserve UUIDs and cents, and retain readable backup conversion paths.
+The optional printed map consumes real OSRM geometry and bundled, metadata-trimmed Natural Earth 1:50m country/city data. It preserves geographic aspect ratio, adds contextual padding, clips country shapes to the print frame and fits all route points. No standard OpenStreetMap community tiles are fetched for print/offline export. Source and public-domain terms are documented in `public/maps/NOTICE.md`. If routing fails, the document action reports an error; the standard route sheet without a diagram remains available. PDF pages are rendered for visual QA independently of browser preview availability.
 
-Routing, telemetry, notifications and accounting should remain separate service adapters. Do not add simulated GPS, unsupported accounting guarantees or fake optimization.
+## Appearance and trip finance
 
-## Physical visits and documents
+`useAppearance` persists the light/dark choice in localStorage under `krypta-appearance`. Semantic surface/text/status overrides live in `src/styles/appearance.css`. An early document theme assignment avoids a light flash. PDF options use the company print default, never the UI theme.
 
-`domain/route-plan.ts` projects adjacent stop records at the same coordinates into a physical visit. Underlying stop IDs and order references stay intact. Repeated non-adjacent visits to the same address remain distinct. The map, stop editor, Google Maps segments and PDF templates use this projection for numbering. Group movement and arrival updates operate on all underlying records. Legacy arrival marks remain visible when any of the duplicated records already recorded arrival.
+`src/domain/trip-finance.ts` defines guarded expense/receipt/void commands. Driver expense entry and payment collection are separate optional capabilities. Legacy driver records default to expense entry enabled, collection disabled. Managers retain trip-finance access. All commands verify the company, active user and trip access; driver actions are limited to assigned trips.
 
-Map viewport fitting uses current stop bounds, not a previous road geometry or a pending animation. Resize refitting is disabled after manual map interaction. Colliding labels receive a screen-space offset and a leader to their actual coordinates; markers do not change geographic positions.
+Receipts are optional workspace records with integer cents, method, actor, date, creation time and void metadata. Active receipt sums cannot exceed the order's cumulative paid value. Generic corrections that would make paid lower than the receipt total are rejected. A void preserves history and deducts the exact receipt amount. Receipt trip references remain historical if an order is subsequently unassigned or moved. Driver voids are constrained to their own receipts and the currently assigned order; managers can correct historical records.
 
-PDF rendering is isolated in `services/pdf/documents.ts`. Templates accept typed data and fonts, and return a jsPDF document. They do not inspect the DOM, current UI tab or viewport. A4 headers, table pagination, explicit stop statuses and page footers are shared. Operational trip, passenger and parcel templates exclude monetary data. Finance has a separate report. Fonts are served from `public/fonts`; the browser loads the renderer on demand and opens the PDF from a user-initiated action.
+Expense entries use the established Database collection, so fleet/trip totals and reports update together. Optional submission metadata records who entered them. Restoring an old backup remains valid. The receipt journal covers new entries only; legacy paid totals and period reports retain their documented booking-date convention until a ledger migration is implemented.
 
-## Content and localization boundary
-
-Technical documents, comments, test names and development instructions are English. Current UI text is Lithuanian and is kept brief and task-specific. This locale is an initial presentation choice, not a geographic product restriction. No translation framework or additional locale is introduced in this revision. Replace regional formatting behind a configuration boundary when localization is implemented.
-
-## Operational maps and mobile views
-
-Phone trip lists use a card projection of the same records and filters as the desktop table, so status, departure, vehicle and load remain visible without horizontal scrolling. Payment fields are optional and collapsed by default. `Order.priceSet` is an optional backward-compatible flag: missing legacy positive prices are known, missing zero prices are unknown, and an explicit zero price can represent a free booking.
-
-`visitTasks` projects order type, pickup/delivery direction, quantity and contacts onto a physical visit. It intentionally exposes no monetary fields. Marker HTML uses only generated numbers, fixed SVGs and enum-derived CSS classes; user content is rendered through React. The same projection drives task filtering and the selected-stop panel. Arrival writes reuse the validated context transaction, and completing a trip confirms all stops. Historical completed trips are shown as arrived without replacing their stored records.
-
-Embedded maps disable one-finger dragging on coarse-pointer devices until the user enables control or enters full-screen mode. Full-screen mode locks page scrolling, traps keyboard focus, restores it on close and keeps controls outside the map viewport. Imagery uses the public Esri World Imagery raster endpoint with source attribution; no imagery is requested until explicitly selected. Providers may rate-limit or change availability.
-
-`insertOrderStops` is a geographic minimum-added-distance heuristic. It evaluates pickup/delivery insertion positions while preserving the driver's existing stop order and confirmed arrival prefix, and always places pickup before delivery. It does not optimize the whole route or claim road-network distance savings. Final road geometry/distance still comes from OSRM after the sequence changes. Existing stop address edits retain their position and progress metadata.
-
-## Repeatable fixtures
-
-`createSeed(anchorDate)` builds versioned, independent fixture objects with UTC
-calendar arithmetic. The default anchor is today's date in Europe/Vilnius.
-Settings exposes explicit restore, fixed-date export and clearing actions. A
-source update never resets an existing store automatically.
-
-`scripts/data.ts` shares the same factory and schema validator. SQLite seed and
-clear commands require `--confirm`, hold an immediate transaction, write a JSON
-backup of the previous validated state, and increment its revision. Clearing
-retains settings. Export produces a fresh fixture without reading a live store.
-Backups and exports are runtime artifacts, excluded from source control.
+The application can eventually be deployed as a dedicated installation on a company subdomain, independently of that company's public website. That production deployment still requires server authentication, authorization and shared persistence; this review remains a static browser-local application.

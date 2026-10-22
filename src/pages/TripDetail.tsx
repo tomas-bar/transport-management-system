@@ -1,3 +1,6 @@
+import { TripFinance } from "../components/TripFinance";
+import { TripActivity } from "../components/TripActivity";
+import { Journey } from "../components/Journey";
 import { PdfMenu } from "../components/PdfMenu";
 import { routeVisits } from "../domain/route-plan";
 import { useState } from "react";
@@ -132,6 +135,8 @@ export function TripDetail({ id }: { id: string }) {
           {driver.firstName} {driver.lastName}
         </span>
       </div>
+      <Journey trip={t} />
+      <TripActivity tripId={t.id}/>
       <div className="trip-kpis">
         <div>
           <Users size={20} />
@@ -328,7 +333,7 @@ export function TripDetail({ id }: { id: string }) {
           />
         </Panel>
       )}
-      {tab === "finance" && (
+      {tab === "finance" && (<>
         <div className="detail-two-col">
           <Panel title="Finansinė suvestinė">
             <div className="finance-lines">
@@ -378,7 +383,7 @@ export function TripDetail({ id }: { id: string }) {
               </Button>
             )}
           </Panel>
-        </div>
+        </div><TripFinance tripId={t.id}/></>
       )}
       {edit && <TripForm trip={t} onClose={() => setEdit(false)} />}{" "}
       {orderForm && (

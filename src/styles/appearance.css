@@ -1,0 +1,105 @@
+:root{--surface:#fff;--surface-raised:#fafbfe;--canvas:#f7f8fa;--text:#253348;--text-secondary:#6e7d95;--text-subtle:#8b99ae;--accent-soft:#edf2ff;--accent-ink:#315bdc}
+.theme-toggle{color:#8b99af}.theme-toggle:hover{color:#315bdc}.trip-finance-module{margin-top:30px;min-width:0}.trip-finance-actions{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:18px}.trip-finance-module>.panel{margin-bottom:18px}.trip-finance-module .panel-heading{padding-bottom:5px}.trip-expense-list,.trip-receipt-list{padding:0 23px 10px}.trip-expense-list>div,.trip-receipt-list>div{display:flex;align-items:center;gap:13px;padding:18px 0;border-bottom:1px solid var(--line)}.trip-expense-list>div:last-child,.trip-receipt-list>div:last-child{border:0}.trip-expense-list>div>span:nth-child(2),.trip-receipt-list>div>span{min-width:0;flex:1}.trip-expense-list b,.trip-receipt-list b{font-size:13px;font-weight:550;color:#627595}.trip-expense-list small,.trip-receipt-list small{display:block;font-size:11px;line-height:1.6;color:#93a0b6;margin-top:5px;overflow-wrap:anywhere}.trip-expense-list>div>b{flex-shrink:0;white-space:nowrap}.trip-receipt-list>div>div{display:flex;flex-direction:column;align-items:flex-end;flex-shrink:0}.trip-receipt-list .voided{opacity:.55}.trip-receipt-list .voided>div>b{text-decoration:line-through}.inline-empty{padding:20px 0;font-size:12px;color:#97a4b9}.driver-permissions{grid-column:1/-1;border:1px solid var(--line);padding:15px 18px;border-radius:8px;min-width:0}.driver-permissions legend{font-size:12px;color:#7b8aa4;padding:0 5px}.driver-permissions>label{display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.7;min-height:40px}.driver-permissions input{width:17px;height:17px;accent-color:#315bdc;flex-shrink:0}
+/* Treat each page-heading action as a complete control, never shrink its contents. */
+.heading-actions>*{min-width:0}.heading-actions>.pdf-menu{flex:0 0 auto}.pdf-menu>.button{width:auto}.heading-actions .button{white-space:nowrap;flex-shrink:0}.pdf-menu>.button>span{overflow:hidden;text-overflow:ellipsis}.pdf-menu .pdf-options{z-index:55}
+@media(max-width:1050px){.page-heading{flex-wrap:wrap}.heading-actions{max-width:100%;flex-wrap:wrap}}
+@media(max-width:650px){.heading-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:10px;align-items:stretch}.heading-actions>*{width:100%;min-width:0;max-width:100%;margin:0}.heading-actions>.pdf-menu{grid-column:1/-1}.heading-actions>.pdf-menu>.button{width:100%;min-width:0;justify-content:center;white-space:nowrap}.heading-actions>.button{width:100%;min-width:0;padding:11px 8px;font-size:12px}.driver-shell .heading-actions{display:flex;width:auto}.driver-shell .heading-actions>.badge{width:auto}.trip-finance-actions{display:grid;grid-template-columns:minmax(0,1fr)}.trip-finance-actions .button{width:100%}.trip-expense-list,.trip-receipt-list{padding:0 18px 8px}.trip-finance-module .panel-heading{padding:20px 18px 7px}.trip-expense-list b,.trip-receipt-list b{font-size:13px}.trip-expense-list small,.trip-receipt-list small{font-size:11px}.pdf-menu .pdf-options{width:min(330px,calc(100vw - 36px))}.review-topbar>div:last-child{gap:0}.theme-toggle{min-width:38px}.trip-expense-list>div{gap:10px}.trip-expense-list .event-icon{display:none}}
+/* Dark surfaces and semantic accents are independent of PDF print options. */
+:root[data-theme=dark]{--ink:#d8e2f1;--muted:#9eabc0;--teal:#91adff;--line:#2a3548;--paper:#192231;--sidebar:#151d2b;--surface:#192231;--surface-raised:#1f2a3c;--canvas:#101722;--text:#d8e2f1;--text-secondary:#a2afc4;--text-subtle:#8190a9;--accent-soft:#253454;--accent-ink:#9bb4ff;color:var(--text);background:var(--canvas);color-scheme:dark}
+:root[data-theme=dark] body{background:var(--canvas);color:var(--text)}
+:root[data-theme=dark] :is(h1,h2,h3){color:var(--text)}
+:root[data-theme=dark] :is(.review-sidebar,.review-topbar,.panel,.operation-trip,.operations-metrics,.driver-trip-card,.driver-visit,.registry-card,.route-card,.user-card,.notification-popover,.modal,.pdf-options,.place-results,.settings-form,.trip-kpis){background:var(--surface);border-color:var(--line);box-shadow:none}
+:root[data-theme=dark] :is(.review-brand,.operation-trip-name,.table-title,.data-table td>b,.registry-card-name h2,.route-card>b,.user-card h2,.account-current h3,.driver-visit h3,.driver-trip-card h2,.stop-info>b,.detail-person b,.detail-facts b){color:var(--text)}
+:root[data-theme=dark] :is(.muted,.table-sub,.table-sub>span,.contact-lines>span,.registry-card-name p,.route-card-cities,.route-card>p,.stop-info>small,.field small,.field>span,.field-label,.page-heading .muted,.panel-heading .muted,.trip-notes p,.footnote,.finance-lines>div,.detail-person p,.detail-facts small,.result-strip p,.storage-info p,.settings-side .panel>.muted,.settings-form>.muted,.system-info p,.global-results small,.modal header .muted,.driver-meta,.driver-next p,.driver-notes p,.driver-task small,.notification-preview,.notification-row p,.notification-row small,.notification-preferences small,.notification-preferences b,.user-access,.user-card p,.user-card footer>.muted,.company-label small,.review-profile small){color:var(--text-secondary)}
+:root[data-theme=dark] :is(.eyebrow,.overline,.table-footer,.panel-bottom,.trip-card-ref,.dashboard-date,.trip-type,.trip-time small,.trip-kpis small,.stat-top,.stat-detail,.stat-detail button,.operations-metrics span,.operations-metrics small,.week-range,.week-grid small,.review-nav-group,.review-breadcrumb-company,.review-search-button,.review-footer,.review-profile>svg,.trip-summary-strip>span:not(.badge),.trip-card-time>span,.trip-card-time>b,.trip-card-resources>span,.trip-card-load>span,.trip-card-footer>span,.order-card-places p,.order-card-places small,.order-mobile-card>header>span,.order-card-name small,.order-card-payment>b,.driver-visit p,.task-kind,.visit-state,.driver-trip-card>header>span:first-child){color:var(--text-subtle)}
+:root[data-theme=dark] :is(.review-sidebar nav button,.settings-nav){color:#a6b3c8}
+:root[data-theme=dark] :is(.review-sidebar nav button.active,.review-sidebar nav button:hover,.review-sidebar nav button.active svg){background:var(--accent-soft);color:var(--accent-ink)}
+:root[data-theme=dark] :is(.company-icon,.role-icon,.avatar,.agenda-date,.company-label,.review-sidebar-bottom,.review-topbar,.review-footer,.review-profile,.driver-meta,.trip-summary-strip){border-color:var(--line)}
+:root[data-theme=dark] :is(.company-icon,.avatar,.role-icon,.role-label,.nav-count,.review-sidebar nav button b){background:#24314a;color:#a2b7eb}
+:root[data-theme=dark] :is(.button.secondary,.filter-select select,.field input,.field select,.field textarea,.search-input,.period-filter input,.today-button,.day-toolbar>div,.stop-actions button,.stop-index,.icon-button:hover,.segmented,.segmented button){background:#1e293b;border-color:#354159;color:#b6c4da;box-shadow:none}
+:root[data-theme=dark] :is(.field input::placeholder,.search-input input::placeholder){color:#75839b}
+:root[data-theme=dark] .search-input input{color:var(--text)}
+:root[data-theme=dark] .button.primary{background:#436ad9;border-color:#436ad9;color:#f5f8ff;box-shadow:none}
+:root[data-theme=dark] .button.primary:hover:not(:disabled){background:#5078e8}
+:root[data-theme=dark] :is(.button.secondary:hover:not(:disabled),.button.ghost:hover:not(:disabled),.icon-button:hover){background:#293751;color:#d6e2fa}
+:root[data-theme=dark] :is(.button.ghost,.text-link,.back-link,.registry-card-bottom>button,.module-tabs>button.selected,.review-tabs>button.selected,.notification-tabs>button.selected,.theme-toggle,.order-card-footer>button){color:var(--accent-ink)}
+:root[data-theme=dark] .button.danger{background:#3b272f;border-color:#5b3542;color:#e6a3ac}
+:root[data-theme=dark] :is(.data-table th,.table-footer,.panel-bottom,.registry-card-bottom,.operation-trip>footer,.order-mobile-card>footer,.extra-filters,.bulk-bar,.modal footer,.modal>header,.result-strip,.finance-lines>.total,.finance-lines>.result,.notification-tabs,.notification-group-footer){background:var(--surface-raised);border-color:var(--line);color:var(--text-secondary)}
+:root[data-theme=dark] :is(.data-table td,.data-table th,.module-tabs,.toolbar,.stop-row,.vehicle-specs,.registry-card-bottom,.order-place,.finance-lines>div,.panel-heading,.contact-lines,.detail-actions,.trip-kpis>div,.driver-trip-card>footer,.driver-tasks,.driver-task,.visit-action,.notification-group,.notification-event,.notification-preferences>label,.notification-preferences>div,.user-card footer,.team-summary,.account-current,.account-menu>button:not(.button),.notification-popover>header,.notification-popover>footer,.upcoming-agenda>button,.trip-expense-list>div,.trip-receipt-list>div,.order-select-all,.order-mobile-card,.order-card-payment){border-color:var(--line)}
+:root[data-theme=dark] :is(.data-table tbody tr:hover,.global-results>button:hover,.place-results>button:hover,.notification-group-toggle:hover,.user-card.inactive){background:#202d43}
+:root[data-theme=dark] :is(.trip-mobile-card,.order-mobile-card,.trip-mobile-card.status-completed,.trip-mobile-card.status-cancelled){background:var(--surface)}
+:root[data-theme=dark] :is(.trip-mobile-card.status-active,.operation-trip.running>footer,.notification-group.has-unread>.notification-group-toggle,.notification-row.unread){background:#1c2943;border-color:#354d7a}
+:root[data-theme=dark] :is(.trip-card-name,.trip-card-time .today-label,.operation-trip>footer>span,.operation-trip>footer button,.notification-group-summary>b,.notification-event b,.trip-expense-list b,.trip-receipt-list b,.finance-lines b,.vehicle-specs b,.stat strong,.operations-metrics b,.trip-kpis b){color:#c3d3f2}
+:root[data-theme=dark] :is(.operations-metrics>div,.operations-metrics>button){border-color:var(--line)}
+:root[data-theme=dark] .operations-metrics>button:hover{background:#202d43}
+:root[data-theme=dark] .badge.active{background:#273b69;border-color:#3a5287;color:#b0c5ff}
+:root[data-theme=dark] :is(.badge.confirmed,.badge.assigned,.badge.paid){background:#203e37;color:#9fcbbb;border-color:#2c5248}
+:root[data-theme=dark] :is(.badge.planned,.badge.new,.badge.archived){background:#2a3344;color:#aab8ce;border-color:#344155}
+:root[data-theme=dark] .badge.completed{background:#273930;color:#9fbca9;border-color:#31483c}
+:root[data-theme=dark] :is(.badge.cancelled,.badge.unpaid,.badge.unavailable){background:#412e35;color:#d6a3ac;border-color:#543742}
+:root[data-theme=dark] .badge.partial{background:#40392a;color:#d9c18d;border-color:#564a32}
+:root[data-theme=dark] .review-bottom-nav{background:#151e2ded;border-color:var(--line)}
+:root[data-theme=dark] .review-bottom-nav button{color:#7f8fa9}
+:root[data-theme=dark] .review-bottom-nav button.active{color:#a5bcff}
+:root[data-theme=dark] :is(.journey-node,.visit-number){background:#1e2a40;border-color:#3a4860;color:#a0afc7}
+:root[data-theme=dark] .journey-step:before{background:#344156}
+:root[data-theme=dark] .journey-step.done:before{background:#345048}
+:root[data-theme=dark] :is(.journey-step.done .journey-node,.driver-visit.visited .visit-number,.stop-index.completed){background:#2a493e;border-color:#3a5c4d;color:#a3cbb6}
+:root[data-theme=dark] :is(.journey-step.next .journey-node,.driver-visit.current .visit-number){background:#26395e;border-color:#8ca9ee;color:#bed0ff;box-shadow:0 0 0 4px #30426450}
+:root[data-theme=dark] :is(.journey-step.next>span:last-of-type,.driver-visit.current .visit-state){color:#b4c9ff}
+:root[data-theme=dark] .journey-step>span:last-of-type{color:#a1afc4}
+:root[data-theme=dark] :is(.driver-next,.driver-welcome){background:#1e2f4e;border-color:#334a75;color:#b6cafa}
+:root[data-theme=dark] .driver-next h2{color:#c7d8ff}
+:root[data-theme=dark] .driver-next .overline{color:#8fa9de}
+:root[data-theme=dark] :is(.task-symbol,.notification-symbol,.notification-group-icon,.event-icon,.type-icon.passenger,.route-card-icon){background:#263752;color:#a1b9df}
+:root[data-theme=dark] :is(.task-symbol.delivery,.event-icon.delivery){background:#342d48;color:#b9abd6}
+:root[data-theme=dark] :is(.event-icon.correction,.action-inbox,.attention-icon.amber){background:#322d24;border-color:#4a4131;color:#c4ac7e}
+:root[data-theme=dark] :is(.event-icon.payment,.event-icon.expense,.notification-group-icon.finance,.role-icon.driver,.account-state.enabled,.task-done){background:#233c34;color:#a0c7b2}
+:root[data-theme=dark] .task-done{background:transparent}
+:root[data-theme=dark] :is(.driver-task.done b,.handover-activity b){color:#adc3b7}
+:root[data-theme=dark] .handover-activity{background:#1c2c27;border-color:#344c40}
+:root[data-theme=dark] :is(.handover-activity>summary,.handover-activity small){color:#8fb09f}
+:root[data-theme=dark] .handover-activity>summary>span{background:#2c4438;color:#a9c7b6}
+:root[data-theme=dark] .impersonation-banner{background:#342e21;border-color:#50442d;color:#c8b07c}
+:root[data-theme=dark] .notification-event p{color:#99a9c1}
+:root[data-theme=dark] .notification-group-summary>small,:root[data-theme=dark] .notification-event small{color:#7d8ea9}
+:root[data-theme=dark] :is(.unread-count,.notification-tabs span,.module-tabs>button>span,.section-title h2>span){background:#2a3d64;color:#b2c6ff}
+:root[data-theme=dark] .notification-popover>footer button{color:#a8bded}
+:root[data-theme=dark] :is(.action-inbox b,.action-inbox h2){color:#d3c3a6}
+:root[data-theme=dark] .action-inbox small{color:#a89b82}
+:root[data-theme=dark] :is(.action-inbox>button,.inbox-count){border-color:#4b4133}
+:root[data-theme=dark] :is(.inbox-icon,.inbox-count){background:#463b2d;color:#c8b48e}
+:root[data-theme=dark] .inbox-icon.neutral{background:#353b43;color:#b0b8c5}
+:root[data-theme=dark] .map-meta,:root[data-theme=dark] .map-toolbar,:root[data-theme=dark] .map-selection,:root[data-theme=dark] .map-layer-options{background:var(--surface);border-color:var(--line);color:#afbed6}
+:root[data-theme=dark] :is(.map-task-filters button,.map-tools button,.map-layer-options button){color:#a2b3d0;background:#1d293e;border-color:#344157}
+:root[data-theme=dark] :is(.map-task-filters button.selected,.map-layer-options button.selected){background:#2a3c62;color:#bed0ff}
+:root[data-theme=dark] .map-selection-task{border-color:var(--line)}
+:root[data-theme=dark] .map-wrap{border-color:var(--line)}
+:root[data-theme=dark] .pdf-options button{color:#b4c5e2;background:transparent}
+:root[data-theme=dark] .pdf-options button:hover{background:#253652}
+:root[data-theme=dark] .pdf-options b{color:#cbd9ef}
+:root[data-theme=dark] .pdf-options small{color:#8c9fbf}
+:root[data-theme=dark] .plate{background:#d7dfeb;border-color:#8d9cb2;color:#253348}
+:root[data-theme=dark] .plate>b{color:#253348}
+:root[data-theme=dark] .review-mark{color:#fff}
+:root[data-theme=dark] .modal footer .button.primary{color:white}
+:root[data-theme=dark] .modal-backdrop{background:#050a128f}
+:root[data-theme=dark] .product-login{background:#121b2a}
+:root[data-theme=dark] .product-login .login-content{background:#121b2a}
+:root[data-theme=dark] .product-login .login-form-wrap h1{color:#dae5fa}
+:root[data-theme=dark] .product-login .login-description{color:#95a7c5}
+:root[data-theme=dark] .product-login .login-mobile-brand{color:#d8e6ff}
+@media print{:root[data-theme=dark]{color-scheme:light;--ink:#222;--paper:#fff;--line:#ccc;--text:#222;--surface:#fff;--surface-raised:#f7f7f7;--canvas:#fff}body{background:#fff!important;color:#222!important}}
+.login-refined{grid-template-columns:minmax(0,1.08fr) minmax(380px,.92fr)}.login-refined .login-visual{padding:40px clamp(32px,5vw,80px) 27px;background:#192d4c}.login-refined .login-content{position:relative;padding:70px clamp(32px,5vw,80px)}.login-refined .login-art{padding:45px 0;max-width:520px}.login-refined .login-art>h1{font-size:clamp(32px,3.2vw,48px);letter-spacing:-1.6px;line-height:1.2;font-weight:650;margin:21px 0 20px}.login-refined .login-platform-copy{font-size:13px;line-height:1.9;max-width:410px;color:#9aaccc}.login-workflow{margin:32px 0 0;max-width:430px;display:flex;flex-direction:column;align-items:flex-start}.workflow-card{display:flex;align-items:center;gap:14px;padding:17px 20px;border:1px solid #4c5f80;border-radius:11px;background:#243b5d;position:relative;width:86%;color:#c7d6ef}.workflow-icon{width:38px;height:38px;min-width:38px;border-radius:9px;background:#304e76;display:flex;align-items:center;justify-content:center;color:#adc6eb}.workflow-card>div{flex:1;min-width:0}.workflow-card b{font-size:13px;font-weight:550;color:#e0e9f9}.workflow-card p{font-size:10px;color:#8ea8cd;line-height:1.6;margin-top:5px}.workflow-step{font-size:10px;color:#6f8bb4;font-weight:550}.workflow-trip{align-self:flex-end;flex-wrap:wrap;background:#29456a;border-color:#5d789f}.workflow-trip footer{display:flex;gap:18px;width:100%;border-top:1px solid #456083;padding-top:13px;margin-top:1px;color:#90aad0;font-size:10px}.workflow-trip footer>span{display:flex;gap:6px;align-items:center}.workflow-delivery .workflow-icon{background:#305c65;color:#a5d6cd}.workflow-connector{height:23px;display:flex;align-items:center;align-self:center;gap:3px;color:#6683af;transform:rotate(90deg);margin-left:23px}.workflow-connector>span{height:1px;width:12px;background:#6683af}.login-capabilities{display:flex;flex-wrap:wrap;gap:20px;margin-top:29px;color:#748eaf;font-size:10px;line-height:1.7}.login-capabilities>span{display:flex;gap:7px;align-items:center}.login-theme-button{position:absolute;right:25px;top:24px;color:#9aa9c2}.login-form-eyebrow{display:block;font-size:9px;letter-spacing:1.8px;color:#a2aec0;margin-bottom:17px}.login-refined .login-description{font-size:13px;margin-top:12px;margin-bottom:34px}.login-refined .login-form-wrap{max-width:350px}.login-refined .login-form-wrap h1{font-size:31px}.login-refined .login-form-wrap form{gap:22px}.login-refined .login-form-wrap form .field>span{font-size:12px}.login-refined .login-form-wrap form input{min-height:48px}.login-refined .login-form-wrap form>.button{min-height:48px;margin-top:8px}
+@media(max-width:1050px){.login-refined{grid-template-columns:minmax(0,1fr) minmax(360px,1fr)}.login-refined .login-visual{padding:34px 30px 25px}.login-refined .login-content{padding:60px 35px}.login-refined .login-art>h1{font-size:32px}.workflow-card{width:95%;padding:16px}.workflow-card p{font-size:10px}.workflow-trip{width:95%}.login-capabilities{gap:12px;flex-direction:column;margin-top:24px}}
+@media(max-width:800px){.login-refined{display:block}.login-refined .login-visual{display:none}.login-refined .login-content{padding:55px 32px 80px;max-width:460px}.login-refined .login-form-wrap{max-width:none}.login-refined .login-mobile-brand{margin-bottom:48px}.login-form-eyebrow{font-size:9px;margin-bottom:14px}.login-theme-button{right:19px;top:23px}}
+:root[data-theme=dark] :is(.stops-help,.form-help,.place-value small,.place-results small,.place-search>.muted,.registry-card-bottom>span,.storage-info b,.period-filter>span,.period-filter label,.advanced-settings summary,.trip-notes h3,.finance-stats .stat-top,.payment-line>.muted,.vehicle-specs small,.order-place small,.map-selection-heading small,.map-selection-task small,.map-metrics,.map-legend,.trip-card-footer button,.week-summary){color:var(--text-secondary)}
+:root[data-theme=dark] :is(.place-value,.storage-info,.system-info,.demo-notice,.week-grid button,.week-summary,.route-template-stops,.trip-card-footer,.warning){background:var(--surface-raised);border-color:var(--line)}
+:root[data-theme=dark] :is(.place-value b,.place-results b,.order-place b,.order-card-name b,.week-grid b,.settings-side h3){color:var(--text)}
+:root[data-theme=dark] :is(.order-place.pickup>svg,.order-place.delivery>svg,.payment-line button,.period-filter button,.week-controls button,.review-search-button kbd){color:#9eb4de}
+:root[data-theme=dark] .warning{background:#342f24;color:#cabb99;border-color:#4c422f}
+:root[data-theme=dark] .segmented button.active,:root[data-theme=dark] .segmented button.selected{background:#30446d;color:#bfd0fa}
+:root[data-theme=dark] .week-grid button.current{background:#293d66;border-color:#4a6090}
+:root[data-theme=dark] .capacity-bar{background:#303c52}
+:root[data-theme=dark] .capacity-bar>span{background:#7793da}
+@media(max-width:650px){.heading-actions>.button{white-space:normal;line-height:1.5}.heading-actions>.pdf-menu>.button{white-space:nowrap}}

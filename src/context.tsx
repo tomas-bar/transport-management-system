@@ -1,147 +1,243 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
-import type { ReactNode } from "react";
-import type { Database } from "./domain/models";
-import { product } from "./config";
-import { repository } from "./services/repository";
-import { Button } from "./components/ui";
-import { CheckCircle2, AlertCircle, X } from "lucide-react";
+import {useAppearance,type Theme} from './services/appearance';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { CheckCircle2, AlertCircle, X } from 'lucide-react';
+import type { Database } from './domain/models';
+import { applyDriverCommand, createWorkspace, managerRole, notificationChanges, type DriverCommand, type ReviewSnapshot, type Workspace, type WorkspaceUser } from './domain/workspace';
+import { routeVisits } from './domain/route-plan';
+import { markNotificationsRead } from './domain/notifications';
+import {applyFinanceCommand,type FinanceCommand} from './domain/trip-finance';
+import { reviewRepository } from './services/review-repository';
+import { Button } from './components/ui';
+interface Session {
+  userId: string;
+  returnTo?: string;
+}
 interface Context {
+  theme:Theme;toggleTheme:()=>void;
   db: Database;
-  commit: (
-    mutate: (db: Database) => void,
-    message?: string,
-  ) => Promise<boolean>;
+  workspace: Workspace;
+  user: WorkspaceUser | null;
+  session: Session | null;
+  commit: (mutate: (db: Database) => void, message?: string) => Promise<boolean>;
   busy: boolean;
   notify: (message: string, error?: boolean) => void;
   navigate: (path: string) => void;
   path: string;
+  login: (username: string, password: string) => boolean;
+  quickLogin: (id: string) => void;
+  logout: () => void;
+  previewUser: (id: string) => void;
+  returnToAdmin: () => void;
+  saveUser: (user: WorkspaceUser) => Promise<boolean>;
+  readNotifications: (id?: string | string[]) => Promise<boolean>;
+  financeCommand:(command:FinanceCommand)=>Promise<boolean>;
+  setPrintMode: (mode: 'monochrome'|'color')=>Promise<boolean>;
+  setInApp: (enabled: boolean) => Promise<boolean>;
+  driverCommand: (command: DriverCommand) => Promise<boolean>;
+  replaceData: (data: Database, workspace?: Workspace) => Promise<boolean>;
 }
 const AppContext = createContext<Context | null>(null);
 export const useApp = () => {
-  const v = useContext(AppContext);
-  if (!v) throw new Error("Nėra aplikacijos konteksto");
-  return v;
+  const value = useContext(AppContext);
+  if (!value) throw new Error('Missing application context');
+  return value;
 };
-export function Provider({ children }: { children: ReactNode }) {
-  const [db, setDb] = useState<Database | null>(null);
-  const current = useRef<Database | null>(null);
-  const previous = useRef<Database | null>(null);
+export function Provider({
+  children
+}: {
+  children: ReactNode;
+}) {
+  const appearance=useAppearance();
+  const [snapshot, setSnapshot] = useState<ReviewSnapshot | null>(null);
+  const current = useRef<ReviewSnapshot | null>(null);
+  const [session, setSession] = useState<Session | null>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem('krypta-review-session') || 'null');
+    } catch {
+      return null;
+    }
+  });
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
   const [toast, setToast] = useState<{
     message: string;
     error: boolean;
-    undo?: boolean;
   } | null>(null);
-  const [path, setPath] = useState(location.hash.slice(1) || "overview");
+  const [path, setPath] = useState(location.hash.slice(1) || 'overview');
   useEffect(() => {
-    repository
-      .load()
-      .then((d) => {
-        current.current = d;
-        setDb(d);
-      })
-      .catch((e) => setError(String(e)));
-    const update = () => setPath(location.hash.slice(1) || "overview");
-    window.addEventListener("hashchange", update);
-    return () => window.removeEventListener("hashchange", update);
+    reviewRepository.load().then(s => {
+      current.current = s;
+      setSnapshot(s);
+    }).catch(e => setError(String(e)));
+    const update = () => setPath(location.hash.slice(1) || 'overview');
+    window.addEventListener('hashchange', update);
+    return () => window.removeEventListener('hashchange', update);
   }, []);
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 7000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 6000);
+    return () => clearTimeout(timer);
   }, [toast]);
-  const notify = (message: string, error = false) =>
-    setToast({ message, error });
-  async function commit(
-    mutate: (db: Database) => void,
-    message = "Pakeitimai išsaugoti",
-  ) {
+  const notify = (message: string, error = false) => setToast({
+    message,
+    error
+  });
+  const navigate = (next: string) => {
+    location.hash = next;
+    window.scrollTo(0, 0);
+  };
+  const actor = () => current.current?.workspace.users.find(u => u.id === sessionRef.current?.userId && u.active) ?? null;
+  const storeSession = (next: Session | null) => {
+    sessionRef.current = next;
+    setSession(next);
+    try {
+      if (next) sessionStorage.setItem('krypta-review-session', JSON.stringify(next));else sessionStorage.removeItem('krypta-review-session');
+    } catch {}
+    setToast(null);
+  };
+  async function update(mutate: (s: ReviewSnapshot, user: WorkspaceUser) => void, message?: string, emitEvents = true) {
     if (lock.current || !current.current) return false;
+    const user = actor();
+    if (!user) {
+      notify('Prisijunkite iš naujo.', true);
+      return false;
+    }
     lock.current = true;
     setBusy(true);
     try {
       const next = structuredClone(current.current);
-      mutate(next);
-      await repository.save(next);
-      previous.current = current.current;
+      mutate(next, user);
+      if (emitEvents) next.workspace.notifications.push(...notificationChanges(current.current.db, next.db, next.workspace, user.id));
+      await reviewRepository.save(next);
       current.current = next;
-      setDb(next);
-      setToast({ message, error: false, undo: true });
+      setSnapshot(next);
+      if (message) notify(message);
       return true;
     } catch (e) {
-      notify(
-        e instanceof Error ? e.message : "Nepavyko išsaugoti duomenų.",
-        true,
-      );
+      notify(e instanceof Error ? e.message : 'Nepavyko išsaugoti.', true);
       return false;
     } finally {
       lock.current = false;
       setBusy(false);
     }
   }
-  const navigate = (path: string) => {
-    location.hash = path;
-    window.scrollTo(0, 0);
+  const commit = (mutate: (db: Database) => void, message = 'Pakeitimai išsaugoti') => update((next, user) => {
+    if (!managerRole(user)) throw new Error('Šis veiksmas neleidžiamas.');
+    const settings = JSON.stringify(next.db.settings);
+    mutate(next.db);
+    if (user.role !== 'admin' && settings !== JSON.stringify(next.db.settings)) throw new Error('Nustatymus gali keisti administratorius.');
+    for (const c of current.current!.workspace.confirmations) {
+      const old = current.current!.db.orders.find(o => o.id === c.orderId);
+      const changed = next.db.orders.find(o => o.id === c.orderId);
+      if (old && (!changed || old.tripId !== changed.tripId || JSON.stringify(old.pickup) !== JSON.stringify(changed.pickup) || JSON.stringify(old.delivery) !== JSON.stringify(changed.delivery))) throw new Error('Užsakymas jau paimtas. Jo reiso ir adresų pakeisti negalima.');
+    }
+    // Keep driver links valid when operational registries are cleared.
+    next.workspace.confirmations = next.workspace.confirmations.filter(c => next.db.trips.some(t => t.id === c.tripId) && next.db.orders.some(o => o.id === c.orderId));
+    for (const u of next.workspace.users) if (u.role === 'driver' && !next.db.drivers.some(d => d.id === u.driverId)) u.active = false;
+  }, message);
+  const quickLogin = (id: string) => {
+    const u = current.current?.workspace.users.find(u => u.id === id && u.active);
+    if (!u) return;
+    storeSession({
+      userId: u.id
+    });
+    navigate(u.role === 'driver' ? 'my-trips' : 'overview');
   };
-  if (error)
-    return (
-      <div className="boot-error">
-        <h1>Nepavyko atidaryti duomenų saugyklos</h1>
-        <p>
-          Patikrinkite, ar naršyklėje leidžiama svetainės duomenų saugykla.
-          Duomenys nebuvo išvalyti.
-        </p>
-        <pre>{error}</pre>
-        <Button onClick={() => location.reload()}>Bandyti dar kartą</Button>
-      </div>
-    );
-  if (!db)
-    return (
-      <div className="loading">
-        <div className="brand-symbol">k</div>
-        <p>Ruošiama „{product.name}“...</p>
-      </div>
-    );
-  return (
-    <AppContext.Provider value={{ db, commit, busy, notify, navigate, path }}>
-      {children}
-      {toast && (
-        <div
-          className={`toast ${toast.error ? "error" : ""}`}
-          role={toast.error ? "alert" : "status"}
-        >
-          {toast.error ? <AlertCircle2 /> : <CheckCircle2 />}
-          <span>{toast.message}</span>
-          {toast.undo && (
-            <button
-              onClick={async () => {
-                if (previous.current && !lock.current) {
-                  const p = previous.current;
-                  const ok = await commit(
-                    (d) => Object.assign(d, p),
-                    "Veiksmas atšauktas",
-                  );
-                  if (ok) {
-                    previous.current = null;
-                    setToast({ message: "Veiksmas atšauktas", error: false });
-                  }
-                }
-              }}
-            >
-              Atšaukti
-            </button>
-          )}
-          <button
-            aria-label="Uždaryti pranešimą"
-            onClick={() => setToast(null)}
-          >
-            <X size={17} />
-          </button>
-        </div>
-      )}
-    </AppContext.Provider>
-  );
+  const login = (username: string, password: string) => {
+    if (username.trim() === 'admin' && password === 'admin' && current.current?.workspace.users.some(u => u.id === 'admin' && u.active)) {
+      quickLogin('admin');
+      return true;
+    }
+    return false;
+  };
+  const previewUser = (id: string) => {
+    const user = actor();
+    if (user?.role !== 'admin') return;
+    const next = current.current?.workspace.users.find(u => u.id === id && u.active);
+    if (!next) return;
+    storeSession({
+      userId: id,
+      returnTo: user.id
+    });
+    navigate(next.role === 'driver' ? 'my-trips' : 'overview');
+  };
+  const returnToAdmin = () => {
+    const target = current.current?.workspace.users.find(u => u.id === sessionRef.current?.returnTo && u.active && u.role === 'admin');
+    if (target) {
+      storeSession({
+        userId: target.id
+      });
+      navigate('users');
+    } else storeSession(null);
+  };
+  const saveUser = (record: WorkspaceUser) => update((next, user) => {
+    if (user.role !== 'admin') throw new Error('Naudotojus gali keisti administratorius.');
+    if ((record.id === user.id || record.id === 'admin') && (!record.active || record.role !== 'admin')) throw new Error('Savo administratoriaus prieigos pakeisti negalima.');
+    const i = next.workspace.users.findIndex(u => u.id === record.id);
+    const clean = {
+      ...record,
+      name: record.name.trim(),
+      email: record.email.trim(),
+      companyId: next.workspace.companyId,
+      driverId: record.role === 'driver' ? record.driverId : ''
+    };
+    if (i < 0) next.workspace.users.push(clean);else next.workspace.users[i] = clean;
+  }, 'Naudotojas išsaugotas');
+  const financeCommand=(command:FinanceCommand)=>update((next,user)=>applyFinanceCommand(next,user,command),command.type==='expense'?'Išlaidos įregistruotos':command.type==='voidReceipt'?'Mokėjimas atšauktas':'Mokėjimas įregistruotas');
+  const readNotifications = (id?: string|string[]) => update((next, user) => {markNotificationsRead(next.workspace,user.id,typeof id==='string'?[id]:id);});
+  const setPrintMode=(mode:'monochrome'|'color')=>update((next,user)=>{if(user.role!=='admin')throw new Error('Nustatymus gali keisti administratorius.');next.workspace.printMode=mode;},'Spausdinimo nuostata išsaugota');
+  const setInApp = (enabled: boolean) => update((next, user) => {
+    next.workspace.preferences[user.id] = {
+      inApp: enabled
+    };
+  }, 'Pranešimų nuostata išsaugota');
+  const driverCommand = (command: DriverCommand) => update((next, user) => {
+    applyDriverCommand(next, user, command);
+    if (command.type !== 'start' && command.type !== 'finish' && !(command.type==='task'&&command.kind==='delivery')) {
+      const trip=next.db.trips.find(t=>t.id===command.tripId)!;
+      const correction=command.type==='undoTask'||command.type==='undoArrival';
+      const activity=correction?'correction':command.type==='arrive'?'arrival':'pickup';
+      const detail=command.type==='arrive'?routeVisits(trip.stops)[command.visitIndex]?.place.name:command.type==='task'?next.db.orders.find(o=>o.id===command.orderId)?.name:'';
+      for(const recipient of next.workspace.users.filter(u=>u.active&&u.role!=='driver'&&next.workspace.preferences[u.id]?.inApp!==false))next.workspace.notifications.push({id:crypto.randomUUID(),recipientId:recipient.id,type:'task',activity,title:correction?'Patvirtinimas atšauktas':command.type==='arrive'?'Atvykta į sustojimą':'Paėmimas patvirtintas',body:[detail,user.name].filter(Boolean).join(' · '),entity:{type:'trip',id:trip.id},createdAt:new Date().toISOString()});
+    }
+  }, command.type==='undoTask'||command.type==='undoArrival'?'Patvirtinimas atšauktas':'Veiksmas patvirtintas');
+  const replaceData = (data: Database, workspace?: Workspace) => update((next, user) => {
+    if (user.role !== 'admin') throw new Error('Duomenis gali atkurti administratorius.');
+    next.db = structuredClone(data);
+    next.workspace = workspace ? structuredClone(workspace) : {...createWorkspace(data),printMode:current.current!.workspace.printMode};
+    if (!next.workspace.users.some(u => u.id === user.id && u.active && u.role === 'admin')) throw new Error('Kopijoje turi būti aktyvi jūsų administratoriaus paskyra.');
+  }, 'Duomenys atkurti', false);
+  if (error) return <div className="boot-error"><h1>Nepavyko atidaryti saugyklos</h1><p>{error}</p><Button onClick={() => location.reload()}>Bandyti dar kartą</Button></div>;
+  if (!snapshot) return <div className="loading"><div className="brand-symbol">k</div><p>Ruošiama darbo erdvė...</p></div>;
+  const user = snapshot.workspace.users.find(u => u.id === session?.userId && u.active) ?? null;
+  return <AppContext.Provider value={{
+    ...appearance,
+    db: snapshot.db,
+    workspace: snapshot.workspace,
+    user,
+    session,
+    commit,
+    busy,
+    notify,
+    navigate,
+    path,
+    login,
+    quickLogin,
+    logout: () => {
+      storeSession(null);
+      navigate('overview');
+    },
+    previewUser,
+    returnToAdmin,
+    saveUser,
+    readNotifications,
+    setInApp,
+    setPrintMode,
+    financeCommand,
+    driverCommand,
+    replaceData
+  }}>{children}{toast && <div className={`toast ${toast.error ? 'error' : ''}`} role={toast.error ? 'alert' : 'status'}>{toast.error ? <AlertCircle /> : <CheckCircle2 />}<span>{toast.message}</span><button aria-label="Uždaryti pranešimą" onClick={() => setToast(null)}><X size={18} /></button></div>}</AppContext.Provider>;
 }
-const AlertCircle2 = AlertCircle;

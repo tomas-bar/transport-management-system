@@ -1,5 +1,5 @@
 # Dependencies and generated output
-node_modules/
+node_modules
 dist/
 coverage/
 *.tsbuildinfo
@@ -23,7 +23,7 @@ coverage/
 *.pem
 *.key
 
-# Hosting identity is retained only in the managed hosting checkout.
+# Hosting identity belongs to the deployment, not the source repository.
 .openai/
 
 # Logs, editors and operating-system files

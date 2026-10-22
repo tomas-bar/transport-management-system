@@ -33,5 +33,3 @@ jobs:
         run: npm run build
       - name: Check PDF templates
         run: npm run check:documents
-      - name: Build local SQLite application
-        run: npm run build:local

@@ -11,13 +11,19 @@ import {
 } from "../../domain/logic.ts";
 import { routeVisits } from "../../domain/route-plan.ts";
 
+import {drawPrintMap,type PrintBasemap} from "./basemap.ts";
+import type { RoadRoute } from "../maps";
+export interface PrintOptions {mode?:"monochrome"|"color";route?:RoadRoute;basemap?:PrintBasemap}
+const documentOptions=new WeakMap<jsPDF,PrintOptions>();
+export type FinanceDocument="finance"|"expenses"|"payments";
+
 export type TripDocument = "route" | "passengers" | "parcels" | "trip";
 export interface DocumentFonts {
   regular: string;
   bold: string;
 }
-const ink: [number, number, number] = [31, 47, 63];
-const muted: [number, number, number] = [103, 117, 129];
+const ink: [number, number, number] = [39, 39, 39];
+const muted: [number, number, number] = [110, 110, 110];
 const accent: [number, number, number] = [24, 94, 146];
 const margin = 17;
 const pageWidth = 210;
@@ -27,8 +33,10 @@ function setup(
   title: string,
   company: string,
   reference: string,
+  options: PrintOptions = {},
 ) {
   const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
+  documentOptions.set(doc,options);
   doc.addFileToVFS("Krypta-Regular.ttf", fonts.regular);
   doc.addFont("Krypta-Regular.ttf", "Krypta", "normal");
   doc.addFileToVFS("Krypta-Bold.ttf", fonts.bold);
@@ -48,7 +56,7 @@ function setup(
   doc.line(margin, 21, pageWidth - margin, 21);
   doc.setTextColor(...ink);
   doc.setFont("Krypta", "bold");
-  doc.setFontSize(21);
+  doc.setFontSize(19);
   doc.text(title, margin, 33);
   return doc;
 }
@@ -71,9 +79,9 @@ function table(
       font: "Krypta",
       fontStyle: "normal",
       fontSize: 8,
-      cellPadding: 3.2,
+      cellPadding: 2.6,
       textColor: ink,
-      lineColor: [225, 231, 236],
+      lineColor: [220, 220, 220],
       lineWidth: 0.15,
       overflow: "linebreak",
       valign: "top",
@@ -81,12 +89,12 @@ function table(
     headStyles: {
       font: "Krypta",
       fontStyle: "bold",
-      fillColor: accent,
-      textColor: [255, 255, 255],
-      fontSize: 8.2,
-      cellPadding: 3.4,
+      fillColor: documentOptions.get(doc)?.mode === "color" ? [237, 242, 249] : [243, 243, 243],
+      textColor: documentOptions.get(doc)?.mode === "color" ? accent : ink,
+      fontSize: 7.8,
+      cellPadding: 2.3,
     },
-    alternateRowStyles: { fillColor: [247, 249, 251] },
+    alternateRowStyles: { fillColor: [252, 252, 252] },
     columnStyles: widths,
     showHead: "everyPage",
     rowPageBreak: "avoid",
@@ -94,9 +102,9 @@ function table(
   return (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable
     .finalY;
 }
-function section(doc: jsPDF, title: string, y: number) {
+function section(doc: jsPDF, title: string, y: number, reserve = 35) {
   // Reserve space for the section title, table header and first data row.
-  if (y > 240) {
+  if (y + reserve > 275) {
     doc.addPage();
     y = 20;
   }
@@ -210,6 +218,7 @@ export function buildTripPdf(
   t: Trip,
   kind: TripDocument,
   fonts: DocumentFonts,
+  options: PrintOptions = {},
 ) {
   const titles: Record<TripDocument, string> = {
     route: "Maršruto lapas",
@@ -217,9 +226,10 @@ export function buildTripPdf(
     parcels: "Siuntų sąrašas",
     trip: "Reiso lapas",
   };
-  const doc = setup(fonts, titles[kind], db.settings.company, t.number);
+  const doc = setup(fonts, titles[kind], db.settings.company, t.number, options);
   let y = tripMeta(doc, db, t);
   const orders = tripOrders(db, t.id);
+  if(options.route&&(kind === "route"||kind === "trip")) y=routeDiagram(doc,t,options.route,y+10,options.basemap);
   if (kind === "route" || kind === "trip") {
     y = section(doc, "Sustojimai", y + 3);
     y = routeTable(doc, t, y);
@@ -250,66 +260,49 @@ export function buildTripPdf(
     );
   }
   if (t.notes) {
-    y = section(doc, "Pastabos", y + 3);
+    y = section(doc, "Pastabos", y + 3, 20);
     paragraph(doc, t.notes, y + 3);
   }
   return footer(doc, t.number);
 }
 export function buildFinancePdf(
-  db: Database,
-  from: string,
-  to: string,
-  fonts: DocumentFonts,
+ db:Database,from:string,to:string,fonts:DocumentFonts,
+ options:PrintOptions={},kind:FinanceDocument='finance',
 ) {
-  const doc = setup(
-    fonts,
-    "Finansų suvestinė",
-    db.settings.company,
-    `${from} - ${to}`,
-  );
-  const orders = db.orders.filter(
-    (o) => o.date >= from && o.date <= to && o.status !== "cancelled",
-  );
-  const expenses = db.expenses.filter((e) => e.date >= from && e.date <= to);
-  const f = totals(orders, expenses);
-  let y = table(
-    doc,
-    ["Rodiklis", "Suma"],
-    [
-      ["Užsakymų vertė", money(f.revenue)],
-      ["Gauti mokėjimai", money(f.paid)],
-      ["Registruotos išlaidos", money(f.spent)],
-      ["Liko mokėti", money(f.balance)],
-      ["Preliminarus rezultatas", money(f.result)],
-    ],
-    43,
-    { 1: { cellWidth: 44 } },
-  );
-  y = section(doc, "Užsakymai ir mokėjimai", y + 3);
-  y = table(
-    doc,
-    ["Užsakymas / data", "Klientas", "Vertė", "Sumokėta", "Liko mokėti"],
-    orders.map((o) => [
-      `${o.number}\n${o.date}`,
-      db.customers.find((c) => c.id === o.customerId)?.name ?? o.name,
-      hasAgreedPrice(o) ? money(o.price) : "-",
-      money(o.paid),
-      hasAgreedPrice(o) ? money(o.price - o.paid) : "-",
-    ]),
-    y,
-  );
-  y = section(doc, "Išlaidos", y + 3);
-  table(
-    doc,
-    ["Data", "Kategorija / aprašymas", "Reisas", "Suma"],
-    expenses.map((e) => [
-      e.date,
-      `${e.category}${e.description ? "\n" + e.description : ""}`,
-      db.trips.find((t) => t.id === e.tripId)?.number ?? "-",
-      money(e.amount),
-    ]),
-    y,
-    { 0: { cellWidth: 24 }, 2: { cellWidth: 24 }, 3: { cellWidth: 28 } },
-  );
-  return footer(doc, `${from} - ${to}`);
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to)||from>to)throw new Error('Pasirinkite tinkamą laikotarpį.');
+ const title=kind==='expenses'?'Išlaidų suvestinė':kind==='payments'?'Gauti mokėjimai':'Finansų suvestinė';
+ const doc=setup(fonts,title,db.settings.company,`${from} - ${to}`,options);
+ const orders=db.orders.filter(o=>o.date>=from&&o.date<=to&&o.status!=='cancelled');
+ const expenses=db.expenses.filter(e=>e.date>=from&&e.date<=to);
+ const f=totals(orders,expenses);
+ let y=43;
+ if(kind==='expenses') {
+  y=table(doc,['Laikotarpio išlaidos','Suma'],[[`${from} - ${to}`,money(f.spent)]],y,{1:{cellWidth:35}});
+ } else if(kind==='payments') {
+  y=table(doc,['Rodiklis','Suma'],[['Gauti mokėjimai',money(f.paid)]],y,{1:{cellWidth:35}});
+  y=section(doc,'Mokėjimai pagal užsakymo datą',y+3);
+  table(doc,['Užsakymas / data','Klientas','Gauta'],orders.filter(o=>o.paid>0).map(o=>[`${o.number}\n${o.date}`,db.customers.find(c=>c.id===o.customerId)?.name??o.name,money(o.paid)]),y,{2:{cellWidth:35}});
+ } else {
+  y=table(doc,['Rodiklis','Suma'],[['Užsakymų vertė',money(f.revenue)],['Gauti mokėjimai',money(f.paid)],['Registruotos išlaidos',money(f.spent)],['Liko mokėti',money(f.balance)],['Preliminarus rezultatas',money(f.result)]],y,{1:{cellWidth:44}});
+  y=section(doc,'Užsakymai ir mokėjimai',y+3);
+  y=table(doc,['Užsakymas / data','Klientas','Vertė','Sumokėta','Liko mokėti'],orders.map(o=>[`${o.number}\n${o.date}`,db.customers.find(c=>c.id===o.customerId)?.name??o.name,hasAgreedPrice(o)?money(o.price):'-',money(o.paid),hasAgreedPrice(o)?money(o.price-o.paid):'-']),y);
+ }
+ if(kind!=='payments') {
+  y=section(doc,'Išlaidos',y+3);
+  table(doc,['Data','Kategorija / aprašymas','Reisas / transportas','Suma'],expenses.map(e=>[e.date,`${e.category}${e.description?'\n'+e.description:''}`,[db.trips.find(t=>t.id===e.tripId)?.number,db.vehicles.find(v=>v.id===e.vehicleId)?.plate].filter(Boolean).join(' / ')||'-',money(e.amount)]),y,{0:{cellWidth:24},2:{cellWidth:35},3:{cellWidth:28}});
+ }
+ return footer(doc,`${from} - ${to}`);
+}
+
+/** Road geometry from OSRM, projected to a bounded print area. No invented routing fallback. */
+function routeDiagram(doc:jsPDF,trip:Trip,route:RoadRoute,y:number,basemap?:PrintBasemap) {
+ if(!basemap)throw new Error('Žemėlapio pagrindas neįkeltas. Pasirinkite įprastą maršruto lapą arba bandykite dar kartą.');
+ if(y+104>270){doc.addPage();y=22;}
+ doc.setFont('Krypta','bold');doc.setTextColor(...ink);doc.setFontSize(10);doc.text('Reiso žemėlapis',margin,y);
+ const top=y+5,height=82,width=176;
+ drawPrintMap(doc,trip,route,basemap,margin,top,width,height,documentOptions.get(doc)?.mode==='color');
+ doc.setFont('Krypta','normal');doc.setFontSize(7);doc.setTextColor(...muted);
+ doc.text(`${Math.round(route.distance/1000)} km · ${Math.floor(route.duration/3600)} val. ${Math.floor(route.duration%3600/60)} min. važiavimo`,margin,top+height+5);
+ doc.text('Natural Earth · © OpenStreetMap · OSRM',pageWidth-margin,top+height+5,{align:'right'});
+ return top+height+10;
 }

@@ -10,13 +10,15 @@ import {
 import type { Database as Data } from "../domain/models";
 import { useApp } from "../context";
 import { PageHeading, Button, Panel, Field } from "../components/ui";
-import { storageDescription, serverMode } from "../services/repository";
+import { validateWorkspace, type ReviewSnapshot } from "../domain/workspace";
+const storageDescription = "Šios naršyklės saugykla";
+const serverMode = false;
 import { createSeed, createEmptyDatabase } from "../data/seed";
 import { download } from "../services/export";
 import { today, validateDatabase } from "../domain/logic";
 
 export function Settings() {
-  const { db, commit, busy, notify } = useApp();
+  const { db, workspace, setPrintMode, replaceData, commit, busy, notify } = useApp();
   const [form, setForm] = useState({ ...db.settings });
   const [seedDate, setSeedDate] = useState(today());
   const input = useRef<HTMLInputElement>(null);
@@ -26,13 +28,15 @@ export function Settings() {
       return;
     }
     try {
-      const parsed = validateDatabase(JSON.parse(await file.text()) as Data);
+      const raw = JSON.parse(await file.text());
+      const parsed = validateDatabase(raw.db ?? raw);
+      const restoredWorkspace = raw.workspace ? validateWorkspace(raw.workspace, parsed) : undefined;
       if (
         confirm(
           `Pakeisti dabartinius įrašus kopija? Reisų: ${parsed.trips.length}, užsakymų: ${parsed.orders.length}.`,
         )
       ) {
-        if (await commit((d) => Object.assign(d, parsed), "Kopija atkurta"))
+        if (await replaceData(parsed, restoredWorkspace))
           setForm({ ...parsed.settings });
       }
     } catch (e) {
@@ -121,6 +125,7 @@ export function Settings() {
           </form>
         </Panel>
         <div className="settings-side">
+          <Panel title="Spausdinimas"><div className="settings-form"><Field label="Numatytasis PDF stilius"><select disabled={busy} value={workspace.printMode??'monochrome'} onChange={e=>setPrintMode(e.target.value as 'monochrome'|'color')}><option value="monochrome">Nespalvotas</option><option value="color">Spalvotas</option></select></Field></div></Panel>
           <Panel title="Duomenys">
             <div className="storage-info">
               <Database size={23} />
@@ -134,15 +139,15 @@ export function Settings() {
             <p className="muted">
               {serverMode
                 ? "Atsarginė kopija apima visus sistemos įrašus."
-                : "Duomenys saugomi šioje naršyklėje ir tarp įrenginių nesinchronizuoja."}
+                : "Kopijoje yra įrašai, naudotojai ir patvirtinimai. Tarp įrenginių duomenys nesinchronizuoja."}
             </p>
             <div className="stack-actions">
               <Button
                 variant="secondary"
                 onClick={() =>
                   download(
-                    JSON.stringify(db, null, 2),
-                    `krypta-kopija-${today()}.json`,
+                    JSON.stringify({ db, workspace } satisfies ReviewSnapshot, null, 2),
+                    `krypta-perziuros-kopija-${today()}.json`,
                   )
                 }
               >
@@ -191,7 +196,7 @@ export function Settings() {
                 onClick={async () => {
                   if (
                     confirm(
-                      "Pakeisti visus dabartinius įrašus demonstraciniais duomenimis?",
+                      "Atkurti bandomuosius duomenis ir naudotojus? Dabartiniai įrašai bei patvirtinimai bus pakeisti.",
                     )
                   ) {
                     let seed: Data;
@@ -202,10 +207,7 @@ export function Settings() {
                       return;
                     }
                     if (
-                      await commit(
-                        (d) => Object.assign(d, seed),
-                        "Demonstraciniai duomenys atkurti",
-                      )
+                      await replaceData(seed)
                     )
                       setForm({ ...seed.settings });
                   }
@@ -238,12 +240,10 @@ export function Settings() {
                 onClick={async () => {
                   if (
                     confirm(
-                      "Išvalyti visus įrašus? Nustatymai išliks. Prieš tęsiant atsisiųskite kopiją.",
+                      "Išvalyti reisus, užsakymus, registrus ir patvirtinimus? Nustatymai išliks. Prieš tęsiant atsisiųskite kopiją.",
                     )
                   )
-                    await commit((d) => {
-                      Object.assign(d, createEmptyDatabase(d.settings));
-                    }, "Įrašai išvalyti");
+                    await replaceData(createEmptyDatabase(db.settings));
                 }}
               >
                 <Trash2 size={16} />

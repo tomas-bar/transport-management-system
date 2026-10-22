@@ -6,9 +6,15 @@ import {
   Route,
   Users,
   Package,
+  ReceiptText,
+  Wallet,
+  MapPin,
+  Check,
 } from "lucide-react";
 import type { Database, Trip } from "../domain/models";
-import type { DocumentFonts, TripDocument } from "../services/pdf/documents";
+import type { DocumentFonts, TripDocument, FinanceDocument } from "../services/pdf/documents";
+import {loadPrintBasemap} from "../services/pdf/basemap";
+import { roadRoute } from "../services/maps";
 import { useApp } from "../context";
 import { Button } from "./ui";
 
@@ -41,7 +47,9 @@ export function PdfMenu({
   trip?: Trip;
   period?: { from: string; to: string };
 }) {
-  const { db, notify } = useApp();
+  const { db, workspace, notify } = useApp();
+  const [mode,setMode]=useState<"monochrome"|"color">(workspace.printMode??"monochrome");
+  useEffect(()=>setMode(workspace.printMode??"monochrome"),[workspace.printMode]);
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const container = useRef<HTMLDivElement>(null);
@@ -59,7 +67,7 @@ export function PdfMenu({
       document.removeEventListener("keydown", key);
     };
   }, []);
-  async function generate(kind: TripDocument | "finance") {
+  async function generate(kind: TripDocument | FinanceDocument | "route-map") {
     // Open synchronously to preserve the browser's user-gesture allowance.
     const preview = window.open("about:blank", "_blank");
     if (preview) {
@@ -76,16 +84,17 @@ export function PdfMenu({
         import("../services/pdf/documents"),
       ]);
       const snapshot = structuredClone(db) as Database;
+      const mapData=kind==='route-map'&&trip?await Promise.all([roadRoute(trip.stops,snapshot.settings.routingUrl),loadPrintBasemap()]):null;
       const doc =
-        kind === "finance" && period
-          ? pdf.buildFinancePdf(snapshot, period.from, period.to, fonts)
+        period && ["finance","expenses","payments"].includes(kind)
+          ? pdf.buildFinancePdf(snapshot, period.from, period.to, fonts, {mode}, kind as FinanceDocument)
           : trip
-            ? pdf.buildTripPdf(snapshot, trip, kind as TripDocument, fonts)
+            ? pdf.buildTripPdf(snapshot, trip, kind === "route-map" ? "route" : kind as TripDocument, fonts, {mode,route:mapData?.[0],basemap:mapData?.[1]})
             : null;
       if (!doc) throw new Error("PDF duomenys nerasti.");
       const fileName =
-        kind === "finance"
-          ? `finansai-${period?.from}.pdf`
+        period
+          ? `${kind}-${period?.from}-${period?.to}.pdf`
           : `${trip?.number}-${kind}.pdf`;
       const blob = doc.output("blob");
       const url = URL.createObjectURL(
@@ -117,6 +126,12 @@ export function PdfMenu({
           icon: Route,
         },
         {
+          kind: "route-map" as const,
+          label: "Maršruto lapas su žemėlapiu",
+          detail: "Žemėlapis, miestai ir sustojimai",
+          icon: MapPin,
+        },
+        {
           kind: "passengers" as const,
           label: "Keleivių sąrašas",
           detail: "Kontaktai, adresai ir bagažas",
@@ -142,6 +157,8 @@ export function PdfMenu({
           detail: "Pasirinktas laikotarpis",
           icon: FileText,
         },
+        {kind:"expenses" as const,label:"Tik išlaidos",detail:"Pasirinkto laikotarpio išlaidos",icon:ReceiptText},
+        {kind:"payments" as const,label:"Gauti mokėjimai",detail:"Pagal užsakymo datą",icon:Wallet},
       ];
   return (
     <div
@@ -151,7 +168,7 @@ export function PdfMenu({
         if (!open) return;
         const buttons = Array.from(
           container.current?.querySelectorAll<HTMLButtonElement>(
-            '[role="menuitem"]',
+            '[role="menuitem"],[role="menuitemcheckbox"]',
           ) ?? [],
         );
         const current = buttons.indexOf(
@@ -178,7 +195,7 @@ export function PdfMenu({
         onClick={() => setOpen((s) => !s)}
       >
         <Printer size={16} />
-        {busy ? "Ruošiama..." : "Spausdinti / PDF"}
+        <span>{busy ? "Ruošiama..." : "Spausdinti / PDF"}</span>
         <ChevronDown size={14} />
       </Button>
       {open && (
@@ -192,6 +209,7 @@ export function PdfMenu({
               </span>
             </button>
           ))}
+          <button role="menuitemcheckbox" aria-checked={mode==='color'} className="pdf-color-toggle" onClick={()=>setMode(mode==='color'?'monochrome':'color')}><span className={`print-checkbox ${mode==='color'?'checked':''}`}>{mode==='color'&&<Check size={13}/>}</span><span><b>Spalvotas spausdinimas</b><small>{mode==='color'?'Spalvoti akcentai':'Nespalvotas dokumentas'}</small></span></button>
         </div>
       )}
     </div>

@@ -27,7 +27,18 @@ export function OrderTable({
   const { db, commit, busy } = useApp();
   if (!orders.length) return <Empty title="Užsakymų nerasta" />;
   return (
-    <div className="table-scroll">
+    <>
+    <div className="order-mobile-list">
+      {onSelect && <label className="order-select-all"><input type="checkbox" checked={orders.every(o => selected?.includes(o.id))} onChange={e => onSelect(e.target.checked ? orders.map(o => o.id) : [])}/>Pažymėti visus</label>}
+      {orders.map(o => <article className="order-mobile-card" key={o.id}>
+        <header><span>{onSelect && <input type="checkbox" aria-label={`Pažymėti ${o.number}`} checked={selected?.includes(o.id) ?? false} onChange={e => onSelect(e.target.checked ? [...(selected ?? []), o.id] : (selected ?? []).filter(id => id !== o.id))}/>}<span>{o.number} · {dateLabel(o.date)}</span></span><Badge status={o.status}/></header>
+        <button className="order-card-name" onClick={() => onEdit(o)}><span className={`type-icon ${o.type}`}>{o.type === 'passenger' ? <Users size={19}/> : <Package size={19}/>}</span><span><b>{o.name}</b><small>{o.type === 'passenger' ? 'Keleiviai' : 'Siuntos'}: {o.quantity}</small></span><SquarePen size={17}/></button>
+        <div className="order-card-places"><div><ArrowUpRight size={17}/><span><small>Paėmimas</small><b>{o.pickup.name}</b><p>{o.pickup.address}</p></span></div><div><ArrowDownRight size={17}/><span><small>Pristatymas</small><b>{o.delivery.name}</b><p>{o.delivery.address}</p></span></div></div>
+        <footer><span>{db.trips.find(t => t.id === o.tripId)?.number ?? 'Reisas nepriskirtas'}</span><button onClick={() => onEdit(o)}>Atidaryti <ArrowUpRight size={16}/></button></footer>
+        {showPayments && hasAgreedPrice(o) && <div className="order-card-payment"><b>{money(o.price)}</b><Badge status={o.paid >= o.price ? 'paid' : o.paid > 0 ? 'partial' : 'unpaid'}/>{o.paid < o.price && o.status !== 'cancelled' && <button disabled={busy} onClick={() => commit(d => {d.orders.find(x => x.id === o.id)!.paid = o.price;}, 'Mokėjimas užregistruotas')} aria-label={`Pažymėti ${o.number} apmokėtu`}><CheckCircle2 size={18}/></button>}</div>}
+      </article>)}
+    </div>
+    <div className="table-scroll order-desktop-table">
       <table className="data-table order-table">
         <thead>
           <tr>
@@ -173,5 +184,6 @@ export function OrderTable({
         </tbody>
       </table>
     </div>
+    </>
   );
 }
