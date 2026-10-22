@@ -1,3 +1,4 @@
+import {ServerBackups} from '../components/ServerBackups';
 import { useRef, useState } from "react";
 import {
   Download,
@@ -123,7 +124,7 @@ export function Settings() {
             </Button>
           </form>
         </Panel>
-        <div className="settings-side">
+        <div className="settings-side"><ServerBackups/>
           <Panel title="Spausdinimas"><div className="settings-form"><Field label="Numatytasis PDF stilius"><select disabled={busy} value={workspace.printMode??'monochrome'} onChange={e=>setPrintMode(e.target.value as 'monochrome'|'color')}><option value="monochrome">Nespalvotas</option><option value="color">Spalvotas</option></select></Field></div></Panel>
           <Panel title="Duomenys">
             <div className="storage-info">
@@ -185,7 +186,7 @@ export function Settings() {
                 />
               </Field>
               <p className="muted">
-                5 reisai · 9 užsakymai · 2 automobiliai · 2 vairuotojai
+                5 reisai · 9 užsakymai · 3 automobiliai · 2 vairuotojai
               </p>
             </div>
             <div className="stack-actions">

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { request as httpRequest } from 'node:http';
 import sharp from 'sharp';
 import { createApplication } from '../server/application.ts';
 import { hashPassword, verifyPassword, digest } from '../server/security.ts';
@@ -96,6 +97,26 @@ test('module disabling retains history and blocks finance and photo operations o
     assert.equal((await f.request('/api/companies', 'GET', undefined, auth)).status, 403);
   } finally { await f.close(); }
 });
+test('revocation while a request body is arriving prevents the pending write', async () => {
+  const f = await fixture();
+  try {
+    const auth = await f.login();
+    const received = new Promise<void>(resolve => f.server.once('request', () => resolve()));
+    let pending: ReturnType<typeof httpRequest>;
+    const finished = new Promise<number>((resolve, reject) => {
+      pending = httpRequest(f.base + '/api/commands', { method: 'POST', headers: { Origin: origin, Cookie: auth.cookie, 'X-CSRF-Token': auth.csrf, 'Content-Type': 'application/json' } }, response => {
+        response.resume(); response.on('end', () => resolve(response.statusCode!));
+      });
+      pending.on('error', reject);
+      pending.write('{"revision":1,"command":');
+    });
+    await received;
+    assert.equal((await f.request('/api/logout', 'POST', {}, auth)).status, 200);
+    pending!.end('{"type":"read"}}');
+    assert.equal(await finished, 401);
+    assert.equal(f.store.snapshot('one').revision, 1);
+  } finally { await f.close(); }
+});
 test('owner creates a company with an independent administrator and cannot read its operational data', async () => {
   const f = await fixture();
   try {
@@ -139,7 +160,9 @@ test('photos are decoded and rewritten, remain private to their company and disa
     const order = f.store.snapshot('one').snapshot.db.orders[0];
     const photo = await sharp({ create: { width: 4, height: 4, channels: 3, background: '#ff0000' } }).png().toBuffer();
     const upload = (raw: Buffer) => fetch(f.base + '/api/photos?order=' + order.id + '&stage=pickup', { method: 'POST', headers: { Origin: origin, Cookie: auth.cookie, 'X-CSRF-Token': auth.csrf, 'Content-Type': 'image/png' }, body: raw });
-    assert.equal((await upload(Buffer.from('not an image'))).status, 400);
+    assert.equal((await upload(Buffer.from('not an image'))).status, 415);
+    assert.equal((await upload(Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"></svg>'))).status, 415);
+    assert.equal((await upload(Buffer.alloc(8 * 1024 * 1024 + 1))).status, 413);
     const res = await upload(photo); assert.equal(res.status, 201, await res.clone().text()); const { id } = await res.json();
     assert.equal((await f.request('/api/photos/' + id)).status, 401);
     assert.equal((await f.request('/api/photos/' + id, 'GET', undefined, other)).status, 404);
@@ -147,6 +170,23 @@ test('photos are decoded and rewritten, remain private to their company and disa
     assert.equal((await sharp(Buffer.from(await image.arrayBuffer())).metadata()).format, 'jpeg');
     assert.equal((await f.request('/api/photos/' + id, 'DELETE', undefined, auth)).status, 200);
     assert.equal((await f.request('/api/photos/' + id, 'GET', undefined, auth)).status, 404);
+  } finally { await f.close(); }
+});
+test('optional operational records are tenant scoped and reminders retain completion history', async () => {
+  const f = await fixture();
+  try {
+    const auth = await f.login(), other = await f.login('two-admin@example.test'), driver = await f.login('one-user-d1@example.test');
+    const vehicleId = f.store.snapshot('one').snapshot.db.vehicles[0].id;
+    const res = await f.request('/api/reminders', 'POST', { title: 'Insurance renewal', vehicleId, dueDate: '2026-11-01' }, auth);
+    assert.equal(res.status, 201); const { id } = await res.json();
+    assert.equal((await f.request('/api/reminders', 'GET', undefined, driver)).status, 403);
+    assert.deepEqual(await (await f.request('/api/reminders', 'GET', undefined, other)).json(), []);
+    assert.equal((await f.request('/api/reminders', 'PUT', { id, done: true }, other)).status, 404);
+    assert.equal((await f.request('/api/reminders', 'PUT', { id, done: true }, auth)).status, 200);
+    assert.equal((await (await f.request('/api/reminders', 'GET', undefined, auth)).json())[0].done, 1);
+    assert.equal((await f.request('/api/opportunities', 'POST', { title: 'Manual opportunity', url: 'javascript:alert(1)' }, auth)).status, 400);
+    assert.equal((await f.request('/api/opportunities', 'POST', { title: 'Manual opportunity', url: 'https://example.test/offer', notes: 'Manually recorded' }, auth)).status, 201);
+    assert.deepEqual(await (await f.request('/api/opportunities', 'GET', undefined, other)).json(), []);
   } finally { await f.close(); }
 });
 test('restoring data creates a recoverable backup without changing authentication identities', async () => {

@@ -17,7 +17,7 @@ import { OrderTable } from "../components/OrderTable";
 import { OrderForm } from "../components/OrderForm";
 import { csv } from "../services/export";
 export function Orders() {
-  const { db, commit, busy, path } = useApp();
+  const { db, commit, busy, path, modules } = useApp();
   const params = new URLSearchParams(path.split("?")[1]);
   const initialOrder = db.orders.find((o) => o.id === params.get("order"));
   const [edit, setEdit] = useState<Order | undefined>(initialOrder);
@@ -165,7 +165,7 @@ export function Orders() {
             <b>Pažymėta: {selected.length}</b>
             <Button
               variant="secondary"
-              disabled={busy}
+              disabled={busy||!modules.includes("finance")}
               onClick={() =>
                 commit((d) => {
                   d.orders

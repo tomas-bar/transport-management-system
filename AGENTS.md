@@ -9,7 +9,7 @@ This is a transport management product for small passenger and parcel operators.
 - Extend `Database` deliberately. Maintain `validateDatabase`, seed data, JSON backup compatibility and both storage adapters. A version change requires an explicit migration, not silent data replacement.
 - Persist through the context's validated commands; drivers use typed `driverCommand`, administrators and dispatchers use `commit`. Maintain trip/order/stop relationships, integer EUR cents, unknown weights, whole-trip capacity checks and resource scheduling conflicts.
 - Archive referenced vehicles, drivers and customers. Preserve historical IDs. Completed order route/load fields are locked; payments and notes can be corrected.
-- Browser commands: `npm ci`, `npm run dev`, `npm run build`, `npm test`, `npm run check:documents`. The retained SQLite server is reference code and is not wired to review sessions.
+- Browser commands: `npm ci`, `npm run dev`, `npm run build`, `npm test`, `npm run check:documents`. Legacy `server/app.ts` and `server/index.ts` are reference code; shared sessions use `server/application.ts` and `server/start.ts`.
 - Static hosting requires the default `npm run build`. Do not publish the server-mode bundle without its API. Never commit `data/`, SQLite files, runtime secrets or node_modules.
 - The server runtime enforces authentication and authorization with company snapshots. Keep server checks authoritative and preserve migrations. No fake GPS, optimization, tax documents or accounting profit claims.
 

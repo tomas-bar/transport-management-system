@@ -1,3 +1,4 @@
+import {OrderPhotos} from './OrderPhotos';
 import { useState } from "react";
 import type { Order, Place } from "../domain/models";
 import { useApp } from "../context";
@@ -15,7 +16,7 @@ export function OrderForm({
   onClose: () => void;
   tripId?: string;
 }) {
-  const { db, commit, busy, notify } = useApp();
+  const { db, commit, busy, notify, modules, serverMode } = useApp();
   const selected = db.trips.find((t) => t.id === tripId);
   const [form, setForm] = useState<Order>(
     order
@@ -261,7 +262,7 @@ export function OrderForm({
                 />
               </Field>
             )}
-            <details
+            {modules.includes("finance")&&<details
               className="order-payment-section full"
               open={paymentsOpen}
               onToggle={(e) => setPaymentsOpen(e.currentTarget.open)}
@@ -299,7 +300,7 @@ export function OrderForm({
                   />
                 </Field>
               </div>
-            </details>
+            </details>}
             <Field
               label="Priskirti reisui"
               full
@@ -352,6 +353,7 @@ export function OrderForm({
             </Field>
           </div>
         </div>
+        {order&&serverMode&&modules.includes("photos")&&<div className="modal-body"><h3>Nuotraukos</h3><OrderPhotos orderId={order.id}/></div>}
         <footer>
           <Button type="button" variant="secondary" onClick={onClose}>
             Atšaukti

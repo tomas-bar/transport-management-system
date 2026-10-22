@@ -33,7 +33,7 @@ The current adapter stores notifications locally. A server implementation can pe
 
 Prototype sessions use sessionStorage; administrators can select an active sample user for role preview from inside the workspace. `admin / admin` is a deliberate review credential, not a password system. Admin impersonation records the administrator to return to and applies the selected user's permissions during preview. Sessions are not a source of trust outside the prototype.
 
-A production adapter must authenticate on the server, use a secure session mechanism, enforce company scope and authorization on every query/command, and audit impersonation. Client-visible role labels and typed commands can stay while persistence and authentication move behind an API. Laravel/Symfony is compatible with this boundary; there is no frontend dependency on either framework.
+The explicit server build uses `ServerProvider` and the same-origin API for authentication and mutations. The browser adapter remains a separate prototype fallback, never an authentication fallback inside server mode.
 
 ## Compatibility and resets
 
@@ -57,10 +57,16 @@ Receipts are optional workspace records with integer cents, method, actor, date,
 
 Expense entries use the established Database collection, so fleet/trip totals and reports update together. Optional submission metadata records who entered them. Restoring an old backup remains valid. The receipt journal covers new entries only; legacy paid totals and period reports retain their documented booking-date convention until a ledger migration is implemented.
 
-The application can eventually be deployed as a dedicated installation on a company subdomain, independently of that company's public website. That production deployment still requires server authentication, authorization and shared persistence; this review remains a static browser-local application.
+The application can eventually be deployed as a dedicated installation on a company subdomain, independently of that company's public website. The shared server build provides the initial authentication and persistence boundary; a production deployment still requires the HTTPS and persistent-storage operations documented in `SECURITY.md`.
 
 ## Shared server runtime
 
 `server/store.ts` migrates private SQLite storage with foreign-key scoped companies, accounts, sessions, audit, backup, attachment and optional module tables. Operational data stays a versioned company snapshot rather than normalized business tables. Every write verifies its revision and applies `src/domain/commands.ts` on the server. Actors come from authenticated accounts, and driver responses are reduced to assigned work and permitted financial entries. Identity and membership writes commit together.
 
 `ServerProvider` uses a same-origin API and an in-memory CSRF token; authentication uses an HttpOnly cookie. Existing IndexedDB is never migrated implicitly. The platform owner creates companies and administrators, with no implicit company data access. Module configuration belongs to the company and is checked separately from user permissions. Disabling a module preserves its data. Administrator preview is read-only and audited. See `docs/SECURITY.md` for exact controls, sources and deployment requirements.
+
+## Operational modules
+
+Company module configuration is persisted separately from membership permissions. `terminology.ts` centralizes new shared payment, photo and trip-outcome terminology without changing stored identifiers. Notification projections display current group status and remove redundant legacy context without rewriting history. New events store actor IDs.
+
+Private order photos are re-encoded JPEG derivatives under authenticated company/assignment checks. Reminders and manually saved opportunities are separate company tables; disabling a module keeps its records. `payment-report.ts` projects receipt and reversal movements by transaction date while keeping legacy cumulative totals outside that journal. Contact warnings and scheduled-vehicle reminders supplement existing capacity and resource checks.

@@ -24,7 +24,8 @@ export function OrderTable({
   onSelect?: (ids: string[]) => void;
   showPayments?: boolean;
 }) {
-  const { db, commit, busy } = useApp();
+  const { db, commit, busy, modules } = useApp();
+  showPayments = showPayments && modules.includes("finance");
   if (!orders.length) return <Empty title="Užsakymų nerasta" />;
   return (
     <>

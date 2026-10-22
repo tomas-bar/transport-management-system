@@ -48,7 +48,7 @@ export const cities: Place[] = [
 const stops = (indices: number[], prefix: string): Stop[] =>
   indices.map((i, n) => ({ ...cities[i], id: `${prefix}-${n}` }));
 /** Versioned fixtures are recreated from source, never from a previously edited store. */
-export const demoDatasetVersion = "2";
+export const demoDatasetVersion = "3";
 export function createSeed(baseDate = today()): Database {
   if (
     !/^\d{4}-\d{2}-\d{2}$/.test(baseDate) ||
@@ -102,6 +102,22 @@ export function createSeed(baseDate = today()): Database {
         mileage: 142800,
         status: "active",
         notes: "",
+      },
+      {
+        id: "v3",
+        make: "Mercedes-Benz",
+        model: "Sprinter",
+        year: 2021,
+        plate: "KRY 303",
+        type: "Keleivinis mikroautobusas",
+        seats: 8,
+        maxMass: 3500,
+        payload: null,
+        fuel: "Dyzelinas",
+        consumption: 9.2,
+        mileage: 97400,
+        status: "active",
+        notes: "Naudingąją apkrovą patikrinti pagal automobilio dokumentus.",
       },
     ],
     drivers: [

@@ -1,3 +1,4 @@
+import {tripOutcomeLabels} from './terminology.ts';
 import type {ModuleId} from './modules.ts';
 import {validateFinanceRecords,type DriverPermissions,type PaymentReceipt,type ExpenseSubmission} from './trip-finance.ts';
 import type { Database } from './models.ts';
@@ -88,6 +89,7 @@ export function canOpen(user: WorkspaceUser | null, section: string, modules?: M
 }
 export function createWorkspace(db: Database): Workspace {
   const companyId = 'company-review';
+  const fixtureTime = (db.trips[0]?.departure.slice(0,10) ?? '2000-01-01') + 'T00:00:00.000Z';
   const users: WorkspaceUser[] = [{
     id: 'admin',
     companyId,
@@ -133,7 +135,7 @@ export function createWorkspace(db: Database): Workspace {
         type: 'trip',
         id: trip.id
       },
-      createdAt: new Date().toISOString()
+      createdAt: fixtureTime
     });
   }
   for (const user of users.filter(u => u.role !== 'driver')) {
@@ -147,7 +149,7 @@ export function createWorkspace(db: Database): Workspace {
         type: 'order',
         id: ''
       },
-      createdAt: new Date().toISOString()
+      createdAt: fixtureTime
     });
   }
   return workspace;
@@ -184,24 +186,24 @@ export function validateWorkspace(workspace: Workspace, db: Database) {
 }
 export function notificationChanges(before:Database, after:Database, ws:Workspace, actorId:string):AppNotification[] {
   const result:AppNotification[]=[];
-  const actor=ws.users.find(u=>u.id===actorId)?.name??'';
+
   const emit=(activity:NonNullable<AppNotification['activity']>,title:string,body:string,tripId:string,driverId:string,finance=false)=>{
     for(const user of ws.users.filter(u=>u.active&&u.id!==actorId&&(finance?u.role!=='driver':u.role!=='driver'||u.driverId===driverId))) {
       if(ws.preferences[user.id]?.inApp===false)continue;
-      result.push({id:crypto.randomUUID(),recipientId:user.id,type:finance?'finance':activity==='assignment'?'assignment':activity==='delivery'?'task':'trip',activity,title,body:`${body}${actor?' · '+actor:''}`,entity:tripId?{type:'trip',id:tripId}:{type:'finance',id:''},createdAt:new Date().toISOString()});
+      result.push({id:crypto.randomUUID(),recipientId:user.id,type:finance?'finance':activity==='assignment'?'assignment':activity==='delivery'?'task':'trip',activity,title,body,actorId,entity:tripId?{type:'trip',id:tripId}:{type:'finance',id:''},createdAt:new Date().toISOString()});
     }
   };
   for(const trip of after.trips) {
     const old=before.trips.find(t=>t.id===trip.id);
-    if(!old||trip.driverId!==old.driverId)emit('assignment','Reisas priskirtas',trip.number,trip.id,trip.driverId);
-    else if(trip.status!==old.status)emit('trip','Reiso būsena pakeista',trip.number,trip.id,trip.driverId);
-    else if(['departure','arrival','vehicleId','name','notes'].some(k=>trip[k as keyof typeof trip]!==old[k as keyof typeof trip]))emit('trip','Reiso informacija atnaujinta',trip.number,trip.id,trip.driverId);
+    if(!old||trip.driverId!==old.driverId)emit('assignment','Reisas priskirtas','',trip.id,trip.driverId);
+    else if(trip.status!==old.status)emit('trip',tripOutcomeLabels[trip.status],'',trip.id,trip.driverId);
+    else if(['departure','arrival','vehicleId','name','notes'].some(k=>trip[k as keyof typeof trip]!==old[k as keyof typeof trip]))emit('trip','Reiso informacija atnaujinta','',trip.id,trip.driverId);
   }
   for(const order of after.orders) {
     const old=before.orders.find(o=>o.id===order.id);
     const trip=after.trips.find(t=>t.id===order.tripId);
     if(trip&&(!old||old.tripId!==order.tripId))emit('assignment','Pridėtas užsakymas',`${order.number} · ${order.name}`,trip.id,trip.driverId);
-    else if(trip&&old&&old.status!==order.status&&order.status==='completed')emit('delivery','Pristatymas patvirtintas',`${order.number} · ${order.name}`,trip.id,trip.driverId);
+    else if(trip&&old&&old.status!==order.status&&order.status==='completed')emit('delivery',order.type==='passenger'?'Keleiviai pristatyti':'Siunta pristatyta',`${order.number} · ${order.name}`,trip.id,trip.driverId);
     if(old&&old.paid!==order.paid)emit('payment','Mokėjimas atnaujintas',order.number,trip?.id??'',trip?.driverId??'',true);
   }
   for(const expense of after.expenses) {

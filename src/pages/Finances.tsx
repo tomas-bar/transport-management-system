@@ -1,3 +1,4 @@
+import {ReceiptJournal} from '../components/ReceiptJournal';
 import { PdfMenu } from "../components/PdfMenu";
 import { useState } from "react";
 import {
@@ -102,8 +103,8 @@ export function Finances() {
   return (
     <>
       <PageHeading title="Finansai">
-        {validPeriod&&<PdfMenu period={{ from, to }} />}
-        <Button variant="secondary" disabled={!validPeriod} onClick={exportCsv}>
+        {validPeriod&&tab!=="journal"&&<PdfMenu period={{ from, to }} />}
+        <Button variant="secondary" disabled={!validPeriod||tab==="journal"} onClick={exportCsv}>
           <Download size={16} />
           CSV eksportas
         </Button>
@@ -168,7 +169,7 @@ export function Finances() {
         </button>
       </div>
       {!validPeriod&&<p role="alert" className="form-error">Pasirinkite pradžios ir pabaigos datas. Pabaiga negali būti ankstesnė už pradžią.</p>}
-      <div className="stats-grid finance-stats">
+      {tab!=="journal"&&<><div className="stats-grid finance-stats">
         <Stat
           label="Užsakymų vertė"
           value={money(finances.revenue)}
@@ -203,7 +204,8 @@ export function Finances() {
           {money(finances.result)}
         </b>
       </div>
-      <div className="module-tabs">
+      </>}<div className="module-tabs">
+        <button className={tab==="journal"?"selected":""} onClick={()=>setTab("journal")}>Mokėjimų žurnalas</button>
         <button
           className={tab === "expenses" ? "selected" : ""}
           onClick={() => setTab("expenses")}
@@ -220,11 +222,11 @@ export function Finances() {
           className={tab === "orders" ? "selected" : ""}
           onClick={() => setTab("orders")}
         >
-          Visi mokėjimai
+          Užsakymų mokėjimai
         </button>
       </div>
       <Panel>
-        {tab === "expenses" ? (
+        {tab === "journal" ? <ReceiptJournal from={from} to={to}/> : tab === "expenses" ? (
           <>
             <div className="toolbar">
               <SearchInput

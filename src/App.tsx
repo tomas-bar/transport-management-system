@@ -1,7 +1,8 @@
+import {OperationalTools} from './pages/OperationalTools';
 import {Platform} from './pages/Platform';
 import {Profile} from './pages/Profile';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, Route, ClipboardList, Map, Truck, UsersRound, ContactRound, Wallet, Settings as SettingsIcon, Menu, X, ChevronRight, Search, Bell, UserRound, ArrowUpRight, LogOut, ShieldCheck, ArrowLeft, ChevronDown, Package, Moon, Sun } from 'lucide-react';
+import { RefreshCw, LayoutDashboard, Route, ClipboardList, Map, Truck, UsersRound, ContactRound, Wallet, Settings as SettingsIcon, Menu, X, ChevronRight, Search, Bell, UserRound, ArrowUpRight, LogOut, ShieldCheck, ArrowLeft, ChevronDown, Package, Moon, Sun } from 'lucide-react';
 import { Provider, useApp } from './context';
 import { Overview } from './pages/Overview';
 import { Trips } from './pages/Trips';
@@ -18,7 +19,7 @@ import { Notifications } from './pages/Notifications';
 import { DriverWorkspace } from './pages/DriverWorkspace';
 import { Avatar, Modal, SearchInput, Empty, Button } from './components/ui';
 import { canOpen, roleLabels } from './domain/workspace';
-const navigation = [{id:'platform',label:'Įmonės',icon:ShieldCheck,group:'PLATFORMA'}, {id:'profile',label:'Mano paskyra',icon:UserRound}, {
+const navigation = [{id:'platform',label:'Įmonės',icon:ShieldCheck,group:'PLATFORMA'}, {
   id: 'overview',
   label: 'Apžvalga',
   icon: LayoutDashboard,
@@ -63,6 +64,9 @@ const navigation = [{id:'platform',label:'Įmonės',icon:ShieldCheck,group:'PLAT
   icon: Bell,
   group: 'PASKYRA'
 }, {
+  id:'maintenance',label:'Transporto priminimai',icon:Truck
+}, {id:'freight',label:'Krovinių paieška',icon:Search
+}, {
   id: 'users',
   label: 'Naudotojai',
   icon: ShieldCheck
@@ -70,7 +74,7 @@ const navigation = [{id:'platform',label:'Įmonės',icon:ShieldCheck,group:'PLAT
   id: 'settings',
   label: 'Nustatymai',
   icon: SettingsIcon
-}];
+}, {id:'profile',label:'Mano paskyra',icon:UserRound}];
 function Shell() {
   const {
     db,
@@ -111,7 +115,7 @@ function Shell() {
     return () => document.removeEventListener('keydown', key);
   }, [user]);
   if (!user) return <Login />;
-  const allowed = navigation.filter(n => canOpen(user, n.id, modules) && n.id !== 'notifications' && (serverMode || !['profile','platform'].includes(n.id)));
+  const allowed = navigation.filter(n => canOpen(user, n.id, modules) && n.id !== 'notifications' && (serverMode || !['profile','platform','maintenance','freight'].includes(n.id)));
   const unread = workspace.notifications.filter(n => n.recipientId === user.id && !n.readAt).length;
   const current = navigation.find(n => n.id === section)?.label ?? 'Darbo erdvė';
   const q = query.trim().toLocaleLowerCase('lt');
@@ -149,10 +153,10 @@ function Shell() {
           icon: Icon,
           group
         }) => <div key={id}>{group && <span className="review-nav-group">{group}</span>}<button aria-current={section === id ? 'page' : undefined} className={section === id ? 'active' : ''} onClick={() => navigate(id)}><Icon size={19} /><span>{label}</span>{id === 'notifications' && unread > 0 && <b>{unread}</b>}{id === 'orders' && db.orders.filter(o => !o.tripId && !['completed', 'cancelled'].includes(o.status)).length > 0 && <i />}</button></div>)}</nav><div className="review-sidebar-bottom"><button className="review-profile" onClick={() => setAccount(true)}><Avatar name={user.name} /><span><b>{user.name}</b><small>{roleLabels[user.role]}</small></span><ChevronDown size={15} /></button></div></aside>
- <div className="review-main"><header className="review-topbar"><div><button className="review-mobile-menu icon-button" aria-label="Atidaryti meniu" onClick={() => setMobile(true)}><Menu /></button><span className="review-breadcrumb-company">{db.settings.company}<ChevronRight size={14} /></span><b>{current}</b></div><div>{user.role !== 'driver' && user.role !== 'owner' && <button className="review-search-button" onClick={() => setSearch(true)}><Search size={18} /><span>Paieška</span><kbd>⌘ K</kbd></button>}<button className="theme-toggle icon-button" title={theme==='light'?'Tamsus režimas':'Šviesus režimas'} aria-label={theme==='light'?'Įjungti tamsų režimą':'Įjungti šviesų režimą'} onClick={toggleTheme}>{theme==='light'?<Moon size={20}/>:<Sun size={20}/>}</button>{user.role !== 'owner' && <NotificationBell/>}{serverMode && <button className="text-link" disabled={busy} onClick={() => void refresh()}>Atnaujinti</button>}<button className="topbar-profile" aria-label="Naudotojo meniu" onClick={() => setAccount(true)}><Avatar name={user.name} small /><ChevronDown size={15} /></button></div></header>
+ <div className="review-main"><header className="review-topbar"><div><button className="review-mobile-menu icon-button" aria-label="Atidaryti meniu" onClick={() => setMobile(true)}><Menu /></button><span className="review-breadcrumb-company">{db.settings.company}<ChevronRight size={14} /></span><b>{current}</b></div><div>{user.role !== 'driver' && user.role !== 'owner' && <button className="review-search-button" onClick={() => setSearch(true)}><Search size={18} /><span>Paieška</span><kbd>⌘ K</kbd></button>}<button className="theme-toggle icon-button" title={theme==='light'?'Tamsus režimas':'Šviesus režimas'} aria-label={theme==='light'?'Įjungti tamsų režimą':'Įjungti šviesų režimą'} onClick={toggleTheme}>{theme==='light'?<Moon size={20}/>:<Sun size={20}/>}</button>{user.role !== 'owner' && <NotificationBell/>}{serverMode && <button className="icon-button runtime-refresh" aria-label="Atnaujinti duomenis" title="Atnaujinti duomenis" disabled={busy} onClick={() => void refresh()}><RefreshCw size={18}/></button>}<button className="topbar-profile" aria-label="Naudotojo meniu" onClick={() => setAccount(true)}><Avatar name={user.name} small /><ChevronDown size={15} /></button></div></header>
  {session?.returnTo && <div className="impersonation-banner"><span><ShieldCheck size={17} />{serverMode?'Peržiūra be pakeitimų: ':'Peržiūrite kaip '}<b>{user.name}</b><small>{roleLabels[user.role]}</small></span><button disabled={false} onClick={returnToAdmin}><ArrowLeft size={17} />Grįžti į administratorių</button></div>}
  <main id="main-content" className="main-content" key={`${user.id}-${path}`}>
- {!canOpen(user, section, modules) ? <Empty title="Puslapis nepasiekiamas" description="Jūsų rolei ši prieiga nesuteikta."><Button onClick={() => navigate(user.role === 'driver' ? 'my-trips' : user.role === 'owner' ? 'platform' : 'overview')}>Į darbo erdvę</Button></Empty> : section === 'platform' ? <Platform/> : section === 'profile' ? <Profile/> : section === 'overview' ? <Overview /> : section === 'my-trips' ? <DriverWorkspace id={path.startsWith('my-trips/') ? path.split('/')[1] : undefined} /> : section === 'trips' && path.startsWith('trips/') ? <TripDetail id={path.split('/')[1]} /> : section === 'trips' ? <Trips /> : section === 'orders' ? <Orders /> : section === 'routes' ? <Routes /> : ['vehicles', 'drivers', 'customers'].includes(section) ? <Registry kind={section as 'vehicles' | 'drivers' | 'customers'} /> : section === 'finances' ? <Finances /> : section === 'settings' ? <Settings /> : section === 'users' ? <WorkspaceUsers /> : section === 'notifications' ? <Notifications /> : <Empty title="Puslapis nerastas" />}
+ {!canOpen(user, section, modules) ? <Empty title="Puslapis nepasiekiamas" description="Jūsų rolei ši prieiga nesuteikta."><Button onClick={() => navigate(user.role === 'driver' ? 'my-trips' : user.role === 'owner' ? 'platform' : 'overview')}>Į darbo erdvę</Button></Empty> : section === 'maintenance' || section === 'freight' ? <OperationalTools kind={section}/> : section === 'platform' ? <Platform/> : section === 'profile' ? <Profile/> : section === 'overview' ? <Overview /> : section === 'my-trips' ? <DriverWorkspace id={path.startsWith('my-trips/') ? path.split('/')[1] : undefined} /> : section === 'trips' && path.startsWith('trips/') ? <TripDetail id={path.split('/')[1]} /> : section === 'trips' ? <Trips /> : section === 'orders' ? <Orders /> : section === 'routes' ? <Routes /> : ['vehicles', 'drivers', 'customers'].includes(section) ? <Registry kind={section as 'vehicles' | 'drivers' | 'customers'} /> : section === 'finances' ? <Finances /> : section === 'settings' ? <Settings /> : section === 'users' ? <WorkspaceUsers /> : section === 'notifications' ? <Notifications /> : <Empty title="Puslapis nerastas" />}
  <footer className="review-footer"><span>krypta.</span></footer></main></div>
  <nav className="review-bottom-nav" aria-label="Greitoji navigacija">{(user.role === 'driver' ? [{
         id: 'my-trips',

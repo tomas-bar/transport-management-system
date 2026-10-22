@@ -184,6 +184,8 @@ export function Select({
     </div>
   );
 }
+let modalDepth = 0;
+let previousBodyOverflow = "";
 export function Modal({
   title,
   subtitle,
@@ -228,10 +230,13 @@ export function Modal({
       }
     };
     document.addEventListener("keydown", key);
+    if (modalDepth === 0) previousBodyOverflow = document.body.style.overflow;
+    modalDepth++;
     document.body.style.overflow = "hidden";
     return () => {
       document.removeEventListener("keydown", key);
-      document.body.style.overflow = "";
+      modalDepth--;
+      if (modalDepth === 0) document.body.style.overflow = previousBodyOverflow;
       prev?.focus();
     };
   }, []);

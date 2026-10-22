@@ -19,7 +19,7 @@ One Node process and one persistent SQLite database suit the initial small insta
 
 Company operations, generated events, revision changes, membership changes and their audit records commit together. Restore first retains the previous snapshot in `snapshot_backups`. Authentication secrets and session tokens are excluded from JSON workspace backups. Restores preserve registered identities and privileges, and never restore passwords.
 
-Photos are private JPEG derivatives stored in SQLite. Input is limited to 8 MiB and 20 million pixels, resized to at most 2400 pixels per side, with 20 photos per order. Explicit deletion removes the live derivative; audit metadata remains. Photos stay until explicitly deleted. Snapshot JSON backups exclude image bytes; full SQLite backups contain photos. Operators must apply a retention policy and expire their database backups as appropriate. No end-to-end encryption, malware scanning service, or encryption at rest is claimed. Deployment should use encrypted persistent volumes and encrypted backups.
+Photos are private JPEG derivatives stored in SQLite. Input is limited to 8 MiB and 20 million pixels, resized to at most 2400 pixels per side, with 20 photos per order and a 512 MiB live-image quota per company. Explicit deletion removes the live derivative; audit metadata remains. Photos stay until explicitly deleted. Snapshot JSON backups exclude image bytes; full SQLite backups contain photos. Operators must apply a retention policy and expire their database backups as appropriate. No end-to-end encryption, malware scanning service, or encryption at rest is claimed. Deployment should use encrypted persistent volumes and encrypted backups.
 
 ## Hosting requirements
 

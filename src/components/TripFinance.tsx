@@ -1,3 +1,4 @@
+import {paymentMethodLabels as methods} from '../domain/terminology';
 import {useState} from 'react';
 import {Plus,Wallet,ReceiptText,Undo2} from 'lucide-react';
 import {useApp} from '../context';
@@ -5,7 +6,7 @@ import {driverPermissions} from '../domain/trip-finance';
 import {expenseCategories} from '../domain/models';
 import {money,today,hasAgreedPrice} from '../domain/logic';
 import {Button,Field,Modal,Panel} from './ui';
-const methods={cash:'Grynaisiais',bank:'Pavedimu',card:'Kortele'};
+
 export function TripFinance({tripId,driverMode=false}:{tripId:string;driverMode?:boolean}) {
  const {db,user,workspace,financeCommand,busy,modules}=useApp();const [form,setForm]=useState<'expense'|'receipt'|null>(null);
  const [amount,setAmount]=useState('');const [category,setCategory]=useState('Degalai');const [date,setDate]=useState(today());const [description,setDescription]=useState('');const [orderId,setOrderId]=useState('');const [method,setMethod]=useState<'cash'|'bank'|'card'>('cash');

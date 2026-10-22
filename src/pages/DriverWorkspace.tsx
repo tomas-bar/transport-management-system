@@ -1,3 +1,4 @@
+import {TripPhotos} from '../components/OrderPhotos';
 import { useState } from 'react';
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Clock3, MapPin, Package, Play, Truck, UserRound, Navigation, ChevronDown, Users, Undo2 } from 'lucide-react';
 import { useApp } from '../context';
@@ -68,7 +69,7 @@ export function DriverWorkspace({id}:{id?:string}) {
           {canUndoArrival&&<button className="undo-action undo-arrival" disabled={busy} onClick={()=>{if(confirm('Atšaukti atvykimo patvirtinimą?'))driverCommand({type:'undoArrival',tripId:trip.id,visitIndex:index});}}><Undo2 size={14}/>Atšaukti atvykimą</button>}
         </article>;
       })}</div>
-      <TripFinance tripId={trip.id} driverMode/>
+      <TripPhotos tripId={trip.id}/><TripFinance tripId={trip.id} driverMode/>
       {trip.notes&&<div className="driver-notes"><h2>Reiso pastabos</h2><p>{trip.notes}</p></div>}
     </>;
   }

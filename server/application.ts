@@ -146,7 +146,8 @@ export function createApplication(options: { dbPath: string; distPath: string; o
       const account = db.prepare('SELECT * FROM accounts WHERE email=?').get(email) as Account | undefined;
       dummy ??= hashPassword(randomToken());
       const valid = await verifyPassword(input.password, account?.password_hash ?? await dummy);
-      if (!valid || !account?.active) { store.audit(null, null, 'login.failed'); throw new HttpError(401, 'Neteisingas el. paštas arba slaptažodis.'); }
+      const latest = account ? db.prepare('SELECT password_hash,active FROM accounts WHERE id=?').get(account.id) as {password_hash:string;active:number}|undefined : undefined;
+      if (!valid || !account?.active || !latest?.active || latest.password_hash !== account.password_hash) { store.audit(null, null, 'login.failed'); throw new HttpError(401, 'Neteisingas el. paštas arba slaptažodis.'); }
       const token = randomToken(), session: Session = { token_hash: digest(token), account_id: account.id, csrf: randomToken(), created_at: now(), last_at: now(), preview_id: null, user_agent: String(req.headers['user-agent'] ?? '').slice(0, 200) };
       const response = payload(account, session);
       const previous = req.headers.cookie?.split(';').map(p => p.trim()).find(p => p.startsWith(cookieName + '='))?.slice(cookieName.length + 1);
@@ -165,6 +166,11 @@ export function createApplication(options: { dbPath: string; distPath: string; o
         requireThat(typeof req.headers['x-csrf-token'] === 'string' && equalSecret(req.headers['x-csrf-token'], session.csrf), 403, 'Atnaujinkite puslapį ir bandykite dar kartą.');
         requireThat(!session.preview_id || ['/api/preview', '/api/logout'].includes(path), 403, 'Peržiūros režimu pakeitimai neleidžiami.');
       }
+      const recheck = () => {
+        const fresh = authenticate(req);
+        requireThat(fresh.user.id === user.id && fresh.user.role === user.role && fresh.user.driverId === user.driverId && fresh.session.preview_id === session.preview_id, 403, 'Prieiga pasikeitė. Atnaujinkite puslapį.');
+      };
+      const readBody = async () => { const input = await body(req); recheck(); return input; };
       if (path === '/api/session' && method === 'GET') return json(res, 200, payload(account, session));
       if (path === '/api/logout' && method === 'POST') {
         db.prepare('DELETE FROM sessions WHERE token_hash=?').run(session.token_hash); store.audit(account.company_id, account.id, 'logout');
@@ -172,7 +178,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
       }
       if (path === '/api/preview' && method === 'POST') {
         requireThat(account.role === 'admin' && account.company_id, 403, 'Peržiūra neleidžiama.');
-        const input = await body(req), id = input.id === null ? null : text(input.id, 100);
+        const input = await readBody(), id = input.id === null ? null : text(input.id, 100);
         if (id) requireThat(store.snapshot(account.company_id).snapshot.workspace.users.some(u => u.id === id && u.active), 404, 'Naudotojas nerastas.');
         db.prepare('UPDATE sessions SET preview_id=? WHERE token_hash=?').run(id, session.token_hash); session.preview_id = id;
         store.audit(account.company_id, account.id, id ? 'preview.started' : 'preview.stopped', id ?? '');
@@ -180,18 +186,19 @@ export function createApplication(options: { dbPath: string; distPath: string; o
       }
       if (path === '/api/sessions' && method === 'GET') return json(res, 200, db.prepare('SELECT token_hash,created_at,last_at,user_agent FROM sessions WHERE account_id=? AND created_at>? AND last_at>?').all(account.id, now() - 8 * 3600000, now() - 1800000).map(r => ({ id: r.token_hash, createdAt: r.created_at, lastAt: r.last_at, device: r.user_agent, current: r.token_hash === session.token_hash })));
       if (path === '/api/sessions/revoke' && method === 'POST') {
-        const input = await body(req); db.prepare('DELETE FROM sessions WHERE account_id=? AND token_hash=?').run(account.id, text(input.id, 64));
+        const input = await readBody(); db.prepare('DELETE FROM sessions WHERE account_id=? AND token_hash=?').run(account.id, text(input.id, 64));
         store.audit(account.company_id, account.id, 'session.revoked'); return json(res, 200, { ok: true });
       }
       if (path === '/api/password' && method === 'POST') {
-        const input = await body(req); limit('password:' + account.id, 10);
+        const input = await readBody(); limit('password:' + account.id, 10);
         requireThat(await verifyPassword(input.current, account.password_hash), 400, 'Dabartinis slaptažodis neteisingas.');
         const hash = await hashPassword(input.password);
+        recheck();
         store.transaction(() => { db.prepare('UPDATE accounts SET password_hash=? WHERE id=?').run(hash, account.id); db.prepare('DELETE FROM sessions WHERE account_id=?').run(account.id); store.audit(account.company_id, account.id, 'password.changed'); });
         res.setHeader('Set-Cookie', cookie('', true)); return json(res, 200, { ok: true });
       }
       if (path === '/api/profile' && method === 'POST') {
-        const input = await body(req), name = text(input.name, 100);
+        const input = await readBody(), name = text(input.name, 100);
         store.transaction(() => {
           db.prepare('UPDATE accounts SET name=? WHERE id=?').run(name, account.id);
           if (account.company_id) {
@@ -207,8 +214,9 @@ export function createApplication(options: { dbPath: string; distPath: string; o
         requireThat(user.role === 'owner', 403, 'Prieiga nesuteikta.');
         if (method === 'GET') return json(res, 200, db.prepare('SELECT id,name,modules,active FROM companies ORDER BY name').all().map(c => ({ ...c, modules: JSON.parse(String(c.modules)) })));
         if (method === 'POST') {
-          const input = await body(req), name = text(input.name), modules = validateModules(input.modules), email = emailAddress(input.email), adminName = text(input.adminName, 100);
+          const input = await readBody(), name = text(input.name), modules = validateModules(input.modules), email = emailAddress(input.email), adminName = text(input.adminName, 100);
           const passwordHash = await hashPassword(input.password), id = randomUUID();
+          recheck();
           const data = createEmptyDatabase(createSeed('2026-01-01').settings); data.settings.company = name;
           const workspace = createWorkspace(data); workspace.companyId = id; workspace.notifications = [];
           const admin: WorkspaceUser = { id: 'admin', companyId: id, name: adminName, email, role: 'admin', active: true, driverId: '' };
@@ -224,14 +232,14 @@ export function createApplication(options: { dbPath: string; distPath: string; o
       }
       if (path.startsWith('/api/companies/') && method === 'PUT') {
         requireThat(user.role === 'owner', 403, 'Prieiga nesuteikta.');
-        const id = path.split('/')[3], input = await body(req), name = text(input.name), modules = validateModules(input.modules);
+        const id = path.split('/')[3], input = await readBody(), name = text(input.name), modules = validateModules(input.modules);
         requireThat(typeof input.active === 'boolean' && db.prepare('SELECT id FROM companies WHERE id=?').get(id), 400, 'Patikrinkite įmonės duomenis.');
         store.transaction(() => { db.prepare('UPDATE companies SET name=?,modules=?,active=? WHERE id=?').run(name, JSON.stringify(modules), Number(input.active), id); if (!input.active) db.prepare('DELETE FROM sessions WHERE account_id IN (SELECT id FROM accounts WHERE company_id=?)').run(id); store.audit(id, account.id, 'company.updated', id); });
         return json(res, 200, { ok: true });
       }
       if (path === '/api/commands' && method === 'POST') {
         requireThat(account.company_id, 403, 'Prieiga nesuteikta.');
-        const input = await body(req), command = input.command as WorkspaceCommand;
+        const input = await readBody(), command = input.command as WorkspaceCommand;
         requireThat(command && typeof command.type === 'string', 400, 'Netinkamas veiksmas.');
         const row = store.snapshot(account.company_id);
         requireThat(input.revision === row.revision, 409, 'Duomenys pakeisti kitame lange. Atnaujinkite puslapį.');
@@ -244,6 +252,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
           credentials = { email: emailAddress(command.user.email), password: input.password ? await hashPassword(input.password) : null };
           requireThat(existing || credentials.password || !command.user.active, 400, 'Naujam naudotojui nustatykite slaptažodį.');
         }
+        recheck();
         store.transaction(() => {
           if (command.type === 'restore') db.prepare('INSERT INTO snapshot_backups VALUES(?,?,?,?,?)').run(randomUUID(), account.company_id, row.revision, JSON.stringify(row.snapshot), new Date().toISOString());
           const result = db.prepare('UPDATE snapshots SET data=?,revision=revision+1 WHERE company_id=? AND revision=?').run(JSON.stringify(next), account.company_id, row.revision);
@@ -258,7 +267,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
           }
           // A restore may disable a driver whose operational record was removed.
           db.prepare('DELETE FROM sessions WHERE account_id IN (SELECT id FROM accounts WHERE company_id=? AND member_id NOT IN (SELECT value FROM json_each(?)))').run(account.company_id, JSON.stringify(next.workspace.users.filter(u => u.active).map(u => u.id)));
-          store.audit(account.company_id, account.id, 'workspace.' + command.type);
+          store.audit(account.company_id, account.id, 'workspace.' + command.type, command.type==='user'?command.user.id:command.type==='driver'||command.type==='finance'?command.command.tripId:'');
         });
         return json(res, 200, payload(account, session));
       }
@@ -285,6 +294,9 @@ export function createApplication(options: { dbPath: string; distPath: string; o
           let image: Buffer;
           try {
             const raw = await bytes(req, 8 * 1024 * 1024);
+            const mime = req.headers['content-type'];
+            const signature = mime === 'image/jpeg' ? raw.subarray(0, 3).equals(Buffer.from([255, 216, 255])) : mime === 'image/png' ? raw.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) : raw.subarray(0, 4).toString() === 'RIFF' && raw.subarray(8, 12).toString() === 'WEBP';
+            requireThat(signature, 415, 'Vaizdo turinys neatitinka failo tipo.');
             const processor = sharp(raw, { limitInputPixels: 20000000, animated: false });
             const metadata = await processor.metadata();
             const expected = ({ 'image/jpeg': 'jpeg', 'image/png': 'png', 'image/webp': 'webp' } as Record<string, string>)[req.headers['content-type']!];
@@ -296,7 +308,14 @@ export function createApplication(options: { dbPath: string; distPath: string; o
           // Recheck assignment and quota after asynchronous decoding.
           const fresh = authenticate(req); orderAccess(fresh.account, fresh.user, orderId); requireThat(fresh.user.driverId === user.driverId && !fresh.session.preview_id, 403, 'Prieiga pasikeitė. Atnaujinkite puslapį.');
           const id = randomUUID();
-          store.transaction(() => { const total = db.prepare('SELECT count(*) AS n FROM attachments WHERE company_id=? AND order_id=?').get(account.company_id!, orderId) as { n: number }; requireThat(total.n < 20, 400, 'Pasiekta nuotraukų riba.'); db.prepare('INSERT INTO attachments VALUES(?,?,?,?,?,?,?,?)').run(id, account.company_id!, orderId, url.searchParams.get('stage')!, user.id, 'image/jpeg', image, new Date().toISOString()); store.audit(account.company_id, account.id, 'photo.created', id); });
+          store.transaction(() => {
+            const total = db.prepare('SELECT count(*) AS n FROM attachments WHERE company_id=? AND order_id=?').get(account.company_id!, orderId) as { n: number };
+            requireThat(total.n < 20, 400, 'Pasiekta nuotraukų riba.');
+            const storage = db.prepare('SELECT COALESCE(sum(length(bytes)),0) AS size FROM attachments WHERE company_id=?').get(account.company_id!) as {size:number};
+            requireThat(storage.size + image.length <= 512 * 1024 * 1024, 413, 'Pasiekta įmonės nuotraukų saugyklos riba.');
+            db.prepare('INSERT INTO attachments VALUES(?,?,?,?,?,?,?,?)').run(id, account.company_id!, orderId, url.searchParams.get('stage')!, user.id, 'image/jpeg', image, new Date().toISOString());
+            store.audit(account.company_id, account.id, 'photo.created', id);
+          });
           return json(res, 201, { id });
         }
       }
@@ -316,17 +335,23 @@ export function createApplication(options: { dbPath: string; distPath: string; o
         requireThat(user.role === 'admin' || user.role === 'dispatcher', 403, 'Prieiga nesuteikta.');
         if (method === 'GET') return json(res, 200, db.prepare(`SELECT * FROM ${table} WHERE company_id=?`).all(account.company_id!));
         if (method === 'POST') {
-          const input = await body(req), id = randomUUID(), title = text(input.title);
+          const input = await readBody(), id = randomUUID(), title = text(input.title);
+          store.transaction(() => {
           if (reminders) {
             requireThat(store.snapshot(account.company_id!).snapshot.db.vehicles.some(v => v.id === input.vehicleId), 400, 'Automobilis nerastas.');
-            requireThat(typeof input.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate) && new Date(input.dueDate + 'T12:00:00Z').toISOString().slice(0, 10) === input.dueDate, 400, 'Patikrinkite datą.');
+            requireThat(typeof input.dueDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input.dueDate) && Number.isFinite(Date.parse(input.dueDate+'T12:00:00Z')) && new Date(input.dueDate + 'T12:00:00Z').toISOString().slice(0, 10) === input.dueDate, 400, 'Patikrinkite datą.');
             db.prepare('INSERT INTO reminders VALUES(?,?,?,?,?,0)').run(id, account.company_id!, input.vehicleId, title, input.dueDate);
           } else {
             const link = new URL(text(input.url, 2000)); requireThat(link.protocol === 'https:' && !link.username && !link.password, 400, 'Naudokite HTTPS nuorodą.');
             const notes = typeof input.notes === 'string' && input.notes.length <= 2000 ? input.notes.trim() : '';
             db.prepare('INSERT INTO opportunities VALUES(?,?,?,?,?,?)').run(id, account.company_id!, title, link.href, notes, new Date().toISOString());
           }
-          store.audit(account.company_id, account.id, table + '.created', id); return json(res, 201, { id });
+          store.audit(account.company_id, account.id, table + '.created', id); }); return json(res, 201, { id });
+        }
+        if (reminders && method === 'PUT') {
+          const input = await readBody(); requireThat(typeof input.done === 'boolean', 400, 'Netinkama būsena.');
+          const result = db.prepare('UPDATE reminders SET done=? WHERE company_id=? AND id=?').run(Number(input.done), account.company_id!, text(input.id,100));
+          requireThat(result.changes === 1,404,'Priminimas nerastas.'); store.audit(account.company_id,account.id,'reminder.updated',input.id); return json(res,200,{ok:true});
         }
         if (method === 'DELETE') {
           const id = text(url.searchParams.get('id'), 100);

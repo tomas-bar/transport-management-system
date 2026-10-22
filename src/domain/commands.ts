@@ -96,6 +96,11 @@ export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, c
   }
   if (!['read', 'preference', 'print', 'restore', 'user'].includes(command.type)) next.workspace.notifications.push(...notificationChanges(before.db, next.db, next.workspace, user.id));
   validateDatabase(next.db);
+  for (const trip of next.db.trips) for (const order of next.db.orders.filter(o => o.tripId === trip.id && o.status !== 'cancelled')) {
+    const pickup = trip.stops.findIndex(s => s.orderId === order.id && s.kind === 'pickup');
+    const delivery = trip.stops.findIndex(s => s.orderId === order.id && s.kind === 'delivery');
+    if (pickup < 0 || delivery <= pickup) throw new Error('Paėmimo sustojimas turi būti prieš pristatymą.');
+  }
   validateWorkspace(next.workspace, next.db);
   return next;
 }
