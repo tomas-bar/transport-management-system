@@ -34,6 +34,7 @@ This is a transport management product for small passenger and parcel operators.
 - Product UI must not contain review/version/environment labels or a list of sample logins. Keep testing instructions in documentation/chat; retain administrator user preview for role testing.
 
 - Server commands: `npm run check:server`, `npm run build:server`, `npm run server`, `npm run dev:server`. Read `docs/SECURITY.md` before changing session, company or upload behavior. Never expose a server-mode build without its API.
+- Windows local setup uses `setup-windows.ps1` and `start-krypta.cmd`, a private portable Node.js 24 runtime and loopback port 4174. Preserve accounts/data and refuse dirty, divergent or unrelated updates. Bootstrap passwords use masked input and UTF-8 stdin. Keep README commands and the server-build version marker aligned; never install WSL, change firewall rules or reset user data as a setup fallback.
 - Cloud tasks are already isolated. Use the existing checkout; do not create a Git worktree unless explicitly requested.
 
 - User preview is read-only by default. Acting mode requires explicit selection, stays within the effective user permissions, and retains the real account in server audit. Owners enter a company explicitly; company administrators cannot cross companies. Preserve return navigation and the separation from account credential changes.
