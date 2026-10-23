@@ -63,18 +63,25 @@
 .driver-visits .driver-tasks { margin: 16px 0 0; border: 0; display: flex; flex-direction: column; gap: 10px; }
 .driver-visits .driver-task { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: start; padding: 14px 0; gap: 8px 12px; border: 0; border-top: 1px solid var(--line); }
 .driver-visits .driver-task.done { background: var(--task-done-bg); border: 1px solid var(--task-done-border); border-radius: 8px; padding: 12px; }
-.driver-task > .driver-task-info { min-width: 0; }
+.driver-visits .driver-task > .task-details.driver-task-info { min-width: 0; }
 .driver-visits .driver-task b { color: var(--ink); font-size: 14px; line-height: 1.5; margin-top: 5px; overflow-wrap: anywhere; }
-.driver-task .task-kind { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 11px; color: var(--text-secondary); line-height: 1.5; }
-.driver-task .task-kind > svg { flex: 0 0 14px; }
-.driver-task .task-kind > span { color: var(--text-secondary); }
+.task-details { min-width: 0; }
+.task-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; font-size: 11px; line-height: 1.6; color: var(--text-secondary); }
+.task-direction { display: inline-flex; align-items: center; gap: 4px; }
+.task-direction > svg { flex-shrink: 0; margin: 0; }
+.task-direction.pickup { color: var(--pickup-ink, #3d7a9b); }
+.task-direction.delivery { color: var(--delivery-ink, #786397); }
+:root[data-theme=dark] .task-direction.pickup { color: #99c5df; }
+:root[data-theme=dark] .task-direction.delivery { color: #c7b3e2; }
+.task-name { display: block; margin-top: 4px; color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1.6; overflow-wrap: anywhere; }
+.task-contact { display: block; margin-top: 4px; color: var(--text-secondary); font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; }
 .driver-task .task-phone { display: inline-flex; align-items: center; color: var(--text-secondary); font-size: 12px; min-height: 30px; }
 .driver-task .task-symbol { width: 34px; height: 34px; }
 .driver-task .task-symbol.confirmed { background: var(--task-done-bg); color: var(--task-done-ink); }
 .driver-visits .driver-task > .button { width: auto; min-height: 44px; font-size: 13px; padding: 10px 14px; margin: 0; }
-.driver-task .task-result { min-width: 0; flex: 0 0 auto; gap: 2px; }
-.driver-task .task-result .task-done { color: var(--task-done-ink); background: transparent; font-size: 12px; font-weight: 650; min-height: 24px; }
-.driver-task .task-result > small { color: var(--text-secondary); font-size: 10px; margin: 0; }
+.driver-visits .driver-task > .task-result { min-width: 0; flex: 0 0 auto; gap: 2px; align-items: flex-start; }
+.driver-task .task-result .task-done { color: var(--task-done-ink); background: transparent; font-size: 12px; font-weight: 650; min-height: 24px; margin-left: 0; align-self: flex-start; }
+.driver-task .task-result > small { color: var(--text-secondary); font-size: 10px; line-height: 1.6; margin: 0; }
 .driver-task .task-result .undo-action { color: var(--text-secondary); font-size: 11px; min-height: 40px; }
 .task-blocked { display: inline-flex; align-items: center; gap: 5px; max-width: 160px; color: var(--text-secondary); font-size: 11px; line-height: 1.6; }
 .task-blocked > svg { flex-shrink: 0; }
@@ -82,20 +89,35 @@
 .driver-visits .visit-action .button { min-height: 44px; }
 .driver-visits .undo-arrival { font-size: 11px; min-height: 44px; color: var(--text-secondary); }
 .stop-title { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; }
-.stop-title > b { color: var(--ink); font-size: 15px; line-height: 1.5; }
+.stop-title > b { color: var(--ink); font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
 .stop-state { font-size: 10px; font-weight: 600; padding: 3px 6px; border-radius: 5px; color: var(--text-secondary); background: var(--surface-raised); }
 .stop-state.state-done, .stop-task-done { color: var(--task-done-ink); background: var(--task-done-bg); }
 .stop-state.state-arrived { color: var(--task-wait-ink); background: var(--task-wait-bg); }
 .stop-state.state-next { color: var(--accent-ink); background: var(--accent-soft); }
-.stop-editor.is-progress .stop-row { position: relative; padding: 18px 0; align-items: stretch; }
-.stop-editor.is-progress .stop-index-wrap { align-self: stretch; position: relative; }
-.stop-editor.is-progress .stop-index-wrap::after { content: ''; position: absolute; width: 2px; background: var(--line); top: 34px; bottom: -19px; left: 14px; }
-.stop-editor.is-progress .stop-row:last-child .stop-index-wrap::after { display: none; }
+.stop-timeline .stop-row { display: grid; grid-template-columns: 32px minmax(0, 1fr); position: relative; padding: 18px 0; align-items: start; gap: 12px; border-color: var(--line); }
+.stop-timeline .stop-row::before { content: ''; position: absolute; width: 2px; background: var(--line); top: 50px; bottom: -18px; left: 15px; }
+.stop-timeline .stop-row:last-child::before { display: none; }
+.stop-timeline .stop-index-wrap { align-self: start; position: relative; z-index: 1; }
+.stop-timeline .stop-index { width: 32px; height: 32px; font-size: 12px; color: var(--text-secondary); background: var(--surface-raised); border-color: var(--line); }
+.stop-timeline .stop-info > small { font-size: 12px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.stop-timeline .stop-tasks { margin-top: 8px; gap: 12px; }
+.stop-timeline .stop-task { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 4px 8px; color: var(--text-secondary); }
+.stop-task-symbol { display: flex; align-items: center; justify-content: center; min-height: 22px; }
+.stop-timeline .task-pickup .stop-task-symbol { color: #3d7a9b; }
+.stop-timeline .task-delivery .stop-task-symbol { color: #786397; }
+:root[data-theme=dark] .stop-timeline .task-pickup .stop-task-symbol { color: #99c5df; }
+:root[data-theme=dark] .stop-timeline .task-delivery .stop-task-symbol { color: #c7b3e2; }
 .stop-editor.is-progress .state-done .stop-index { background: var(--task-done-bg); color: var(--task-done-ink); border-color: var(--task-done-border); }
 .stop-editor.is-progress .state-arrived .stop-index { background: var(--task-wait-bg); color: var(--task-wait-ink); border-color: var(--task-wait-border); }
 .stop-editor.is-progress .state-next .stop-index { background: var(--accent-soft); color: var(--accent-ink); border-color: var(--accent-ink); }
-.stop-task-done { display: inline-flex; gap: 3px; align-items: center; padding: 2px 5px; margin-left: 5px; border-radius: 4px; font-size: 10px; }
-.stop-editor.is-progress .stop-actions { align-self: flex-start; }
+.stop-task-done { grid-column: 2; justify-self: start; display: inline-flex; gap: 3px; align-items: center; padding: 2px 5px; border-radius: 4px; font-size: 10px; }
+.stop-timeline .stop-actions-toggle { display: none; }
+.stop-timeline .stop-actions { grid-column: 2; display: flex; align-self: start; justify-self: start; justify-content: flex-start; width: auto; max-width: 100%; gap: 5px; }
+.stop-timeline .stop-actions button { width: 36px; height: 36px; border-radius: 6px; color: var(--text-secondary); background: var(--surface); border-color: var(--line); }
+.stop-timeline .stop-actions button > span { display: none; }
+.stop-timeline .stop-actions button.selected { color: var(--task-done-ink); background: var(--task-done-bg); border-color: var(--task-done-border); }
+.stop-timeline .stop-actions button:hover:not(:disabled), .stop-timeline .stop-actions-toggle:hover { color: var(--accent-ink); background: var(--accent-soft); }
+.stop-timeline .stop-actions button:focus-visible, .stop-timeline .stop-actions-toggle:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
 .module-tabs > button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
 .trip-photos { margin-top: 26px; }
 .trip-photos-body { padding: 22px; min-width: 0; }
@@ -144,7 +166,6 @@
   .driver-visit .visit-state { align-self: flex-start; font-size: 11px; padding: 4px 7px; }
   .driver-visits .driver-task { grid-template-columns: 30px minmax(0, 1fr); column-gap: 9px; }
   .driver-task .task-symbol { width: 30px; height: 32px; }
-  .driver-task > .driver-task-info { min-width: 0; }
   .driver-visits .driver-task > .button, .driver-task .task-result, .task-blocked { grid-column: 2; width: 100%; max-width: none; }
   .driver-task .task-result { align-items: flex-start; margin: 0; }
   .driver-visits .driver-task.done { padding: 10px 9px; }
@@ -157,11 +178,26 @@
   .photo-stage-picker > div { display: grid; grid-template-columns: 1fr 1fr; }
   .photo-stage-picker label { padding: 8px; }
   .photo-stage-picker label:last-child { grid-column: 1 / -1; }
-  .stop-editor.is-progress .stop-row { column-gap: 12px; }
+  .stop-timeline .stop-row { grid-template-columns: 30px minmax(0, 1fr); column-gap: 12px; }
+  .stop-timeline .stop-row::before { left: 14px; top: 48px; }
+  .stop-timeline .stop-index { width: 30px; height: 30px; }
+  .stop-timeline .stop-title { align-items: flex-start; flex-direction: column; gap: 6px; }
+  .stop-timeline .stop-title > b { font-size: 16px; }
+  .stop-timeline .stop-state { font-size: 11px; padding: 4px 7px; }
+  .stop-timeline .stop-actions-toggle { grid-column: 2; display: inline-flex; justify-self: start; align-items: center; gap: 7px; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 7px; font-size: 12px; color: var(--text-secondary); background: var(--surface); }
+  .stop-actions-toggle > svg:last-child { transition: transform 160ms ease; }
+  .stop-actions-toggle[aria-expanded=true] > svg:last-child { transform: rotate(180deg); }
+  .stop-timeline .stop-actions { grid-column: 2; display: none; width: 100%; max-width: none; justify-content: start; }
+  .stop-timeline .stop-actions.is-open { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .stop-timeline .stop-actions button { width: 100%; height: auto; min-height: 44px; padding: 8px; gap: 6px; font-size: 12px; line-height: 1.5; }
+  .stop-timeline .stop-actions button > svg { flex-shrink: 0; }
+  .stop-timeline .stop-actions button > span { display: inline; }
+  .stop-timeline .stop-actions button[aria-pressed] { grid-column: 1 / -1; }
 }
+@media print { .stop-actions-toggle { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
   .driver-visits .driver-visit, .trip-photos > summary > svg:last-child,
-  .driver-progress progress::-webkit-progress-value { transition: none; }
+  .driver-progress progress::-webkit-progress-value, .stop-actions-toggle > svg:last-child { transition: none; }
 }
 .operations-metrics > div > b, .operations-metrics > button > b { display: flex; flex-direction: column; align-items: flex-start; gap: 7px; }
 .operations-metrics small { font-size: 11px; line-height: 1.5; margin-left: 0; }

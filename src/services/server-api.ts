@@ -1,6 +1,7 @@
 import type { ModuleId } from '../domain/modules';
 import type { ReviewSnapshot, WorkspaceUser } from '../domain/workspace';
 import type { WorkspaceSession } from '../domain/access';
+import { apiRequestOptions } from './api-request';
 export const serverRuntime = import.meta.env?.VITE_RUNTIME === 'server';
 export const sitesRuntime = import.meta.env?.VITE_RUNTIME === 'sites';
 export const demoRuntime = import.meta.env?.VITE_RUNTIME === 'demo';
@@ -24,13 +25,7 @@ export async function api<T = any>(path: string, method = 'GET', input?: unknown
   if (sitesRuntime && raw && input instanceof Blob) {
     input = await (await import('./image')).normalizeImage(input);
   }
-  const response = await fetch(path, {
-    method,
-    credentials: 'same-origin',
-    cache: 'no-store',
-    headers: { ...(method !== 'GET' ? { 'X-CSRF-Token': csrf } : {}), ...(input !== undefined ? { 'Content-Type': raw ? (input as File).type : 'application/json' } : {}) },
-    body: input === undefined ? undefined : raw ? input as File : JSON.stringify(input),
-  });
+  const response = await fetch(path, apiRequestOptions(method, input, csrf, raw));
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     if (response.status === 401 && !path.endsWith('/login')) window.dispatchEvent(new Event('krypta-session-ended'));

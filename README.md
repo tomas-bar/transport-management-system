@@ -30,7 +30,7 @@ The earlier minimal browser mode remains available with `npm run dev:browser` an
 
 ## Shared Sites test deployment
 
-`npm run build:sites` creates a Worker API plus the complete server-connected frontend. It uses Sites D1 for shared account/workspace snapshots and session verifiers, and private R2 for photos. It is an additional hosting adapter; the Node/SQLite installation remains available unchanged. Sites provisions bindings named `DB` and `BUCKET` through the deployment-only hosting manifest. Schema migrations are in `drizzle/`.
+`npm run build:sites` creates a Worker API plus the complete server-connected frontend. It uses Sites D1 for shared account/workspace snapshots and session verifiers, and private R2 for photos. It is an additional hosting adapter; the Node/SQLite installation remains available unchanged. Sites provisions bindings named `DB` and `BUCKET` through the deployment-only hosting manifest. A clean source checkout can build the frontend and Worker without that manifest; deployment metadata is included only when Sites supplies `.openai/hosting.json`. Schema migrations are in `drizzle/`.
 
 Required hosted secrets are `KRYPTA_INITIAL_PASSWORD` (a unique random bootstrap password of at least 24 characters), `KRYPTA_SETUP_TOKEN` (a random one-time setup secret) and `KRYPTA_SETUP_EXPIRES` (expiry as Unix milliseconds). Store them in Sites runtime secrets, never source files. Open the site's `/#setup=<token>` link once to choose the owner email/name/password. Setup replaces the random initial passwords, invalidates existing sessions and cannot run again after its durable claim flag is set. The owner and initial company accounts share that chosen password for testing; set separate passwords before broader use. No public `admin/admin` or `owner/owner` login is created by this adapter.
 
@@ -61,7 +61,7 @@ Configuration variables are documented in [.env.example](.env.example). The serv
 
 Companies can enable finance, private order photos, vehicle reminders and freight opportunities and external search. Operations is the shared prerequisite; permissions are checked separately from module availability. Turning a module off retains its history. Photos support phone capture/upload, private enlarged viewing and explicit deletion. Reminders use user-entered dates and appear in the day plan when relevant vehicles are scheduled. No legal expiry interval is invented.
 
-Trip timelines distinguish arrival with pending work from fully confirmed stops. Driver cards show specific pickup/delivery outcomes and guarded corrections; photos have a separate manager tab and a collapsible driver section. The day plan includes ongoing multi-day trips and concrete unresolved actions for the selected date.
+Trip timelines distinguish arrival with pending work from fully confirmed stops. On phones, manager stop controls expand under each stop through Veiksmai, leaving addresses and task details full width. Manager and driver task rows share pickup/delivery labels, order names and separate parcel recipient details. Driver cards show specific outcomes and guarded corrections; photos have a separate manager tab and a collapsible driver section. The day plan includes ongoing multi-day trips and concrete unresolved actions for the selected date.
 
 New trips begin as drafts, with optional vehicle/driver selection. Drafts do not reserve resources, appear in driver workspaces or send notifications. Publishing validates resources, scheduling and load before exposing the assignment. Draft quotations are excluded from aggregate finance reports, and payments/expenses require publication. Repeat Trip also defaults to a draft.
 
@@ -92,9 +92,11 @@ npm test
 # Focused static-demo workflow checks:
 node --experimental-strip-types --test tests/demo.test.ts
 npm run check:server
+npx tsc -p tsconfig.edge.json
 npm run build
 npm run check:documents
 npm run build:server
+npm run build:sites
 ```
 
 Tests cover domain integrity, driver commands, finance, session security, CSRF, company boundaries, module restrictions, optimistic concurrency, private uploads and backup protection. PDF generation checks pagination and bundled fonts. Run desktop and phone browser checks when a browser is available and state whether they ran locally or against a deployed site.

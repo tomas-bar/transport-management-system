@@ -31,9 +31,13 @@ jobs:
         run: npm test
       - name: Check server types
         run: npm run check:server
+      - name: Check Sites Worker types
+        run: npx tsc -p tsconfig.edge.json
       - name: Build browser application
         run: npm run build
       - name: Check PDF templates
         run: npm run check:documents
       - name: Build server application
         run: npm run build:server
+      - name: Build Sites application and Worker
+        run: npm run build:sites

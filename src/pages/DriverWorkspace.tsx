@@ -12,6 +12,7 @@ import { TripFinance } from '../components/TripFinance';
 import { Journey } from '../components/Journey';
 import { MapView } from '../components/MapView';
 import { HandoverIcon } from '../components/HandoverIcon';
+import { TaskDetails } from '../components/TaskDetails';
 import { dateLabel, tripOrders } from '../domain/logic';
 import { tripProgress } from '../domain/trip-progress';
 import { handoverLabels, visitStateLabels } from '../domain/terminology';
@@ -98,10 +99,7 @@ export function DriverWorkspace({ id }: { id?: string }) {
           return <div className={`driver-task ${done ? 'done' : task.allowed ? 'ready' : 'waiting'}`} key={task.stopId}>
             <span className={`task-symbol ${done ? 'confirmed' : task.kind}`} aria-hidden="true">
               {done ? <CheckCircle2 size={20} /> : task.type === 'passenger' ? <UserRound size={20} /> : <Package size={20} />}</span>
-            <div className="driver-task-info"><span className={`task-kind ${task.kind}`}><HandoverIcon kind={task.kind} size={14} />
-              {labels.title}<span>· {task.type === 'passenger' ? 'Keleiviai' : 'Siuntos'}: {task.quantity}</span></span>
-              <b>{task.name}</b>{task.phone && <a className="task-phone" href={`tel:${task.phone.replace(/\s/g, '')}`}>{task.phone}</a>}
-            </div>
+            <TaskDetails task={task} order={orders.find(order => order.id === task.orderId)} className="driver-task-info" showPhone />
             {done ? <div className="task-result"><span className="task-done"><Check size={15} />{labels.done}</span>
               {event && <small title="Patvirtinimo registravimo laikas">{dateLabel(event.createdAt, true)}</small>}
               {canUndo && <button className="undo-action" disabled={busy} onClick={async () => {

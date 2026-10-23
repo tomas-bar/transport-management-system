@@ -9,8 +9,9 @@ React 19, TypeScript and Vite provide the common Lithuanian interface, with Luci
 | Complete static demo | `npm run dev`, `npm run build` | Browser IndexedDB, demo accounts and tab-local sessions; all implemented modules |
 | Minimal browser prototype | `npm run dev:browser`, `npm run build:browser` | Original `krypta-design-review` workspace and prototype login |
 | Shared server | `npm run build:server`, `npm run server` | Node.js 24, private SQLite and cookie authentication |
+| Shared Sites evaluation | `npm run build:sites` | Cloudflare Worker, D1 state, private R2 photos and cookie authentication |
 
-`VITE_RUNTIME=demo` selects `src/services/demo`, while `VITE_RUNTIME=server` selects the same-origin API. Both use `ServerProvider` for the full workspace UI. The server runtime never falls back to a browser adapter when its API is unavailable. `server/app.ts` remains reference code, not the shared runtime.
+`VITE_RUNTIME=demo` selects `src/services/demo`, while `VITE_RUNTIME=server` and `VITE_RUNTIME=sites` select their same-origin APIs. These runtimes use `ServerProvider` for the full workspace UI. API runtimes never fall back to a browser adapter when their API is unavailable. `server/app.ts` remains reference code, not the shared runtime. `services/api-request.ts` defines the shared browser request contract: unsafe JSON commands include a body even when they have no arguments, while photo uploads retain their binary body and content type. Origin and CSRF checks remain authoritative on the server.
 
 ## Model and commands
 
@@ -24,6 +25,8 @@ React 19, TypeScript and Vite provide the common Lithuanian interface, with Luci
 The established relationship is `Customer -> Order -> Trip -> Driver + Vehicle`. Operational data and workspace events form one validated `ReviewSnapshot`, with optimistic revision checks. Money uses integer EUR cents; unknown prices/weights remain unknown. Completed orders and confirmed handovers protect route/load fields from incompatible edits. Optional company numbering settings default compatibly to KR-/1001 and UZ-/2001. `references.ts` allocates within each company snapshot and validates changed/new references without rewriting legacy values; only the company manager can renumber records. Display references remain separate from stable internal IDs.
 
 `trip-progress.ts` projects arrival, task completion and next work consistently for route strips, driver cards, manager stops and overview cards. `day-plan.ts` includes multi-day trips and date-scoped unresolved work. These projections never write or invent confirmation timestamps. Physical visits group adjacent stops at the same coordinates while retaining order references. Arrival and handover remain distinct. A next-visit pickup/delivery can record arrival atomically, delivery requires pickup, and corrections preserve dependencies. Trip completion requires all visits and active orders to be completed. Driver actions are limited to explicitly permitted actions on assigned work.
+
+`TaskDetails` presents the shared visit task metadata and order name in both workspaces, with a separate recipient for parcel deliveries. Phone stop controls expand below the manager's stop details; desktop controls remain directly available. These presentation choices do not change operational commands or stop identities.
 
 Manager delivery summaries use typed `reviewTrip` commands and optional `workspace.tripReviews`. They record manager-source pickup/delivery confirmations without fabricating arrival events. Partial summaries leave unresolved work active; final closure requires all deliveries. Typed `repeatTrip` commands generate new booking/stop identities, reset execution and payments, optionally retain quoted prices, and pass the existing scheduling/load validators. These commands are shared by all adapters.
 

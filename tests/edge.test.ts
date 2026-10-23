@@ -6,6 +6,7 @@ import sharp from 'sharp';
 import worker, { type Env, type EdgeDatabase, privateJpeg } from '../edge/worker.ts';
 import { createSeed, createEmptyDatabase } from '../src/data/seed.ts';
 import { createWorkspace } from '../src/domain/workspace.ts';
+import { apiRequestOptions } from '../src/services/api-request.ts';
 
 function fixture() {
   const sqlite = new DatabaseSync(':memory:'); sqlite.exec(readFileSync(new URL('../drizzle/0000_shared_workspace.sql', import.meta.url), 'utf8'));
@@ -18,8 +19,10 @@ function fixture() {
   function browser() {
     let cookie = '', csrf = '';
     return { async call(path: string, method = 'GET', body?: any, override: Record<string, string> = {}) {
-      const headers: Record<string, string> = { Cookie: cookie, Origin: 'https://krypta.test', 'X-CSRF-Token': csrf, ...(body !== undefined ? { 'Content-Type': body instanceof Blob ? body.type : 'application/json' } : {}), ...override };
-      const response = await worker.fetch(new Request('https://krypta.test' + path, { method, headers, body: body === undefined ? undefined : body instanceof Blob ? body : JSON.stringify(body) }), env);
+      const options = apiRequestOptions(method, body, csrf, body instanceof Blob);
+      const headers = new Headers(options.headers);
+      for (const [name, value] of Object.entries({ Cookie: cookie, Origin: 'https://krypta.test', ...override })) headers.set(name, value);
+      const response = await worker.fetch(new Request('https://krypta.test' + path, { ...options, headers }), env);
       if (response.headers.get('Set-Cookie')) cookie = response.headers.get('Set-Cookie')!.split(';')[0];
       const data = response.headers.get('Content-Type')?.includes('application/json') ? await response.json() as any : await response.blob();
       if (data.csrf) csrf = data.csrf;
@@ -71,5 +74,33 @@ test('shared photos are private and confirmed reset removes their blobs while re
     assert.equal((await browser.call('/api/session')).response.status, 200);
     assert.equal((await f.browser().call('/api/login', 'POST', { email: 'driver', password })).response.status, 200);
     await assert.rejects(privateJpeg(new Blob(['bad'], { type: 'image/jpeg' })), /formatas|nuotrauka/);
+  } finally { f.sqlite.close(); }
+});
+test('shared photo deletion uses the browser request contract and preserves ownership, origin and CSRF checks', async () => {
+  const f = fixture(); try {
+    const manager = await claim(f), driver = f.browser();
+    await manager.call('/api/login', 'POST', { email: 'admin', password });
+    const login = await driver.call('/api/login', 'POST', { email: 'driver', password });
+    assert.equal(login.response.status, 200);
+    const order = login.data.snapshot.db.orders[0];
+    const bytes = await sharp({ create: { width: 4, height: 4, channels: 3, background: '#ffffff' } }).jpeg().toBuffer();
+    const photo = () => new Blob([bytes], { type: 'image/jpeg' });
+    const uploadPath = '/api/photos?order=' + order.id + '&stage=pickup';
+    const managerUpload = await manager.call(uploadPath, 'POST', photo());
+    const driverUpload = await driver.call(uploadPath, 'POST', photo());
+    assert.equal(managerUpload.response.status, 200);
+    assert.equal(driverUpload.response.status, 200);
+    const managerPath = '/api/photos/' + managerUpload.data.id;
+    const driverPath = '/api/photos/' + driverUpload.data.id;
+    assert.equal((await driver.call(managerPath, 'DELETE')).response.status, 403);
+    assert.equal((await driver.call(driverPath, 'DELETE', undefined, { Origin: 'https://other.test' })).response.status, 403);
+    assert.equal((await driver.call(driverPath, 'DELETE', undefined, { 'X-CSRF-Token': 'wrong' })).response.status, 403);
+    assert.equal(f.photos.size, 2);
+    assert.equal((await driver.call(driverPath, 'DELETE')).response.status, 200);
+    assert.equal(f.photos.has('photos/' + driverUpload.data.id), false);
+    assert.equal((await manager.call(driverPath)).response.status, 404);
+    assert.deepEqual((await driver.call('/api/photos?order=' + order.id)).data.map((row: { id: string }) => row.id), [managerUpload.data.id]);
+    assert.equal((await manager.call(managerPath, 'DELETE')).response.status, 200);
+    assert.equal(f.photos.size, 0);
   } finally { f.sqlite.close(); }
 });
