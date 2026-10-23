@@ -77,27 +77,3 @@ span.plate > b.plate-number {
   letter-spacing: 1.2px;
   line-height: 1;
 }
-.notification-group-summary > b { color: var(--ink); }
-.notification-group-summary .notification-preview,
-.notification-event p { color: var(--text-secondary, #53657f); }
-.notification-group-summary > small,
-.notification-event small { color: var(--text-secondary, #53657f); font-size: 12px; }
-.notification-event b { color: var(--ink); font-size: 14px; }
-.notification-group-reference { color: var(--text-secondary, #53657f); }
-.notification-event.unread { border-left: 3px solid #4267d5; padding-left: 10px; }
-.notification-event .event-read { min-width: 44px; min-height: 44px; }
-
-@media (max-width: 650px) {
-  .app-toast { width: calc(100vw - 24px); padding: 14px 10px 14px 14px; }
-  .app-toast .app-toast-message { font-size: 15px; }
-}
-@media print { .app-toast { display: none; } }
-.notification-group-summary .notification-preview,
-.notification-group-summary > small,
-.notification-group-reference,
-.notification-event p,
-.notification-event small { color: #53657f; }
-.notification-event p { font-size: 13px; }
-.notification-groups.compact .notification-group-summary > b { font-size: 14px; }
-.notification-groups.compact .notification-preview { font-size: 13px; }
-:root[data-theme=dark] :is(.notification-group-summary .notification-preview,.notification-group-summary > small,.notification-group-reference,.notification-event p,.notification-event small) { color: #b3c2d8; }

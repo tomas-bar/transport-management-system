@@ -1,5 +1,6 @@
 import { useConfirm } from './Feedback';
 import {OrderPhotos} from './OrderPhotos';
+import { Camera } from 'lucide-react';
 import { useState } from "react";
 import type { Order, Place } from "../domain/models";
 import { useApp } from "../context";
@@ -367,7 +368,7 @@ export function OrderForm({
             </Field>
           </div>
         </div>
-        {order&&serverMode&&modules.includes("photos")&&<div className="modal-body"><h3>Nuotraukos</h3><OrderPhotos orderId={order.id}/></div>}
+        {order&&serverMode&&modules.includes("photos")&&<div className="modal-body order-photo-section"><h3><Camera size={18}/>Nuotraukos</h3><OrderPhotos orderId={order.id}/></div>}
         <footer>
           <Button type="button" variant="secondary" onClick={onClose}>
             Atšaukti

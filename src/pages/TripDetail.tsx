@@ -27,6 +27,7 @@ import {
   Printer,
   AlertTriangle,
   UserRound,
+  Camera,
 } from "lucide-react";
 import { useApp } from "../context";
 import {
@@ -228,6 +229,9 @@ export function TripDetail({ id }: { id: string }) {
         >
           {modules.includes("finance")?"Finansai ir pastabos":"Komanda ir pastabos"}
         </button>
+        {modules.includes('photos') && <button className={tab === 'photos' ? 'selected' : ''} onClick={() => setTab('photos')}>
+          <Camera size={16} />Nuotraukos
+        </button>}
       </div>
       {tab === "route" && (
         <div className="trip-route-layout">
@@ -267,6 +271,7 @@ export function TripDetail({ id }: { id: string }) {
           </Panel>
           <Panel title="Sustojimų seka" className="stops-panel">
             <StopEditor
+              tripId={t.id}
               stops={displayedStops}
               readOnly={closed}
               onChange={(stops) =>
@@ -400,7 +405,7 @@ export function TripDetail({ id }: { id: string }) {
           </Panel>
         </div><TripFinance tripId={t.id}/></>
       )}
-      <TripPhotos tripId={t.id}/>
+      {tab === 'photos' && <TripPhotos tripId={t.id}/>}
       {review && <TripReview tripId={t.id} onClose={() => setReview(false)} />}{repeat && <RepeatTrip sourceId={t.id} onClose={() => setRepeat(false)} />}{edit && <TripForm trip={t} onClose={() => setEdit(false)} />}{" "}
       {orderForm && (
         <OrderForm

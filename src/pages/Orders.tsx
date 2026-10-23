@@ -35,6 +35,7 @@ export function Orders() {
     params.get("assignment") === "unassigned",
   );
   const [sort, setSort] = useState("date");
+  const [until, setUntil] = useState(() => /^\d{4}-\d{2}-\d{2}$/.test(params.get('until') ?? '') ? params.get('until')! : '');
   const [selected, setSelected] = useState<string[]>([]);
   const [assignment, setAssignment] = useState(false);
   const [tripId, setTripId] = useState("");
@@ -47,6 +48,7 @@ export function Orders() {
             .includes(query.toLocaleLowerCase("lt"))) &&
         (!type || o.type === type) &&
         (!status || o.status === status) &&
+        (!until || o.date <= until) &&
         (!unassigned ||
           (!o.tripId && ["new", "confirmed"].includes(o.status))) &&
         (!payment ||
@@ -67,6 +69,7 @@ export function Orders() {
     );
   return (
     <>
+      {until && <div className="filter-context">Užsakymai iki {until}<Button variant="ghost" onClick={() => setUntil('')}>Visos datos</Button></div>}
       <PageHeading title="Užsakymai">
         <Button
           variant="secondary"

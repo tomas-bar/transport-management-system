@@ -21,17 +21,23 @@ import { PlacePicker } from "./PlacePicker";
 import { Button, Field, Modal } from "./ui";
 import { uid } from "../domain/logic";
 import { useApp } from "../context";
+import { tripProgress } from '../domain/trip-progress';
+import { handoverLabels, visitStateLabels } from '../domain/terminology';
 
 export function StopEditor({
   stops,
   onChange,
   readOnly = false,
+  tripId,
 }: {
   stops: Stop[];
   onChange: (v: Stop[]) => void;
   readOnly?: boolean;
+  tripId?: string;
 }) {
-  const { db } = useApp();
+  const { db, workspace } = useApp();
+  const trip = db.trips.find(trip => trip.id === tripId);
+  const progress = trip ? tripProgress(trip, db.orders, workspace.confirmations) : undefined;
   const [adding, setAdding] = useState(false);
   const [place, setPlace] = useState<Place | null>(null);
   const [arrival, setArrival] = useState("");
@@ -46,27 +52,29 @@ export function StopEditor({
     setAdding(true);
   }
   return (
-    <div className="stop-editor">
+    <div className={`stop-editor ${progress ? 'is-progress' : ''}`}>
       <div className="stop-list">
         {visits.map((visit, i) => {
           const s = visit.place;
           const manual = visit.stops.find((p) => !p.orderId);
           const tasks = visit.stops.filter((p) => p.orderId);
+          const execution = progress?.visits[i];
           return (
             <div
-              className={`stop-row ${visit.completed ? "done" : ""}`}
+              className={`stop-row ${execution ? `state-${execution.state}` : visit.completed ? 'done' : ''}`}
               key={s.id}
             >
               <div className="stop-index-wrap">
                 <span className="stop-index">{visit.number}</span>
-                {visit.completed && (
+                {(execution ? execution.done : visit.completed) && (
                   <span className="stop-complete">
                     <Check size={10} />
                   </span>
                 )}
               </div>
               <div className="stop-info">
-                <b>{s.name}</b>
+                <div className="stop-title"><b>{s.name}</b>{execution && <span className={`stop-state state-${execution.state}`}>
+                  {visitStateLabels[execution.state]}</span>}</div>
                 <small>{s.address}</small>
                 {(manual?.arrival || s.arrival) && (
                   <span className="stop-time">
@@ -79,10 +87,12 @@ export function StopEditor({
                       const order = db.orders.find(
                         (o) => o.id === task.orderId,
                       );
+                      if (order?.status === 'cancelled') return null;
+                      const done = execution?.tasks.find(item => item.stopId === task.id)?.done;
                       return (
                         <div
                           key={task.id}
-                          className={`stop-task task-${task.kind}`}
+                          className={`stop-task task-${task.kind} ${done ? 'is-done' : ''}`}
                         >
                           {order?.type === "passenger" ? (
                             <Users size={12} />
@@ -102,6 +112,7 @@ export function StopEditor({
                             </span>{" "}
                             {order?.name ?? "Užsakymas"}
                             {order ? ` (${order.quantity})` : ""}
+                            {done && task.kind && <span className="stop-task-done"><Check size={12} />{handoverLabels[task.kind].done}</span>}
                           </span>
                         </div>
                       );
