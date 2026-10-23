@@ -44,26 +44,26 @@ The frontend login may be reachable without ChatGPT sign-in when the owner expli
 
 ### Windows 10/11 quick setup
 
-Open ordinary Windows PowerShell and run:
+The optional Windows installer lives on `codex/windows-local-setup`, separate from `main`. Open ordinary Windows PowerShell and run:
 
 ```powershell
 $setup = Join-Path $env:TEMP ('krypta-setup-' + [guid]::NewGuid().ToString('N') + '.ps1')
-Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/tomas-bar/transport-management-system/main/setup-windows.ps1' -OutFile $setup
+Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/tomas-bar/transport-management-system/codex/windows-local-setup/setup-windows.ps1' -OutFile $setup
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File $setup
 ```
 
-The launcher clones `main` into `C:\Projects\Krypta`, installs Git through WinGet if missing, downloads the latest Node.js 24 Windows ZIP from nodejs.org with SHA-256 verification, runs `npm ci` and `npm run build:server`, prompts for a new local owner email/password and starts the app. Node/npm live under `%LOCALAPPDATA%\Krypta\tools`; existing system Node installations and permanent execution policies are unchanged. Approve the Git installer if Windows asks. If WinGet is unavailable, setup tries App Installer registration and otherwise stops with the official installation link. It retries downloads three times and stops on other failures; it does not discard source, reset data or switch to demo mode. Use `-InstallPath "$env:USERPROFILE\Projects\Krypta"` for a user-writable alternative directory. Existing source directories must be this repository's Git checkout.
+The launcher clones `codex/windows-local-setup` into `C:\Projects\Krypta`, installs Git through WinGet if missing, downloads the latest Node.js 24 Windows ZIP from nodejs.org with SHA-256 verification, runs `npm ci` and `npm run build:server`, prompts for a new local owner email/password and opens the app in your default browser. Node/npm live under `%LOCALAPPDATA%\Krypta\tools`; existing system Node installations and permanent execution policies are unchanged. Approve the Git installer if Windows asks. If WinGet is unavailable, setup tries App Installer registration and otherwise stops with the official installation link. It retries downloads three times and stops on other failures; it does not discard source, reset data or switch to demo mode. Use `-InstallPath "$env:USERPROFILE\Projects\Krypta"` for a user-writable alternative directory. Existing source directories must be this repository's Git checkout.
 
 Open **http://127.0.0.1:4174** using that exact address and sign in with the local credentials. They are separate from the hosted Krypta account and data. Create a company and its administrator; companies begin empty. Restore fictional samples explicitly in Settings when desired. SQLite is included in Node; no separate database installation is needed. Passwords are entered masked, confirmed and sent through UTF-8 stdin, never saved as a password file or passed as process arguments. The launcher binds only to this computer and uses `data/server.sqlite` inside its checkout, regardless of inherited server environment variables.
 
-Keep the terminal open; stop with `Ctrl+C`. Later, double-click `C:\Projects\Krypta\start-krypta.cmd`, or run it from the console. This starts the existing server build without downloads or rebuilding. The launcher refuses to start a frontend overwritten by another build mode. To update explicitly, stop the server and run:
+Keep the separate **Krypta - local server** window open; stop it with `Ctrl+C`. After restarting Windows, double-click `C:\Projects\Krypta\start-krypta.cmd`, or create a desktop shortcut to that file. It opens **http://127.0.0.1:4174** in the default browser, reusing an already healthy Krypta server or starting the existing build in a separate visible console and waiting for readiness. It does not start another server when clicked again. A Windows mutex coordinates simultaneous shortcut clicks, and a different service on port 4174 is left untouched. Startup needs no downloads or rebuilding. The launcher refuses to start a frontend overwritten by another build mode or an older source commit. It does not register startup tasks or install a Windows service. To update explicitly, stop the server and run:
 
 ```powershell
 cd C:\Projects\Krypta
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\setup-windows.ps1 -Update
 ```
 
-Updates require clean source on `main`, fetch from GitHub and fast-forward only; local source changes, unpublished commits and divergent history stop the update. Setup also stops if port 4174 is already occupied, without terminating any process. Accounts, operational data and photos are not cleared or reseeded. Normal database migrations still run when the server starts. Before updating valuable records, stop the server and copy the entire private `data` directory to a protected backup. Do not commit or share it. This is a foreground local installation, not an automatic Windows service or phone-accessible deployment. Windows execution was not available in the implementation environment; validate the launcher on a Windows machine before relying on unattended installation.
+Updates require clean source on `codex/windows-local-setup`, fetch that branch from GitHub and fast-forward only; local source changes, unpublished commits and divergent history stop the update. The optional branch must be kept current with `main` by its maintainer; the installer does not merge branches or switch an existing main checkout. Setup also stops if port 4174 is already occupied, without terminating any process. Accounts, operational data and photos are not cleared or reseeded. Normal database migrations still run when the server starts. Before updating valuable records, stop the server and copy the entire private `data` directory to a protected backup. Do not commit or share it. This is a local installation, not an automatic Windows service or phone-accessible deployment. Windows execution was not available in the implementation environment; validate the launcher on a Windows machine before relying on unattended installation. The Windows scripts can be removed later when using manual Node commands; keep the private `data` directory to retain records.
 
 ### Manual setup
 
@@ -113,6 +113,8 @@ Private photos are excluded from JSON. Before replacing server operations when p
 The retained `data:seed` and `data:clear` CLI commands target the old reference SQLite adapter, not shared company workspaces. `data:export` generates operational fixtures that can be explicitly imported through Settings.
 
 ## Checks
+
+Verification commands are run manually. Automatic GitHub Actions pipelines are disabled.
 
 ```sh
 npm test

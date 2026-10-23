@@ -3,12 +3,62 @@
 param(
     [string]$InstallPath,
     [switch]$Update,
-    [switch]$StartOnly
+    [switch]$StartOnly,
+    [switch]$ServeOnly
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 $repository = 'https://github.com/tomas-bar/transport-management-system.git'
+$setupBranch = 'codex/windows-local-setup'
+$localOrigin = 'http://127.0.0.1:4174'
+
+function Get-LocalServerState {
+    $probe = New-Object Net.Sockets.TcpClient
+    try {
+        $pending = $probe.BeginConnect('127.0.0.1', 4174, $null, $null)
+        if (!$pending.AsyncWaitHandle.WaitOne(300)) { return 'stopped' }
+        try { $probe.EndConnect($pending) } catch { return 'stopped' }
+        try {
+            $health = Invoke-WebRequest -UseBasicParsing -Uri "$localOrigin/api/health" -TimeoutSec 2
+            $body = $health.Content | ConvertFrom-Json
+            $page = Invoke-WebRequest -UseBasicParsing -Uri $localOrigin -TimeoutSec 2
+            if ($health.StatusCode -eq 200 -and $body.ok -eq $true -and $body.schema -ge 3 -and $page.Content -match '<title>Krypta[ |<]') { return 'ready' }
+        } catch { }
+        return 'occupied'
+    } finally { $probe.Dispose() }
+}
+
+function Open-LocalKrypta {
+    # The OS releases this mutex after a crash/restart. No stale lock file remains.
+    $mutex = [Threading.Mutex]::new($false, 'Local\Krypta-Local-4174')
+    $acquired = $false
+    $serverWindow = $null
+    try {
+        try { $acquired = $mutex.WaitOne(30000) }
+        catch [Threading.AbandonedMutexException] { $acquired = $true }
+        if (!$acquired) { throw 'Another Krypta launcher is starting. Wait a moment and click the shortcut again.' }
+        $state = Get-LocalServerState
+        if ($state -eq 'ready') { Start-Process $localOrigin; return }
+        if ($state -eq 'occupied') { throw 'Port 4174 belongs to a different or unresponsive service. Nothing was stopped.' }
+        $script = Join-Path $InstallPath 'setup-windows.ps1'
+        $shell = (Get-Process -Id $PID).Path
+        $arguments = '-NoProfile -ExecutionPolicy Bypass -File "' + $script + '" -InstallPath "' + $InstallPath + '" -ServeOnly'
+        # A separate visible console keeps the server alive after the shortcut exits.
+        $serverWindow = Start-Process -FilePath $shell -ArgumentList $arguments -WorkingDirectory $InstallPath -PassThru
+        $deadline = [DateTime]::UtcNow.AddSeconds(30)
+        while ([DateTime]::UtcNow -lt $deadline) {
+            if ($serverWindow.HasExited) { throw 'The server stopped before becoming ready. Run start-krypta.cmd again and read the server error.' }
+            if ((Get-LocalServerState) -eq 'ready') { Start-Process $localOrigin; return }
+            Start-Sleep -Milliseconds 250
+        }
+        throw 'The server did not become ready within 30 seconds. Check the separate server window; it was not terminated.'
+    } finally {
+        if ($serverWindow) { $serverWindow.Dispose() }
+        if ($acquired) { $mutex.ReleaseMutex() }
+        $mutex.Dispose()
+    }
+}
 
 function Invoke-Checked {
     param([string]$Program, [string[]]$Arguments)
@@ -129,7 +179,12 @@ function Initialize-Owner {
 
 try {
     if ($env:OS -ne 'Windows_NT') { throw 'Run this script in Windows PowerShell on Windows 10 or 11.' }
+    if ($ServeOnly) { $StartOnly = $true }
     if ($StartOnly -and $Update) { throw 'Use -Update for setup/build, or -StartOnly to start an existing build.' }
+    if ($StartOnly -and !$ServeOnly -and (Get-LocalServerState) -eq 'ready') {
+        Start-Process $localOrigin
+        return
+    }
     if (!$StartOnly) {
         # Never rebuild files beneath a running local server or kill its process.
         $probe = New-Object Net.Sockets.TcpClient
@@ -164,19 +219,21 @@ try {
         }
         if (!(Test-Path -LiteralPath $InstallPath)) {
             New-Item -ItemType Directory -Path (Split-Path -Parent $InstallPath) -Force | Out-Null
-            Invoke-Checked $git @('clone', '--branch', 'main', '--single-branch', $repository, $InstallPath)
+            Invoke-Checked $git @('clone', '--branch', $setupBranch, '--single-branch', $repository, $InstallPath)
         }
         if (!(Test-Path -LiteralPath (Join-Path $InstallPath '.git'))) { throw "The destination already exists and is not a Git checkout: $InstallPath. Choose a new -InstallPath; nothing was deleted." }
+        $repositoryRoot = & $git -C $InstallPath rev-parse --show-toplevel
+        if ($LASTEXITCODE -ne 0 -or [IO.Path]::GetFullPath($repositoryRoot).TrimEnd('\') -ne $InstallPath.TrimEnd('\')) { throw 'The installation path must be the Git repository root. Nothing was overwritten.' }
         $remote = & $git -C $InstallPath remote get-url origin
         if ($LASTEXITCODE -ne 0 -or $remote -notmatch '^https://github\.com/tomas-bar/transport-management-system(?:\.git)?/?$') { throw 'This checkout has an unexpected origin. Setup will not change it.' }
         if ($Update) {
             $branch = & $git -C $InstallPath branch --show-current
-            if ($LASTEXITCODE -ne 0 -or $branch -ne 'main') { throw 'Updates require the main branch. No branch was switched.' }
+            if ($LASTEXITCODE -ne 0 -or $branch -ne $setupBranch) { throw "Updates require $setupBranch. No branch was switched. Use a separate installation directory for an existing main checkout." }
             $dirty = & $git -C $InstallPath status --porcelain
             if ($LASTEXITCODE -ne 0 -or $dirty) { throw 'Local source changes exist. Commit or review them before updating; nothing was discarded.' }
-            Invoke-Checked $git @('-C', $InstallPath, 'fetch', 'origin', 'main')
+            Invoke-Checked $git @('-C', $InstallPath, 'fetch', 'origin', $setupBranch)
             $ahead = & $git -C $InstallPath rev-list --count 'FETCH_HEAD..HEAD'
-            if ($LASTEXITCODE -ne 0 -or [int]$ahead -ne 0) { throw 'Local commits are ahead of or diverge from GitHub main. Reconcile them yourself; setup will not reset them.' }
+            if ($LASTEXITCODE -ne 0 -or [int]$ahead -ne 0) { throw "Local commits are ahead of or diverge from GitHub $setupBranch. Reconcile them yourself; setup will not reset them." }
             Invoke-Checked $git @('-C', $InstallPath, 'merge', '--ff-only', 'FETCH_HEAD')
         }
     }
@@ -210,12 +267,15 @@ try {
             if ($LASTEXITCODE -ne 0 -or (Get-Content -LiteralPath 'dist\.krypta-local-build' -Raw).Trim() -ne $currentCommit) { throw 'The source changed since the last setup. Run setup-windows.ps1 to rebuild before starting.' }
         }
         Initialize-Owner $node
-        Write-Host ''
-        Write-Host 'Open http://127.0.0.1:4174 and sign in with your LOCAL owner email/password.'
-        Write-Host 'Keep this window open. Stop Krypta with Ctrl+C. Local records remain in data\server.sqlite.'
-        Invoke-Checked $node @('--experimental-strip-types', 'server/start.ts')
+        if ($ServeOnly) {
+            try { $Host.UI.RawUI.WindowTitle = 'Krypta - local server' } catch { }
+            Write-Host 'Krypta: http://127.0.0.1:4174. Keep this server window open; Ctrl+C stops it.'
+            Write-Host 'Local accounts, records and photos remain in data\server.sqlite after restarting.'
+            Invoke-Checked $node @('--experimental-strip-types', 'server/start.ts')
+        } else { Open-LocalKrypta }
     } finally { Pop-Location }
 } catch {
     Write-Host ("Krypta setup stopped: " + $_.Exception.Message) -ForegroundColor Red
+    if ($ServeOnly) { Read-Host 'Press Enter to close this server window' | Out-Null }
     exit 1
 }
