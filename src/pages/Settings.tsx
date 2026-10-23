@@ -10,12 +10,13 @@ import {
   Trash2,
   Save,
 } from "lucide-react";
-import type { Database as Data } from "../domain/models";
 import { useApp } from "../context";
 import { PageHeading, Button, Panel, Field } from "../components/ui";
 import { validateWorkspace, type ReviewSnapshot } from "../domain/workspace";
 
-import { createSeed, createEmptyDatabase } from "../data/seed";
+import { createSeed } from "../data/seed";
+import { readOnlySession } from '../domain/access';
+import { ActAsButton } from '../components/UserPreview';
 import { download } from "../services/export";
 import { today, validateDatabase } from "../domain/logic";
 import { nextCompanyReference, referenceSeries, validateNumbering } from '../domain/references';
@@ -23,7 +24,8 @@ import type { NumberSeries } from '../domain/models';
 
 export function Settings() {
   const confirm = useConfirm();
-  const { db, workspace, setPrintMode, replaceData, commit, busy, notify, serverMode, session } = useApp();
+  const { db, workspace, user, setPrintMode, replaceData, resetCompanyData, commit, busy, notify, serverMode, session } = useApp();
+  const resetBlocked = readOnlySession(session) || user?.role !== 'admin';
   const [form, setForm] = useState({ ...db.settings });
   const [seedDate, setSeedDate] = useState(today());
   const input = useRef<HTMLInputElement>(null);
@@ -208,6 +210,7 @@ export function Settings() {
             </div>
           </Panel>
           <Panel title="Bandomieji duomenys">
+            {resetBlocked && <div className="settings-form"><p className="muted">Duomenis išvalyti ir atkurti gali įmonės vadovas. Peržiūros režimu pirmiausia įjunkite redagavimą.</p>{user?.role === 'admin' && readOnlySession(session) && <ActAsButton id={user.id} name={user.name} companyId={workspace.companyId} />}</div>}
             <div className="settings-form">
               <Field label="Pradžios data">
                 <input
@@ -224,24 +227,14 @@ export function Settings() {
             <div className="stack-actions">
               <Button
                 variant="secondary"
-                disabled={busy || !seedDate || !!session?.returnTo}
+                disabled={busy || !seedDate || resetBlocked}
                 onClick={async () => {
                   if (
                     await confirm(
-                      "Atkurti bandomuosius duomenis ir naudotojus? Dabartiniai įrašai bei patvirtinimai bus pakeisti, užsakymų nuotraukos pašalintos.",
+                      "Atkurti bandomuosius duomenis? Dabartiniai įrašai bei patvirtinimai bus pakeisti, nuotraukos, priminimai ir krovinių galimybės pašalinti. Įmonės nustatymai ir paskyros išliks.",
                     )
                   ) {
-                    let seed: Data;
-                    try {
-                      seed = createSeed(seedDate);
-                    } catch {
-                      notify("Pasirinkite tinkamą pradžios datą.", true);
-                      return;
-                    }
-                    if (
-                      await replaceData(seed, undefined, { discardPhotos: true })
-                    )
-                      setForm({ ...seed.settings });
+                    if (await resetCompanyData('samples', seedDate)) setForm({ ...db.settings });
                   }
                 }}
               >
@@ -250,7 +243,7 @@ export function Settings() {
               </Button>
               <Button
                 variant="secondary"
-                disabled={busy || !seedDate || !!session?.returnTo}
+                disabled={busy || !seedDate}
                 onClick={() => {
                   try {
                     const seed = createSeed(seedDate);
@@ -268,14 +261,14 @@ export function Settings() {
               </Button>
               <Button
                 variant="danger"
-                disabled={busy || !!session?.returnTo}
+                disabled={busy || resetBlocked}
                 onClick={async () => {
                   if (
                     await confirm(
-                      "Išvalyti reisus, užsakymus, registrus ir patvirtinimus? Nuotraukos bus pašalintos, nustatymai išliks. Prieš tęsiant atsisiųskite kopiją.",
+                      "Visam laikui išvalyti šios įmonės reisus, užsakymus, registrus, mokėjimus, patvirtinimus, nuotraukas, priminimus, krovinių galimybes ir ankstesnes duomenų kopijas? Įmonės nustatymai ir paskyros išliks. Šio veiksmo atšaukti negalima.",
                     )
                   )
-                    await replaceData(createEmptyDatabase(db.settings), undefined, { discardPhotos: true });
+                    if (await resetCompanyData('clear')) setForm({ ...db.settings });
                 }}
               >
                 <Trash2 size={16} />

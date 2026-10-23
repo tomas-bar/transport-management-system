@@ -17,6 +17,7 @@ import {applyFinanceCommand,type FinanceCommand} from './domain/trip-finance';
 import { reviewRepository } from './services/review-repository';
 import { Button } from './components/ui';
 import { readOnlySession, type PreviewOptions, type WorkspaceSession as Session } from './domain/access';
+import { companyResetCommand, type CompanyResetMode } from './services/company-reset';
 export interface Context {
   serverMode: boolean; modules: ModuleId[]; refresh: () => Promise<void>;
   theme:Theme;toggleTheme:()=>void;
@@ -42,6 +43,7 @@ export interface Context {
   operationalCommand: (command: Extract<WorkspaceCommand, {type: 'reviewTrip' | 'repeatTrip'}>) => Promise<boolean>;
   driverCommand: (command: DriverCommand) => Promise<boolean>;
   replaceData: (data: Database, workspace?: Workspace, options?: { discardPhotos?: boolean }) => Promise<boolean>;
+  resetCompanyData: (mode: CompanyResetMode, anchorDate?: string) => Promise<boolean>;
 }
 export const AppContext = createContext<Context | null>(null);
 export const useApp = () => {
@@ -253,7 +255,10 @@ function LocalProvider({
     financeCommand,
     operationalCommand: command => update((next, user) => { Object.assign(next, applyWorkspaceCommand(next, user.id, command, ['operations', 'finance', 'photos', 'maintenance', 'freight'])); }, command.type === 'reviewTrip' ? 'Reiso suvestinė išsaugota' : 'Naujas reisas sukurtas', false),
     driverCommand,
-    replaceData
+    replaceData,
+    resetCompanyData: (mode, anchorDate) => update((next, user) => {
+      Object.assign(next, applyWorkspaceCommand(next, user.id, companyResetCommand(next, { mode, anchorDate, confirmed: true }), ['operations', 'finance', 'photos', 'maintenance', 'freight']));
+    }, mode === 'clear' ? 'Įmonės įrašai išvalyti' : 'Bandomieji duomenys atkurti', false),
   }}>{children}{toast && <Toast message={toast.message} error={toast.error} onClose={() => setToast(null)} />}</AppContext.Provider>;
 }
 

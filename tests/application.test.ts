@@ -38,6 +38,40 @@ async function fixture() {
   }
   return { ...app, db, request, login, base, advance: (ms: number) => time += ms, async close() { await new Promise<void>(r => app.server.close(() => r())); app.close(); rmSync(dir, { recursive: true, force: true }); } };
 }
+test('company reset clears stored records and photos in manager acting mode with company isolation', async () => {
+  const f = await fixture();
+  try {
+    for (const companyId of ['one', 'two']) {
+      f.db.prepare('INSERT INTO attachments VALUES(?,?,?,?,?,?,?,?)').run(companyId + '-photo', companyId, 'o1', 'pickup', 'admin', 'image/jpeg', Buffer.from('photo'), new Date().toISOString());
+      f.db.prepare('INSERT INTO reminders VALUES(?,?,?,?,?,0)').run(companyId + '-reminder', companyId, 'v1', 'Inspection', '2026-11-01');
+      f.db.prepare('INSERT INTO opportunities(id,company_id,title,url,notes,created_at) VALUES(?,?,?,?,?,?)').run(companyId + '-offer', companyId, 'Offer', '', '', new Date().toISOString());
+      f.db.prepare('INSERT INTO snapshot_backups VALUES(?,?,?,?,?)').run(companyId + '-backup', companyId, 1, JSON.stringify(f.store.snapshot(companyId).snapshot), new Date().toISOString());
+    }
+    const owner = await f.login('owner@example.test');
+    const reset = { mode: 'clear', confirmed: true, revision: 1 };
+    assert.equal((await f.request('/api/preview', 'POST', { id: 'admin', companyId: 'one' }, owner)).status, 200);
+    assert.equal((await f.request('/api/company-data/reset', 'POST', reset, owner)).status, 403);
+    assert.equal((await f.request('/api/preview', 'POST', { id: 'admin', companyId: 'one', mode: 'act' }, owner)).status, 200);
+    assert.equal((await f.request('/api/company-data/reset', 'POST', { ...reset, confirmed: false }, owner)).status, 400);
+    assert.equal((await f.request('/api/company-data/reset', 'POST', { ...reset, revision: 0 }, owner)).status, 409);
+    assert.equal((await f.request('/api/company-data/reset', 'POST', reset, { ...owner, csrf: 'wrong' })).status, 403);
+    const cleared = await f.request('/api/company-data/reset', 'POST', reset, owner);
+    assert.equal(cleared.status, 200, await cleared.clone().text());
+    const data = await cleared.json();
+    for (const key of ['trips', 'orders', 'vehicles', 'drivers', 'customers', 'routes', 'expenses']) assert.deepEqual(data.snapshot.db[key], []);
+    assert.deepEqual(data.snapshot.workspace.notifications, []);
+    for (const table of ['attachments', 'reminders', 'opportunities', 'snapshot_backups']) {
+      assert.equal(f.db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE company_id=?`).get('one')!.n, 0);
+      assert.equal(f.db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE company_id=?`).get('two')!.n, 1);
+    }
+    assert.equal(f.store.snapshot('two').snapshot.db.trips.length, 5);
+    const restored = await f.request('/api/company-data/reset', 'POST', { mode: 'samples', confirmed: true, anchorDate: '2026-10-23', revision: data.revision }, owner);
+    assert.equal(restored.status, 200);
+    assert.equal((await restored.json()).snapshot.db.trips.length, 5);
+    assert.equal((await f.login()).res.status, 200);
+    assert.equal((await f.request('/api/preview', 'POST', { id: null }, owner)).status, 200);
+  } finally { await f.close(); }
+});
 test('password hashes are salted, verify correctly and reject weak new passwords', async () => {
   assert(await verifyPassword(password, passwordHash));
   assert(!await verifyPassword('wrong password', passwordHash));
@@ -130,6 +164,9 @@ test('owner creates a company with an independent administrator and cannot read 
     const admin = await f.login('new@example.test');
     assert.equal(admin.data.snapshot.db.trips.length, 0);
     assert.equal(admin.data.snapshot.db.settings.company, 'New company');
+    assert.equal(admin.data.snapshot.db.settings.email, '');
+    assert.deepEqual(admin.data.snapshot.workspace.notifications, []);
+    assert.equal(admin.data.snapshot.workspace.users.length, 1);
     assert.equal((await f.request('/api/commands', 'POST', { revision: 1, command: { type: 'read' } }, owner)).status, 403);
   } finally { await f.close(); }
 });

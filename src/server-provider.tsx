@@ -76,6 +76,9 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     setInApp: enabled => send({ type: 'preference', enabled }, 'Pranešimų nuostata išsaugota'),
     setPrintMode: mode => send({ type: 'print', mode }, 'Spausdinimo nuostata išsaugota'),
     replaceData: (db, workspace, options) => send({ type: 'restore', discardPhotos: options?.discardPhotos, snapshot: { db, workspace: workspace ?? createWorkspace(db) } }, 'Duomenys atkurti'),
+    resetCompanyData: (mode, anchorDate) => run(async () => {
+      accept(await api<ServerSession>('/api/company-data/reset', 'POST', { mode, anchorDate, confirmed: true, revision: current.current?.revision }));
+    }, mode === 'clear' ? 'Įmonės įrašai išvalyti' : 'Bandomieji duomenys atkurti'),
   };
   if (loading) return <div className="loading"><p>Ruošiama darbo erdvė...</p></div>;
   if (error) return <div className="boot-error"><h1>{demoRuntime ? 'Nepavyko atidaryti saugyklos' : 'Nepavyko prisijungti prie serverio'}</h1><p>{error}</p><Button onClick={() => location.reload()}>Bandyti dar kartą</Button></div>;

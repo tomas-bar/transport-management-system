@@ -6,6 +6,7 @@ import { validateModules, type ModuleId } from '../../domain/modules.ts';
 import { projectSnapshot } from '../../domain/projection.ts';
 import { createWorkspace, type WorkspaceUser } from '../../domain/workspace.ts';
 import { ApiError } from '../api-error.ts';
+import { companyResetCommand } from '../company-reset.ts';
 import type { ServerSession } from '../server-api.ts';
 import { demoPassword, matchesPassword, type DemoStorage, type DemoState, type DemoSession, type DemoAccount, type DemoCompany } from './model.ts';
 
@@ -108,7 +109,7 @@ export class DemoApi {
     const unsafe = method !== 'GET';
     if (unsafe && session.previewId && !['/api/preview', '/api/logout'].includes(endpoint)) {
       requireThat(session.previewMode === 'act', 403, 'Peržiūros režimu pakeitimai neleidžiami. Pasirinkite „Dirbti kaip naudotojas“.');
-      requireThat(['/api/commands', '/api/photos', '/api/reminders', '/api/opportunities'].some(p => endpoint === p || endpoint.startsWith(p + '/')), 403, 'Paskyros nustatymus keiskite grįžę į savo paskyrą.');
+      requireThat(['/api/commands', '/api/company-data/reset', '/api/photos', '/api/reminders', '/api/opportunities'].some(p => endpoint === p || endpoint.startsWith(p + '/')), 403, 'Paskyros nustatymus keiskite grįžę į savo paskyrą.');
     }
     const moduleAccess = (id: ModuleId) => {
       requireThat(company?.modules.includes(id), 403, 'Šis modulis išjungtas.');
@@ -165,7 +166,7 @@ export class DemoApi {
         const name = text(input.name), modules = validateModules(input.modules), email = emailAddress(input.email), adminName = text(input.adminName, 100);
         requireThat(!state.accounts.some(a => a.email === email), 409, 'Šis el. pašto adresas jau naudojamas.');
         const password = await newPassword(input.password), id = crypto.randomUUID();
-        const db = createEmptyDatabase(createSeed('2026-01-01').settings); db.settings.company = name;
+        const db = createEmptyDatabase(createSeed('2026-01-01').settings); db.settings.company = name; db.settings.email = ''; db.settings.phone = '';
         const workspace = createWorkspace(db); workspace.companyId = id; workspace.notifications = [];
         workspace.users = [{ id: 'admin', companyId: id, name: adminName, email, role: 'admin', active: true, driverId: '' }];
         state.companies.push({ id, name, modules, active: 1, revision: 1, snapshot: { db, workspace } });
@@ -192,13 +193,15 @@ export class DemoApi {
       if (!current.active) state.sessions = state.sessions.filter(s => !state.accounts.some(a => a.id === s.accountId && a.companyId === current.id));
       await save(); return { ok: true };
     }
-    if (endpoint === '/api/commands' && method === 'POST') {
-      const current = companyAccess(), command = input.command as WorkspaceCommand;
+    if (['/api/commands', '/api/company-data/reset'].includes(endpoint) && method === 'POST') {
+      const current = companyAccess(), reset = endpoint === '/api/company-data/reset';
+      if (reset) requireThat(user.role === 'admin', 403, 'Duomenis gali išvalyti ir atkurti įmonės vadovas.');
+      const command = reset ? companyResetCommand(current.snapshot, input) : input.command as WorkspaceCommand;
       requireThat(input.revision === current.revision, 409, 'Duomenys pakeisti kitame lange. Atnaujinkite puslapį.');
       requireThat(command && typeof command.type === 'string', 400, 'Netinkamas veiksmas.');
-      requireThat(!session.previewId || !['user', 'restore'].includes(command.type), 403, 'Naudotojus ir kopijas valdykite grįžę į savo paskyrą.');
+      requireThat(!session.previewId || reset || !['user', 'restore'].includes(command.type), 403, 'Naudotojus ir kopijas valdykite grįžę į savo paskyrą.');
       if (command.type === 'restore' && command.discardPhotos) {
-        requireThat(user.role === 'admin' && !session.previewId, 403, 'Duomenis gali atkurti įmonės vadovas.');
+        requireThat(user.role === 'admin' && (!session.previewId || reset), 403, 'Duomenis gali atkurti įmonės vadovas.');
         state.photos = state.photos.filter(photo => photo.companyId !== current.id);
       }
       if (command.type === 'restore') requireThat(!state.photos.some(p => p.companyId === current.id), 409, 'Prieš atkurdami JSON kopiją pašalinkite užsakymų nuotraukas. JSON kopijoje jų nėra.');
@@ -227,7 +230,12 @@ export class DemoApi {
           Object.assign(existing, { email, name: record.name, password });
         } else if (password) state.accounts.push({ id: crypto.randomUUID(), companyId: current.id, memberId: record.id, email, name: record.name, password });
       }
-      if (command.type === 'restore') state.backups.push({ id: crypto.randomUUID(), companyId: current.id, revision: current.revision, created_at: new Date().toISOString(), snapshot: structuredClone(current.snapshot) });
+      if (reset) {
+        state.reminders = state.reminders.filter(row => row.companyId !== current.id);
+        state.opportunities = state.opportunities.filter(row => row.companyId !== current.id);
+      }
+      if (reset && input.mode === 'clear') state.backups = state.backups.filter(row => row.companyId !== current.id);
+      else if (command.type === 'restore') state.backups.push({ id: crypto.randomUUID(), companyId: current.id, revision: current.revision, created_at: new Date().toISOString(), snapshot: structuredClone(current.snapshot) });
       current.snapshot = next; current.revision++;
       state.sessions = state.sessions.filter(s => {
         const identity = state.accounts.find(a => a.id === s.accountId);

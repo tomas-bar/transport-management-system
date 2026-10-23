@@ -69,7 +69,7 @@ export async function demoApi<T>(path: string, method: string, input?: unknown):
       const id = path.split('/')[3], url = imageUrls.get(id);
       if (url) URL.revokeObjectURL(url); imageUrls.delete(id);
     }
-    if (path === '/api/logout') { for (const url of imageUrls.values()) URL.revokeObjectURL(url); imageUrls.clear(); }
+    if (path === '/api/logout' || path === '/api/company-data/reset') { for (const url of imageUrls.values()) URL.revokeObjectURL(url); imageUrls.clear(); }
     return result as T;
   } catch (error) {
     if (error instanceof ApiError && error.status === 401 && path !== '/api/login') window.dispatchEvent(new Event('krypta-session-ended'));

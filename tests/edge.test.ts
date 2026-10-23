@@ -104,3 +104,66 @@ test('shared photo deletion uses the browser request contract and preserves owne
     assert.equal(f.photos.size, 0);
   } finally { f.sqlite.close(); }
 });
+
+test('owner acting as company manager can clear storage and restore samples without changing other companies or credentials', async () => {
+  const f = fixture(); try {
+    const owner = await claim(f);
+    await owner.call('/api/login', 'POST', { email: 'owner@testing.test', password });
+    const companies = (await owner.call('/api/companies')).data;
+    const companyId = companies[0].id;
+    const created = await owner.call('/api/companies', 'POST', { name: 'Empty company', modules: ['operations', 'photos', 'maintenance', 'freight'], email: 'new@testing.test', adminName: 'New manager', password });
+    assert.equal(created.response.status, 200);
+    const other = f.browser();
+    const fresh = await other.call('/api/login', 'POST', { email: 'new@testing.test', password });
+    assert.equal(fresh.data.snapshot.db.trips.length, 0);
+    assert.equal(fresh.data.snapshot.db.orders.length, 0);
+    assert.equal(fresh.data.snapshot.db.vehicles.length, 0);
+    assert.equal(fresh.data.snapshot.db.settings.email, '');
+    assert.deepEqual(fresh.data.snapshot.workspace.notifications, []);
+    assert.equal(fresh.data.snapshot.workspace.users.length, 1);
+    const reset = (revision: number, mode = 'clear', extra = {}) => ({ revision, mode, confirmed: true, anchorDate: '2026-10-23', ...extra });
+    await other.call('/api/company-data/reset', 'POST', reset(fresh.data.revision, 'samples'));
+    const otherBefore = (await other.call('/api/session')).data;
+    let session = (await owner.call('/api/preview', 'POST', { id: 'admin', companyId })).data;
+    assert.equal((await owner.call('/api/company-data/reset', 'POST', reset(session.revision))).response.status, 403);
+    session = (await owner.call('/api/preview', 'POST', { id: 'admin', companyId, mode: 'act' })).data;
+    session = (await owner.call('/api/company-data/reset', 'POST', reset(session.revision, 'samples'))).data;
+    assert.equal((await owner.call('/api/backups')).data.length, 1);
+    const bytes = await sharp({ create: { width: 4, height: 4, channels: 3, background: '#ffffff' } }).jpeg().toBuffer();
+    const upload = await owner.call('/api/photos?order=' + session.snapshot.db.orders[0].id + '&stage=pickup', 'POST', new Blob([bytes], { type: 'image/jpeg' }));
+    assert.equal(upload.response.status, 200);
+    const otherPhoto = await other.call('/api/photos?order=' + otherBefore.snapshot.db.orders[0].id + '&stage=pickup', 'POST', new Blob([bytes], { type: 'image/jpeg' }));
+    assert.equal(otherPhoto.response.status, 200);
+    await owner.call('/api/reminders', 'POST', { title: 'Inspection', vehicleId: session.snapshot.db.vehicles[0].id, dueDate: '2026-11-01' });
+    await owner.call('/api/opportunities', 'POST', { title: 'Saved offer', url: 'https://example.test/offer', notes: '' });
+    assert.equal((await owner.call('/api/company-data/reset', 'POST', reset(session.revision, 'clear', { confirmed: false }))).response.status, 400);
+    assert.equal((await owner.call('/api/company-data/reset', 'POST', reset(session.revision - 1))).response.status, 409);
+    assert.equal((await owner.call('/api/company-data/reset', 'POST', reset(session.revision), { 'X-CSRF-Token': 'wrong' })).response.status, 403);
+    assert.equal((await owner.call('/api/company-data/reset', 'POST', reset(session.revision), { Origin: 'https://other.test' })).response.status, 403);
+    assert.equal((await owner.call('/api/commands', 'POST', { revision: session.revision, command: { type: 'restore', discardPhotos: true, snapshot: session.snapshot } })).response.status, 403);
+    assert.equal(f.photos.size, 2);
+    const cleared = await owner.call('/api/company-data/reset', 'POST', reset(session.revision));
+    assert.equal(cleared.response.status, 200);
+    for (const key of ['trips', 'orders', 'vehicles', 'drivers', 'customers', 'routes', 'expenses']) assert.deepEqual(cleared.data.snapshot.db[key], []);
+    assert.deepEqual(cleared.data.snapshot.workspace.notifications, []);
+    assert.deepEqual(cleared.data.snapshot.workspace.confirmations, []);
+    assert.deepEqual(cleared.data.snapshot.db.settings, session.snapshot.db.settings);
+    assert.equal(f.photos.size, 1);
+    assert.equal((await other.call('/api/photos/' + otherPhoto.data.id)).response.status, 200);
+    assert.equal((await owner.call('/api/photos/' + otherPhoto.data.id)).response.status, 404);
+    assert.deepEqual((await owner.call('/api/reminders')).data, []);
+    assert.deepEqual((await owner.call('/api/opportunities')).data, []);
+    assert.deepEqual((await owner.call('/api/backups')).data, []);
+    assert.deepEqual((await other.call('/api/session')).data.snapshot, otherBefore.snapshot);
+    const restored = await owner.call('/api/company-data/reset', 'POST', reset(cleared.data.revision, 'samples'));
+    assert.equal(restored.response.status, 200);
+    assert.equal(restored.data.snapshot.db.trips.length, 5);
+    assert.equal(restored.data.snapshot.db.settings.company, session.snapshot.db.settings.company);
+    const driver = f.browser();
+    assert.equal((await driver.call('/api/login', 'POST', { email: 'driver', password })).response.status, 200);
+    assert.equal((await driver.call('/api/company-data/reset', 'POST', reset(restored.data.revision))).response.status, 403);
+    const admin = f.browser();
+    assert.equal((await admin.call('/api/login', 'POST', { email: 'admin', password })).response.status, 200);
+    assert.equal((await owner.call('/api/preview', 'POST', { id: null })).data.user.role, 'owner');
+  } finally { f.sqlite.close(); }
+});

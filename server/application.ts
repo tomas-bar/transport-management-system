@@ -12,6 +12,7 @@ import { createWorkspace, type WorkspaceUser, type ReviewSnapshot } from '../src
 import { applyWorkspaceCommand, type WorkspaceCommand } from '../src/domain/commands.ts';
 import { validateModules, type ModuleId } from '../src/domain/modules.ts';
 import { projectSnapshot } from '../src/domain/projection.ts';
+import { companyResetCommand } from '../src/services/company-reset.ts';
 export { projectSnapshot } from '../src/domain/projection.ts';
 
 interface Account { id: string; company_id: string | null; member_id: string | null; email: string; name: string; role: WorkspaceUser['role']; password_hash: string; active: number }
@@ -178,7 +179,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
         requireThat(typeof req.headers['x-csrf-token'] === 'string' && equalSecret(req.headers['x-csrf-token'], session.csrf), 403, 'Atnaujinkite puslapį ir bandykite dar kartą.');
         const previewControl = ['/api/preview', '/api/logout'].includes(path);
         requireThat(!session.preview_id || previewControl || session.preview_mode === 'act', 403, 'Peržiūros režimu pakeitimai neleidžiami. Pasirinkite „Dirbti kaip naudotojas“.');
-        requireThat(!session.preview_id || previewControl || ['/api/commands', '/api/photos', '/api/reminders', '/api/opportunities'].some(p => path === p || path.startsWith(p + '/')), 403, 'Paskyros nustatymus keiskite grįžę į savo paskyrą.');
+        requireThat(!session.preview_id || previewControl || ['/api/commands', '/api/company-data/reset', '/api/photos', '/api/reminders', '/api/opportunities'].some(p => path === p || path.startsWith(p + '/')), 403, 'Paskyros nustatymus keiskite grįžę į savo paskyrą.');
       }
       const recheck = () => {
         const fresh = authenticate(req);
@@ -240,7 +241,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
           const input = await readBody(), name = text(input.name), modules = validateModules(input.modules), email = emailAddress(input.email), adminName = text(input.adminName, 100);
           const passwordHash = await hashPassword(input.password), id = randomUUID();
           recheck();
-          const data = createEmptyDatabase(createSeed('2026-01-01').settings); data.settings.company = name;
+          const data = createEmptyDatabase(createSeed('2026-01-01').settings); data.settings.company = name; data.settings.email = ''; data.settings.phone = '';
           const workspace = createWorkspace(data); workspace.companyId = id; workspace.notifications = [];
           const admin: WorkspaceUser = { id: 'admin', companyId: id, name: adminName, email, role: 'admin', active: true, driverId: '' };
           workspace.users = [admin];
@@ -273,14 +274,16 @@ export function createApplication(options: { dbPath: string; distPath: string; o
         store.transaction(() => { db.prepare('UPDATE companies SET name=?,modules=?,active=? WHERE id=?').run(name, JSON.stringify(modules), Number(input.active), id); if (!input.active) db.prepare('DELETE FROM sessions WHERE account_id IN (SELECT id FROM accounts WHERE company_id=?)').run(id); store.audit(id, account.id, 'company.updated', id); });
         return json(res, 200, { ok: true });
       }
-      if (path === '/api/commands' && method === 'POST') {
+      if (['/api/commands', '/api/company-data/reset'].includes(path) && method === 'POST') {
         requireThat(companyId, 403, 'Prieiga nesuteikta.');
-        const input = await readBody(), command = input.command as WorkspaceCommand;
-        requireThat(command && typeof command.type === 'string', 400, 'Netinkamas veiksmas.');
-        requireThat(!session.preview_id || !['user', 'restore'].includes(command.type), 403, 'Naudotojus ir kopijas valdykite grįžę į savo paskyrą.');
+        const input = await readBody(), reset = path === '/api/company-data/reset';
+        if (reset) requireThat(user.role === 'admin', 403, 'Duomenis gali išvalyti ir atkurti įmonės vadovas.');
         const row = store.snapshot(companyId);
+        const command = reset ? companyResetCommand(row.snapshot, input) : input.command as WorkspaceCommand;
+        requireThat(command && typeof command.type === 'string', 400, 'Netinkamas veiksmas.');
+        requireThat(!session.preview_id || reset || !['user', 'restore'].includes(command.type), 403, 'Naudotojus ir kopijas valdykite grįžę į savo paskyrą.');
         requireThat(input.revision === row.revision, 409, 'Duomenys pakeisti kitame lange. Atnaujinkite puslapį.');
-        if (command.type === 'restore') requireThat(!db.prepare('SELECT id FROM attachments WHERE company_id=? LIMIT 1').get(companyId), 409, 'Prieš atkurdami JSON kopiją išsaugokite visą serverio duomenų bazę ir pašalinkite užsakymų nuotraukas.');
+        if (command.type === 'restore' && !reset) requireThat(!db.prepare('SELECT id FROM attachments WHERE company_id=? LIMIT 1').get(companyId), 409, 'Prieš atkurdami JSON kopiją išsaugokite visą serverio duomenų bazę ir pašalinkite užsakymų nuotraukas.');
         const next = applyWorkspaceCommand(row.snapshot, user.id, command, JSON.parse(company(companyId).modules));
         // Account changes are coupled to the validated membership update.
         let credentials: { email: string; password: string | null } | null = null;
@@ -291,7 +294,11 @@ export function createApplication(options: { dbPath: string; distPath: string; o
         }
         recheck();
         store.transaction(() => {
-          if (command.type === 'restore') db.prepare('INSERT INTO snapshot_backups VALUES(?,?,?,?,?)').run(randomUUID(), companyId, row.revision, JSON.stringify(row.snapshot), new Date().toISOString());
+          if (reset) {
+            for (const table of ['attachments', 'reminders', 'opportunities']) db.prepare(`DELETE FROM ${table} WHERE company_id=?`).run(companyId);
+          }
+          if (reset && input.mode === 'clear') db.prepare('DELETE FROM snapshot_backups WHERE company_id=?').run(companyId);
+          else if (command.type === 'restore') db.prepare('INSERT INTO snapshot_backups VALUES(?,?,?,?,?)').run(randomUUID(), companyId, row.revision, JSON.stringify(row.snapshot), new Date().toISOString());
           const result = db.prepare('UPDATE snapshots SET data=?,revision=revision+1 WHERE company_id=? AND revision=?').run(JSON.stringify(next), companyId, row.revision);
           requireThat(result.changes === 1, 409, 'Duomenys pasikeitė. Atnaujinkite puslapį.');
           if (command.type === 'user' && credentials) {
@@ -304,7 +311,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
           }
           // A restore may disable a driver whose operational record was removed.
           db.prepare('DELETE FROM sessions WHERE account_id IN (SELECT id FROM accounts WHERE company_id=? AND member_id NOT IN (SELECT value FROM json_each(?)))').run(companyId, JSON.stringify(next.workspace.users.filter(u => u.active).map(u => u.id)));
-          audit('workspace.' + command.type, command.type==='user'?command.user.id:command.type==='driver'||command.type==='finance'?command.command.tripId:command.type==='reviewTrip'||command.type==='repeatTrip'?command.input.tripId:'');
+          audit(reset ? 'workspace.' + input.mode : 'workspace.' + command.type, command.type==='user'?command.user.id:command.type==='driver'||command.type==='finance'?command.command.tripId:command.type==='reviewTrip'||command.type==='repeatTrip'?command.input.tripId:'');
         });
         return json(res, 200, payload(account, session));
       }
