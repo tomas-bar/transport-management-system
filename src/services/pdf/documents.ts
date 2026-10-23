@@ -1,3 +1,4 @@
+import { draftOrder } from '../../domain/record-mode.ts';
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import type { CellInput, RowInput } from "jspdf-autotable";
@@ -272,7 +273,7 @@ export function buildFinancePdf(
  if(!/^\d{4}-\d{2}-\d{2}$/.test(from)||!/^\d{4}-\d{2}-\d{2}$/.test(to)||from>to)throw new Error('Pasirinkite tinkamą laikotarpį.');
  const title=kind==='expenses'?'Išlaidų suvestinė':kind==='payments'?'Gauti mokėjimai':'Finansų suvestinė';
  const doc=setup(fonts,title,db.settings.company,`${from} - ${to}`,options);
- const orders=db.orders.filter(o=>o.date>=from&&o.date<=to&&o.status!=='cancelled');
+ const orders=db.orders.filter(o=>!draftOrder(db,o)&&o.date>=from&&o.date<=to&&o.status!=='cancelled');
  const expenses=db.expenses.filter(e=>e.date>=from&&e.date<=to);
  const f=totals(orders,expenses);
  let y=43;

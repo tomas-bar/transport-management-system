@@ -8,6 +8,7 @@ import { TripActivity } from "../components/TripActivity";
 import { Journey } from "../components/Journey";
 import { PdfMenu } from "../components/PdfMenu";
 import { routeVisits } from "../domain/route-plan";
+import { isDraft, isHistorical } from '../domain/record-mode';
 import { useState } from "react";
 import {
   ArrowLeft,
@@ -35,6 +36,7 @@ import {
   Button,
   Panel,
   Badge,
+  TripBadge,
   Plate,
   Avatar,
   Empty,
@@ -73,8 +75,10 @@ export function TripDetail({ id }: { id: string }) {
       </Empty>
     );
   const t = trip;
-  const vehicle = db.vehicles.find((v) => v.id === t.vehicleId)!;
-  const driver = db.drivers.find((d) => d.id === t.driverId)!;
+  const vehicle = db.vehicles.find((v) => v.id === t.vehicleId);
+  const driver = db.drivers.find((d) => d.id === t.driverId);
+  const draft = isDraft(t);
+  const historical = isHistorical(t);
   const orders = tripOrders(db, t.id);
   const load = loadInfo(db, t);
   const finance = totals(
@@ -119,7 +123,11 @@ export function TripDetail({ id }: { id: string }) {
           Redaguoti
         </Button>
         {!closed &&
-          (t.status === "active" ? (
+          (draft ? <Button disabled={busy} onClick={async () => {
+            if (await confirm('Patikrinti išteklius ir paskelbti reisą priskirtam vairuotojui?', { title: 'Paskelbti reisą', confirmLabel: 'Paskelbti reisą' })) {
+              await commit(db => saveTrip(db, { ...t, recordMode: undefined }), 'Reisas paskelbtas');
+            }
+          }}>Paskelbti reisą</Button> : t.status === "active" ? (
             <Button disabled={busy} onClick={() => setReview(true)}>
               <CheckCircle2 size={16} />
               Užbaigti reisą
@@ -132,22 +140,24 @@ export function TripDetail({ id }: { id: string }) {
           ))}
       </PageHeading>
       <div className="trip-summary-strip">
-        <Badge status={t.status} />
+        <TripBadge trip={t} />
         <span>
           <CalendarDays size={16} />
           {t.departure.slice(0, 10)} · {t.departure.slice(11)}
         </span>
         <span>
           <Truck size={16} />
-          {vehicle.make} {vehicle.model} <Plate value={vehicle.plate} />
+          {vehicle ? <>{vehicle.make} {vehicle.model} <Plate value={vehicle.plate} /></> : 'Transportas nepriskirtas'}
         </span>
         <span>
           <UserRound size={16} />
-          {driver.firstName} {driver.lastName}
+          {driver ? `${driver.firstName} ${driver.lastName}` : 'Vairuotojas nepriskirtas'}
         </span>
       </div>
       <Journey trip={t} />
-      {!closed && <div className="trip-delivery-progress">
+      {draft && <p className="record-mode-banner">Juodraštis. Vairuotojui nematomas, pranešimai nesiunčiami.</p>}
+      {historical && <p className="record-mode-banner">Istorinis įrašas. Užsakymai ir išlaidos pridedami be pranešimų.</p>}
+      {!closed && !draft && <div className="trip-delivery-progress">
         <span><CheckCircle2 size={18} /><b>Pristatyta {orders.filter(order => order.status === 'completed').length} / {orders.length}</b></span>
         <Button variant="secondary" disabled={busy} onClick={() => setReview(true)}>Reiso suvestinė</Button>
       </div>}
@@ -159,7 +169,7 @@ export function TripDetail({ id }: { id: string }) {
           <span>
             <small>Keleivių vietos</small>
             <b>
-              {load.passengers} <span>/ {load.capacity}</span>
+              {load.passengers} <span>/ {vehicle ? load.capacity : '?'}</span>
             </b>
           </span>
           <div className="capacity-bar">
@@ -239,7 +249,7 @@ export function TripDetail({ id }: { id: string }) {
             <MapView
               stops={displayedStops}
               onStopsChange={
-                closed
+                closed || draft
                   ? undefined
                   : (stops) =>
                       commit((d) => {
@@ -272,6 +282,7 @@ export function TripDetail({ id }: { id: string }) {
           <Panel title="Sustojimų seka" className="stops-panel">
             <StopEditor
               tripId={t.id}
+              canConfirmArrival={!draft}
               stops={displayedStops}
               readOnly={closed}
               onChange={(stops) =>
@@ -288,14 +299,9 @@ export function TripDetail({ id }: { id: string }) {
           title="Reiso užsakymai"
           subtitle={`${load.passengers} keleiviai · ${load.parcels} siuntos`}
           action={
-            !closed && (
+            (!closed || historical) && (
               <div className="inline-actions">
-                <Button
-                  variant="secondary"
-                  onClick={() => setAssign((x) => !x)}
-                >
-                  Priskirti esamą
-                </Button>
+                {!historical && <Button variant="secondary" onClick={() => setAssign((x) => !x)}>Priskirti esamą</Button>}
                 <Button
                   onClick={() => {
                     setOrderEdit(undefined);
@@ -303,7 +309,7 @@ export function TripDetail({ id }: { id: string }) {
                   }}
                 >
                   <Plus size={16} />
-                  Naujas užsakymas
+                  {historical ? 'Istorinis užsakymas' : 'Naujas užsakymas'}
                 </Button>
               </div>
             )
@@ -355,7 +361,7 @@ export function TripDetail({ id }: { id: string }) {
       )}
       {tab === "finance" && (<>
         <div className="detail-two-col">
-          {modules.includes("finance")&&<Panel title="Finansinė suvestinė">
+          {modules.includes("finance")&&!draft&&<Panel title="Finansinė suvestinė">
             <div className="finance-lines">
               <div>
                 <span>Užsakymų vertė</span>
@@ -387,9 +393,9 @@ export function TripDetail({ id }: { id: string }) {
               <UserRound size={20} />
               <div>
                 <b>
-                  {driver.firstName} {driver.lastName}
+                  {driver ? `${driver.firstName} ${driver.lastName}` : 'Vairuotojas nepriskirtas'}
                 </b>
-                <p>{driver.phone || "Telefonas nenurodytas"}</p>
+                <p>{driver?.phone || "Telefonas nenurodytas"}</p>
               </div>
             </div>
             <div className="trip-notes">

@@ -35,7 +35,7 @@ test("revenue, received payments and expenses are distinct", () => {
 });
 test("passenger capacity prevents overbooking", () => {
   const db = createSeed();
-  const candidate = { ...db.orders[0], id: "too-many", quantity: 6 };
+  const candidate = { ...db.orders[0], id: "too-many", number: "UZ-CAPACITY", quantity: 6 };
   assert.throws(() => saveOrder(db, candidate), /Nepakanka keleivių vietų/);
 });
 test("order date must match trip departure date", () => {

@@ -1,3 +1,4 @@
+import { driverVisibleTrip } from '../src/domain/record-mode.ts';
 import { validateOpportunity, freightDetails } from '../src/domain/freight.ts';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { readFileSync, existsSync, statSync } from 'node:fs';
@@ -130,7 +131,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
     requireThat(companyId, 403, 'Prieiga nesuteikta.');
     const s = store.snapshot(companyId).snapshot;
     const order = s.db.orders.find(o => o.id === orderId);
-    requireThat(order && (user.role !== 'driver' || s.db.trips.some(t => t.id === order.tripId && t.driverId === user.driverId)), 404, 'Užsakymas nerastas.');
+    requireThat(order && (user.role !== 'driver' || s.db.trips.some(t => t.id === order.tripId && t.driverId === user.driverId && driverVisibleTrip(t))), 404, 'Užsakymas nerastas.');
   }
   function limit(key: string, maximum: number) {
     const row = db.prepare('SELECT * FROM login_limits WHERE key=?').get(key) as { started_at: number; attempts: number } | undefined;

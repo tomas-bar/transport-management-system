@@ -21,6 +21,8 @@ Company operations, generated events, revision changes, membership changes and t
 
 Photos are private JPEG derivatives stored in SQLite. Input is limited to 8 MiB and 20 million pixels, resized to at most 2400 pixels per side, with 20 photos per order and a 512 MiB live-image quota per company. Explicit deletion removes the live derivative; audit metadata remains. Photos stay until explicitly deleted. Snapshot JSON backups exclude image bytes; full SQLite backups contain photos. Operators must apply a retention policy and expire their database backups as appropriate. No end-to-end encryption, malware scanning service, or encryption at rest is claimed. Deployment should use encrypted persistent volumes and encrypted backups.
 
+Draft and retrospective historical records are excluded from driver projections and operational commands. Both demo and server private photo routes repeat this visibility check against the current company snapshot, including requests for guessed order or attachment IDs. Publishing a draft repeats the normal resource, scheduling and load validation. Published work cannot be hidden by switching its mode; completed history protects existing route records and order links.
+
 The browser policy allows HTTPS data connections because company administrators can configure map-provider endpoints. Application scripts remain same-origin; map requests send only the explicitly selected addresses and coordinates. Network egress settings remain independent of this browser policy.
 
 ## Hosting requirements

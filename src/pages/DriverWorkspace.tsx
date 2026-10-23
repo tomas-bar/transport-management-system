@@ -1,3 +1,4 @@
+import { driverVisibleTrip } from '../domain/record-mode';
 import { useState } from 'react';
 import {
   ArrowLeft, ArrowRight, Check, CheckCircle2, Clock3, MapPin, Package,
@@ -22,7 +23,7 @@ export function DriverWorkspace({ id }: { id?: string }) {
   const [history, setHistory] = useState(false);
   const [showMap, setShowMap] = useState(false);
   if (!user || user.role !== 'driver') return null;
-  const trips = db.trips.filter(trip => trip.driverId === user.driverId)
+  const trips = db.trips.filter(trip => trip.driverId === user.driverId && driverVisibleTrip(trip))
     .sort((a, b) => a.departure.localeCompare(b.departure));
   const trip = id ? trips.find(trip => trip.id === id) : undefined;
   if (id && !trip) return <Empty title="Reisas nepasiekiamas" description="Galite peržiūrėti tik jums priskirtus reisus.">

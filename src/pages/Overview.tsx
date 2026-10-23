@@ -1,3 +1,4 @@
+import { isDraft } from '../domain/record-mode';
 import { useState } from 'react';
 import {
   Plus, ArrowUpRight, ArrowRight, Users, Package, ChevronLeft, ChevronRight,
@@ -29,7 +30,7 @@ export function Overview() {
   const passengers = orders.filter(order => order.type === 'passenger');
   const parcels = orders.filter(order => order.type === 'parcel');
   const quantity = (records: typeof orders) => records.reduce((sum, order) => sum + order.quantity, 0);
-  const upcoming = db.trips.filter(trip => trip.departure.slice(0, 10) > day && !['completed', 'cancelled'].includes(trip.status))
+  const upcoming = db.trips.filter(trip => !isDraft(trip) && trip.departure.slice(0, 10) > day && !['completed', 'cancelled'].includes(trip.status))
     .sort((a, b) => a.departure.localeCompare(b.departure)).slice(0, 3);
   const waitingPath = `orders?assignment=unassigned&until=${day}`;
   const actions = [

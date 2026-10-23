@@ -12,11 +12,12 @@ import { TripTable } from "../components/TripTable";
 import { TripForm } from "../components/TripForm";
 import { tripStatuses } from "../domain/models";
 import { csv } from "../services/export";
+import { isDraft, isHistorical } from '../domain/record-mode';
 export function Trips() {
   const { db, path } = useApp();
   const [form, setForm] = useState(false);
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(new URLSearchParams(path.split('?')[1]).get('status') ?? '');
   const [type, setType] = useState("");
   const [driver, setDriver] = useState("");
   const [vehicle, setVehicle] = useState("");
@@ -32,7 +33,7 @@ export function Trips() {
           `${t.name} ${t.number}`
             .toLocaleLowerCase("lt")
             .includes(query.toLocaleLowerCase("lt"))) &&
-        (!status || t.status === status) &&
+        (!status || (status === 'draft' ? isDraft(t) : status === 'historical' ? isHistorical(t) : !isDraft(t) && t.status === status)) &&
         (!type || t.type === type) &&
         (!driver || t.driverId === driver) &&
         (!vehicle || t.vehicleId === vehicle) &&
@@ -57,6 +58,7 @@ export function Trips() {
                 "Išvykimas",
                 "Atvykimas",
                 "Būsena",
+                "Įrašo tipas",
               ],
               filtered.map((t) => [
                 t.number,
@@ -65,6 +67,7 @@ export function Trips() {
                 t.departure,
                 t.arrival,
                 tripStatuses[t.status],
+                t.recordMode === 'draft' ? 'Juodraštis' : t.recordMode === 'historical' ? 'Istorinis' : 'Paskelbtas',
               ]),
               "krypta-reisai.csv",
             )
@@ -79,6 +82,7 @@ export function Trips() {
         </Button>
       </PageHeading>
       <div className="module-tabs">
+        <button className={status === 'draft' ? 'selected' : ''} onClick={() => setStatus('draft')}>Juodraščiai<span>{db.trips.filter(isDraft).length}</span></button>
         <button
           className={!status ? "selected" : ""}
           onClick={() => setStatus("")}
@@ -120,7 +124,7 @@ export function Trips() {
             <option value="local">Vietiniai</option>
           </Select>
           <Select label="Reiso būsena" value={status} onChange={setStatus}>
-            <option value="">Visos būsenos</option>
+            <option value="">Visos būsenos</option><option value="draft">Juodraščiai</option><option value="historical">Istoriniai</option>
             {Object.entries(tripStatuses).map(([k, v]) => (
               <option key={k} value={k}>
                 {v}

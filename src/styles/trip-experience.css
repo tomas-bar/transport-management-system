@@ -178,3 +178,7 @@
 .numbering-settings h3 { font-size: 13px; color: var(--ink); margin-bottom: 12px; }
 .numbering-settings output { display: block; margin-top: 8px; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
 .numbering-settings output b { color: var(--ink); }
+.badge.draft { color: #72569f; border-color: #ded2ef; background: #f4effa; }
+:root[data-theme=dark] .badge.draft { color: #d3baf2; border-color: #5f477e; background: #342942; }
+.record-mode-note { grid-column: 1 / -1; font-size: 12px; line-height: 1.7; color: var(--text-secondary); padding: 12px 14px; background: var(--surface-raised); border: 1px solid var(--line); border-radius: 8px; margin: 0 0 8px; }
+.record-mode-banner { padding: 14px 18px; margin: 10px 0 20px; color: var(--text-secondary); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; font-size: 13px; line-height: 1.6; }

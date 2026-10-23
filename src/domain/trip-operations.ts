@@ -2,6 +2,7 @@ import type { Order, Trip } from './models.ts';
 import type { ReviewSnapshot, WorkspaceUser } from './workspace.ts';
 import { saveTrip } from './logic.ts';
 import { nextCompanyReference } from './references.ts';
+import { isDraft } from './record-mode.ts';
 
 export interface TripReviewInput {
   tripId: string;
@@ -15,6 +16,7 @@ export interface TripReview extends TripReviewInput {
   createdAt: string;
 }
 export interface RepeatTripInput {
+  asDraft?: boolean;
   sourceId: string;
   tripId: string;
   departure: string;
@@ -37,6 +39,7 @@ export function reviewTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input:
   if (!input || typeof input !== 'object') throw new Error('Patikrinkite reiso suvestinę.');
   const trip = snapshot.db.trips.find(record => record.id === input.tripId);
   if (!trip || ['completed', 'cancelled'].includes(trip.status)) throw new Error('Reisas nepasiekiamas arba jau uždarytas.');
+  if (isDraft(trip)) throw new Error('Pirmiausia paskelbkite reisą.');
   if (!Array.isArray(input.completedOrderIds) || new Set(input.completedOrderIds).size !== input.completedOrderIds.length || typeof input.finish !== 'boolean' || typeof input.note !== 'string' || input.note.length > 1000) {
     throw new Error('Patikrinkite reiso suvestinę.');
   }
@@ -64,6 +67,7 @@ export function reviewTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input:
 export function repeatTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input: RepeatTripInput) {
   manager(snapshot, user);
   if (!input || typeof input !== 'object' || typeof input.departure !== 'string' || typeof input.arrival !== 'string') throw new Error('Patikrinkite naujo reiso duomenis.');
+  if (input.asDraft !== undefined && typeof input.asDraft !== 'boolean') throw new Error('Patikrinkite juodraščio parinktį.');
   const db = snapshot.db;
   const source = db.trips.find(trip => trip.id === input.sourceId);
   if (!source) throw new Error('Pradinis reisas nerastas.');
@@ -76,6 +80,7 @@ export function repeatTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input:
   for (const order of selected) {
     copies.set(order.id, {
       ...structuredClone(order), id: crypto.randomUUID(),
+      recordMode: undefined,
       number: nextCompanyReference({ ...db, orders: [...db.orders, ...copies.values()] }, 'orders'),
       date: input.departure.slice(0, 10), tripId: input.tripId, status: 'assigned',
       price: input.copyPrices ? order.price : 0,
@@ -85,6 +90,7 @@ export function repeatTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input:
   }
   const trip: Trip = {
     ...structuredClone(source), id: input.tripId,
+    recordMode: input.asDraft ? 'draft' : undefined,
     number: nextCompanyReference(db, 'trips'),
     departure: input.departure, arrival: input.arrival,
     vehicleId: input.vehicleId, driverId: input.driverId,

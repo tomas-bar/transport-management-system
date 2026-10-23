@@ -35,6 +35,7 @@ export interface Route {
   archived?: boolean;
 }
 export interface Trip {
+  recordMode?: 'draft' | 'historical';
   id: string;
   number: string;
   name: string;
@@ -49,6 +50,7 @@ export interface Trip {
   stops: Stop[];
 }
 export interface Order {
+  recordMode?: 'historical';
   id: string;
   number: string;
   type: "passenger" | "parcel";

@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import type { Trip } from "../domain/models";
 import { useApp } from "../context";
-import { Badge, Plate, Avatar, Empty } from "./ui";
+import { TripBadge, Plate, Avatar, Empty } from "./ui";
 import { dateLabel, loadInfo, today } from "../domain/logic";
 export function TripTable({
   trips,
@@ -101,7 +101,7 @@ export function TripTable({
                     <div className="load-mini">
                       <Users size={14} />
                       <b>{l.passengers}</b>
-                      <span>/ {l.capacity}</span>
+                      <span>/ {v ? l.capacity : '?'}</span>
                       <Package size={14} />
                       <b>{l.parcels}</b>
                     </div>
@@ -114,7 +114,7 @@ export function TripTable({
                     </div>
                   </td>
                   <td>
-                    <Badge status={t.status} />
+                    <TripBadge trip={t} />
                   </td>
                   <td>
                     <button

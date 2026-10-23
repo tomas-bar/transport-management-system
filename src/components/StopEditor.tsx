@@ -29,11 +29,13 @@ export function StopEditor({
   onChange,
   readOnly = false,
   tripId,
+  canConfirmArrival = true,
 }: {
   stops: Stop[];
   onChange: (v: Stop[]) => void;
   readOnly?: boolean;
   tripId?: string;
+  canConfirmArrival?: boolean;
 }) {
   const { db, workspace } = useApp();
   const trip = db.trips.find(trip => trip.id === tripId);
@@ -159,7 +161,7 @@ export function StopEditor({
                       <Trash2 size={15} />
                     </button>
                   )}
-                  <button
+                  {canConfirmArrival && <button
                     type="button"
                     aria-label={`${visit.completed ? "Atšaukti atvykimą" : "Pažymėti atvykimą"}: ${s.name}`}
                     aria-pressed={visit.completed}
@@ -169,7 +171,7 @@ export function StopEditor({
                     }
                   >
                     <Check size={15} />
-                  </button>
+                  </button>}
                 </div>
               )}
             </div>

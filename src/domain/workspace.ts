@@ -1,5 +1,6 @@
 import type { TripReview } from './trip-operations.ts';
 import {tripOutcomeLabels} from './terminology.ts';
+import { driverVisibleTrip, historicalOrder } from './record-mode.ts';
 import type {ModuleId} from './modules.ts';
 import {validateFinanceRecords,type DriverPermissions,type PaymentReceipt,type ExpenseSubmission} from './trip-finance.ts';
 import type { Database } from './models.ts';
@@ -126,7 +127,7 @@ export function createWorkspace(db: Database): Workspace {
     confirmations: [],
     preferences: {}
   };
-  for (const trip of db.trips.filter(t => !['completed', 'cancelled'].includes(t.status))) {
+  for (const trip of db.trips.filter(t => driverVisibleTrip(t) && !['completed', 'cancelled'].includes(t.status))) {
     const driver = users.find(u => u.role === 'driver' && u.driverId === trip.driverId);
     if (driver) workspace.notifications.push({
       id: `seed-${trip.id}`,
@@ -203,19 +204,25 @@ export function notificationChanges(before:Database, after:Database, ws:Workspac
     }
   };
   for(const trip of after.trips) {
+    if (!driverVisibleTrip(trip)) continue;
     const old=before.trips.find(t=>t.id===trip.id);
-    if(!old||trip.driverId!==old.driverId)emit('assignment','Reisas priskirtas','',trip.id,trip.driverId);
+    if(!old||!driverVisibleTrip(old)||trip.driverId!==old.driverId)emit('assignment','Reisas priskirtas','',trip.id,trip.driverId);
     else if(trip.status!==old.status)emit('trip',tripOutcomeLabels[trip.status],'',trip.id,trip.driverId);
     else if(['departure','arrival','vehicleId','name','notes'].some(k=>trip[k as keyof typeof trip]!==old[k as keyof typeof trip]))emit('trip','Reiso informacija atnaujinta','',trip.id,trip.driverId);
   }
   for(const order of after.orders) {
     const old=before.orders.find(o=>o.id===order.id);
     const trip=after.trips.find(t=>t.id===order.tripId);
+    if (historicalOrder(after, order) || (trip && !driverVisibleTrip(trip))) continue;
+    const oldTrip = before.trips.find(record => record.id === order.tripId);
+    if (oldTrip && !driverVisibleTrip(oldTrip)) continue;
     if(trip&&(!old||old.tripId!==order.tripId))emit('assignment','Pridėtas užsakymas',`${order.number} · ${order.name}`,trip.id,trip.driverId);
     else if(trip&&old&&old.status!==order.status&&order.status==='completed')emit('delivery',order.type==='passenger'?'Keleiviai pristatyti':'Siunta pristatyta',`${order.number} · ${order.name}`,trip.id,trip.driverId);
     if(old&&old.paid!==order.paid)emit('payment','Mokėjimas atnaujintas',order.number,trip?.id??'',trip?.driverId??'',true);
   }
   for(const expense of after.expenses) {
+    const trip = after.trips.find(record => record.id === expense.tripId);
+    if (trip && !driverVisibleTrip(trip)) continue;
     const old=before.expenses.find(e=>e.id===expense.id);
     if(!old||JSON.stringify(old)!==JSON.stringify(expense))emit('expense',old?'Išlaidos atnaujintos':'Išlaidos įregistruotos',expense.category,expense.tripId,'',true);
   }
@@ -225,6 +232,7 @@ export function applyDriverCommand(snapshot: ReviewSnapshot, user: WorkspaceUser
   if (!user.active || user.role !== 'driver' || user.companyId !== snapshot.workspace.companyId) throw new Error('Šis veiksmas neleidžiamas.');
   const trip = snapshot.db.trips.find(t => t.id === command.tripId && t.driverId === user.driverId);
   if (!trip) throw new Error('Reisas jums nepriskirtas.');
+  if (!driverVisibleTrip(trip)) throw new Error('Reisas nepaskelbtas vairuotojui.');
   if (['cancelled', 'completed'].includes(trip.status)) throw new Error('Reisas jau uždarytas.');
   if (command.type === 'start') {
     if (trip.status !== 'confirmed') throw new Error('Reisas turi būti patvirtintas vadybininko.');

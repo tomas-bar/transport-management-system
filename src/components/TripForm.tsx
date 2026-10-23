@@ -1,4 +1,5 @@
 import { nextCompanyReference } from '../domain/references';
+import { isDraft, isHistorical } from '../domain/record-mode';
 import { useConfirm } from './Feedback';
 import { useState } from "react";
 import type { Trip } from "../domain/models";
@@ -14,7 +15,7 @@ export function TripForm({
   onClose: () => void;
 }) {
   const confirm = useConfirm();
-  const { db, commit, busy, user } = useApp();
+  const { db, commit, busy, user, navigate } = useApp();
   const [form, setForm] = useState<Trip>(
     trip
       ? structuredClone(trip)
@@ -29,6 +30,7 @@ export function TripForm({
           driverId: "",
           routeId: "",
           status: "planned",
+          recordMode: 'draft',
           notes: "",
           stops: [],
         },
@@ -41,6 +43,7 @@ export function TripForm({
   const archivedDriver = db.drivers.find(
     (d) => d.id === form.driverId && d.status !== "active",
   );
+  const mode = form.recordMode ?? 'operational';
   return (
     <Modal
       title={trip ? "Redaguoti reisą" : "Naujas reisas"}
@@ -51,6 +54,7 @@ export function TripForm({
       <form
         onSubmit={async (e) => {
           e.preventDefault();
+          if (trip && isDraft(trip) && !form.recordMode && !await confirm('Paskelbti reisą priskirtam vairuotojui?', { title: 'Paskelbti reisą', confirmLabel: 'Paskelbti reisą' })) return;
           if (
             trip &&
             form.status !== trip.status &&
@@ -67,14 +71,28 @@ export function TripForm({
               (d) => {
                 saveTrip(d, form);
               },
-              trip ? "Reisas atnaujintas" : "Reisas sukurtas",
+              trip ? 'Reisas atnaujintas' : isDraft(form) ? 'Juodraštis išsaugotas' : isHistorical(form) ? 'Istorinis reisas įrašytas' : 'Reisas paskelbtas',
             )
           )
-            onClose();
+            { onClose(); if (!trip) navigate(`trips/${form.id}`); }
         }}
       >
         <div className="modal-body">
           <div className="form-grid">
+            {(!trip || isDraft(trip)) && <Field label="Įrašo tipas" full>
+              <select value={mode} onChange={event => {
+                const selected = event.target.value;
+                setForm(previous => ({ ...previous, recordMode: selected === 'operational' ? undefined : selected as 'draft' | 'historical',
+                  status: selected === 'historical' ? 'completed' : 'planned' }));
+              }}>
+                <option value="draft">Juodraštis</option>
+                <option value="operational">Paskelbtas reisas</option>
+                {!trip && <option value="historical">Istorinis reisas</option>}
+              </select>
+            </Field>}
+            <p className="record-mode-note">{isDraft(form) ? 'Matomas tik vadovui ir vadybininkams. Pranešimai nesiunčiami, transportas ir vairuotojas nerezervuojami.'
+              : isHistorical(form) ? 'Užbaigtas ankstesnis reisas. Galėsite pridėti istorinius užsakymus ir išlaidas. Pranešimai nesiunčiami.'
+              : 'Reisas bus matomas priskirtam vairuotojui. Pranešimai siunčiami pagal jo nuostatas.'}</p>
             <Field label="Reiso numeris" full>
               <input required maxLength={40} readOnly={user?.role !== 'admin'} value={form.number} onChange={event => set('number', event.target.value)} />
             </Field>
@@ -133,7 +151,7 @@ export function TripForm({
                 <option value="local">Vietinis</option>
               </select>
             </Field>
-            <Field label="Būsena" hint={trip?.status !== "completed" ? "Pristatymus patvirtinkite reiso suvestinėje." : undefined}>
+            {!form.recordMode && <Field label="Būsena" hint={trip?.status !== "completed" ? "Pristatymus patvirtinkite reiso suvestinėje." : undefined}>
               <select
                 value={form.status}
                 onChange={(e) =>
@@ -146,7 +164,7 @@ export function TripForm({
                   </option>
                 ))}
               </select>
-            </Field>
+            </Field>}
             <Field label="Išvykimas *">
               <input
                 type="datetime-local"
@@ -155,18 +173,19 @@ export function TripForm({
                 onChange={(e) => set("departure", e.target.value)}
               />
             </Field>
-            <Field label="Planuojamas atvykimas *">
+            <Field label={isHistorical(form) ? 'Atvykimas *' : 'Planuojamas atvykimas *'}>
               <input
                 type="datetime-local"
                 required
                 min={form.departure}
+                max={isHistorical(form) ? today() + 'T23:59' : undefined}
                 value={form.arrival}
                 onChange={(e) => set("arrival", e.target.value)}
               />
             </Field>
-            <Field label="Transporto priemonė *">
+            <Field label={isDraft(form) ? 'Transporto priemonė' : 'Transporto priemonė *'}>
               <select
-                required
+                required={!isDraft(form)}
                 value={form.vehicleId}
                 onChange={(e) => set("vehicleId", e.target.value)}
               >
@@ -174,7 +193,7 @@ export function TripForm({
                 {db.vehicles
                   .filter(
                     (v) =>
-                      v.status === "active" || v.id === archivedVehicle?.id,
+                      isHistorical(form) || v.status === "active" || v.id === archivedVehicle?.id,
                   )
                   .map((v) => (
                     <option key={v.id} value={v.id}>
@@ -184,16 +203,16 @@ export function TripForm({
                   ))}
               </select>
             </Field>
-            <Field label="Vairuotojas *">
+            <Field label={isDraft(form) ? 'Vairuotojas' : 'Vairuotojas *'}>
               <select
-                required
+                required={!isDraft(form)}
                 value={form.driverId}
                 onChange={(e) => set("driverId", e.target.value)}
               >
                 <option value="">Pasirinkite vairuotoją</option>
                 {db.drivers
                   .filter(
-                    (d) => d.status === "active" || d.id === archivedDriver?.id,
+                    (d) => isHistorical(form) || d.status === "active" || d.id === archivedDriver?.id,
                   )
                   .map((d) => (
                     <option key={d.id} value={d.id}>
@@ -213,8 +232,7 @@ export function TripForm({
             </Field>
           </div>
           <p className="form-help">
-            * Privalomi laukai. Vairuotojo ir automobilio užimtumas tikrinamas
-            išsaugant.
+            {isDraft(form) ? '* Privalomi laukai. Išteklių užimtumas bus patikrintas paskelbiant.' : '* Privalomi laukai.'}
           </p>
         </div>
         <footer>
@@ -226,7 +244,7 @@ export function TripForm({
               ? "Saugoma..."
               : trip
                 ? "Išsaugoti pakeitimus"
-                : "Sukurti reisą"}
+                : isDraft(form) ? 'Išsaugoti juodraštį' : isHistorical(form) ? 'Įrašyti į istoriją' : 'Paskelbti reisą'}
           </Button>
         </footer>
       </form>

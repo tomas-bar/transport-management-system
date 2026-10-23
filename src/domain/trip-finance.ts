@@ -1,4 +1,5 @@
 import type {Expense} from './models.ts';
+import { driverVisibleTrip, isDraft } from './record-mode.ts';
 import {expenseCategories} from './models.ts';
 import {hasAgreedPrice,today} from './logic.ts';
 import type {ReviewSnapshot,WorkspaceUser} from './workspace.ts';
@@ -12,6 +13,8 @@ export function applyFinanceCommand(snapshot:ReviewSnapshot,user:WorkspaceUser,c
  if(!user.active||user.companyId!==snapshot.workspace.companyId)throw new Error('Prieiga nesuteikta.');
  const trip=snapshot.db.trips.find(t=>t.id===command.tripId);
  if(!trip||(user.role==='driver'&&trip.driverId!==user.driverId))throw new Error('Reisas nepasiekiamas.');
+ if(user.role==='driver'&&!driverVisibleTrip(trip))throw new Error('Reisas nepasiekiamas.');
+ if(isDraft(trip))throw new Error('Prieš registruodami mokėjimus ar išlaidas paskelbkite reisą.');
  if(trip.status==='cancelled'&&command.type!=='voidReceipt')throw new Error('Atšauktame reise šis veiksmas neleidžiamas.');
  const permissions=driverPermissions(user);
  if(user.role==='driver'&&!(command.type==='expense'?permissions.recordExpenses:permissions.collectPayments))throw new Error('Šiam veiksmui nesuteikta teisė.');

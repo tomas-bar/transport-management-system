@@ -22,6 +22,7 @@ export function RepeatTrip({ sourceId, onClose }: { sourceId: string; onClose: (
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [copyPrices, setCopyPrices] = useState(false);
+  const [asDraft, setAsDraft] = useState(true);
   const orders = tripOrders(db, sourceId);
   const visible = orders.filter(order => `${order.number} ${order.name} ${order.pickup.name} ${order.delivery.name}`.toLocaleLowerCase('lt').includes(query.toLocaleLowerCase('lt')));
   const allVisible = visible.length > 0 && visible.every(order => selected.includes(order.id));
@@ -29,7 +30,7 @@ export function RepeatTrip({ sourceId, onClose }: { sourceId: string; onClose: (
   async function save() {
     const tripId = crypto.randomUUID();
     const ok = await operationalCommand({ type: 'repeatTrip', input: {
-      sourceId, tripId, departure, arrival, vehicleId, driverId, orderIds: selected, copyPrices,
+      sourceId, tripId, departure, arrival, vehicleId, driverId, orderIds: selected, copyPrices, asDraft,
     } });
     if (ok) { onClose(); navigate('trips/' + tripId); }
   }
@@ -40,10 +41,10 @@ export function RepeatTrip({ sourceId, onClose }: { sourceId: string; onClose: (
         <div className="form-grid">
           <Field label="Išvykimas"><input type="datetime-local" required value={departure} onChange={event => setDeparture(event.target.value)} /></Field>
           <Field label="Atvykimas"><input type="datetime-local" required min={departure} value={arrival} onChange={event => setArrival(event.target.value)} /></Field>
-          <Field label="Automobilis"><select required value={vehicleId} onChange={event => setVehicleId(event.target.value)}>
+          <Field label="Automobilis"><select required={!asDraft} value={vehicleId} onChange={event => setVehicleId(event.target.value)}>
             <option value="">Pasirinkite</option>{db.vehicles.filter(vehicle => vehicle.status === 'active').map(vehicle => <option key={vehicle.id} value={vehicle.id}>{vehicle.plate} · {vehicle.model}</option>)}
           </select></Field>
-          <Field label="Vairuotojas"><select required value={driverId} onChange={event => setDriverId(event.target.value)}>
+          <Field label="Vairuotojas"><select required={!asDraft} value={driverId} onChange={event => setDriverId(event.target.value)}>
             <option value="">Pasirinkite</option>{db.drivers.filter(driver => driver.status === 'active').map(driver => <option key={driver.id} value={driver.id}>{driver.firstName} {driver.lastName}</option>)}
           </select></Field>
         </div>
@@ -60,6 +61,8 @@ export function RepeatTrip({ sourceId, onClose }: { sourceId: string; onClose: (
         </label>)}</div>
         {modules.includes('finance') && <label className="review-finish-check"><input type="checkbox" checked={copyPrices} onChange={event => setCopyPrices(event.target.checked)} />Kopijuoti sutartas kainas</label>}
         <p className="muted">Mokėjimai, išlaidos ir įvykdymo istorija nekopijuojami.</p>
+        <label className="review-finish-check"><input type="checkbox" checked={asDraft} onChange={event => setAsDraft(event.target.checked)} />Išsaugoti kaip juodraštį</label>
+        <p className="record-mode-note">{asDraft ? 'Vairuotojui nebus siunčiamas pranešimas iki paskelbimo.' : 'Naujas reisas bus paskelbtas vairuotojui.'}</p>
       </div>
       <footer><Button variant="secondary" onClick={onClose}>Atšaukti</Button><Button type="submit" disabled={busy}><Copy size={17} />Sukurti naują reisą</Button></footer>
     </form>

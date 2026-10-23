@@ -1,3 +1,4 @@
+import { repeatTrip } from '../src/domain/trip-operations.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSeed, createEmptyDatabase } from '../src/data/seed.ts';
@@ -49,4 +50,17 @@ test('invalid numbering is rejected and untouched legacy reference formats remai
   validateReferenceChanges(db, structuredClone(db), true);
   db.settings.numbering = { trips: { prefix: 'BAD PREFIX', start: 0 }, orders: { prefix: 'X-', start: 1 } };
   assert.throws(() => validateDatabase(db), /Prefiksui/);
+});
+
+
+test('repeated trips and selected orders use the current company series', () => {
+  const db = createSeed('2026-10-23'), workspace = createWorkspace(db);
+  db.settings.numbering = { trips: { prefix: 'T/26-', start: 4 }, orders: { prefix: 'O/26-', start: 9 } };
+  const source = db.trips[0], order = db.orders.find(order => order.tripId === source.id)!;
+  repeatTrip({ db, workspace }, workspace.users.find(user => user.role === 'admin')!, {
+    sourceId: source.id, tripId: 'repeat-custom', departure: '2026-11-20T08:00', arrival: '2026-11-21T18:00',
+    driverId: source.driverId, vehicleId: source.vehicleId, orderIds: [order.id], copyPrices: false, asDraft: true,
+  });
+  assert.equal(db.trips.find(trip => trip.id === 'repeat-custom')!.number, 'T/26-4');
+  assert.equal(db.orders.find(order => order.tripId === 'repeat-custom')!.number, 'O/26-9');
 });

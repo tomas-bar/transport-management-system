@@ -1,3 +1,4 @@
+import { saveTrip, saveOrder } from '../src/domain/logic.ts';
 import { routeVisits } from '../src/domain/route-plan.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -290,5 +291,31 @@ test('freight opportunities persist validated details with company scope, revisi
     f.db.prepare("UPDATE companies SET modules='[\"operations\"]' WHERE id='one'").run();
     assert.equal((await f.request('/api/opportunities', 'GET', undefined, first)).status, 403);
     assert.equal(f.db.prepare('SELECT count(*) AS n FROM opportunities').get()!.n, 1);
+  } finally { await f.close(); }
+});
+
+
+test('unpublished drafts and historical backfill stay outside driver data and private photo access', async () => {
+  const f = await fixture();
+  try {
+    const admin = await f.login();
+    const data = structuredClone(admin.data.snapshot.db);
+    for (const [id, number, recordMode, status] of [
+      ['draft-trip', 'DRAFT-1', 'draft', 'planned'],
+      ['history-trip', 'HISTORY-1', 'historical', 'completed'],
+    ] as const) {
+      saveTrip(data, { ...data.trips[0], id, number, recordMode, status, departure: '2026-09-01T08:00', arrival: '2026-09-01T18:00', stops: [] });
+      saveOrder(data, { ...data.orders[0], id: id + '-order', number: number + '-ORDER', tripId: id, date: '2026-09-01', paid: 0 });
+    }
+    const response = await f.request('/api/commands', 'POST', { revision: 1, command: { type: 'commit', db: data } }, admin);
+    assert.equal(response.status, 200, await response.clone().text());
+    const driver = await f.login('one-user-d1@example.test');
+    assert(!driver.data.snapshot.db.trips.some((trip: any) => ['draft-trip', 'history-trip'].includes(trip.id)));
+    assert(!driver.data.snapshot.db.orders.some((order: any) => order.id.endsWith('-order')));
+    for (const id of ['draft-trip', 'history-trip']) {
+      assert.equal((await f.request('/api/photos?order=' + id + '-order', 'GET', undefined, driver)).status, 404);
+      assert.equal((await f.request('/api/commands', 'POST', { revision: 2, command: { type: 'driver', command: { type: 'start', tripId: id } } }, driver)).status, 400);
+    }
+    assert.equal(f.store.snapshot('one').revision, 2);
   } finally { await f.close(); }
 });

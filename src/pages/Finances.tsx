@@ -1,4 +1,5 @@
 import { useConfirm } from '../components/Feedback';
+import { draftOrder, isDraft } from '../domain/record-mode';
 import {ReceiptJournal} from '../components/ReceiptJournal';
 import { PdfMenu } from "../components/PdfMenu";
 import { useState } from "react";
@@ -48,7 +49,7 @@ export function Finances() {
   const [order, setOrder] = useState<Order | null>(null);
   const validPeriod=!!from&&!!to&&from<=to;
   const orders = db.orders.filter(
-    (o) => o.date >= from && o.date <= to && o.status !== "cancelled",
+    (o) => !draftOrder(db, o) && o.date >= from && o.date <= to && o.status !== "cancelled",
   );
   const expenses = db.expenses.filter((e) => e.date >= from && e.date <= to);
   const finances = totals(orders, expenses);
@@ -416,7 +417,7 @@ export function Finances() {
                     }}
                   >
                     <option value="">Nepriskirta reisui</option>
-                    {db.trips.map((t) => (
+                    {db.trips.filter(t => !isDraft(t)).map((t) => (
                       <option key={t.id} value={t.id}>
                         {t.number} · {t.name}
                       </option>

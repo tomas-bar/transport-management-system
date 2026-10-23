@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 import type { Trip } from "../domain/models";
 import { useApp } from "../context";
-import { Badge, Plate } from "./ui";
+import { TripBadge, Plate } from "./ui";
 import { dateLabel, loadInfo, today } from "../domain/logic";
 export function TripCards({ trips }: { trips: Trip[] }) {
   const { db, navigate } = useApp();
@@ -25,7 +25,7 @@ export function TripCards({ trips }: { trips: Trip[] }) {
               <span className="trip-card-ref">
                 {t.number} · {t.type === "local" ? "Vietinis" : "Tarptautinis"}
               </span>
-              <Badge status={t.status} />
+              <TripBadge trip={t} />
             </div>
             <button
               className="trip-card-name"
@@ -64,7 +64,7 @@ export function TripCards({ trips }: { trips: Trip[] }) {
               <span>
                 <Users size={15} />
                 <b>
-                  {load.passengers} / {load.capacity}
+                  {load.passengers} / {v ? load.capacity : '?'}
                 </b>{" "}
                 vietos
               </span>

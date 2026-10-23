@@ -45,8 +45,10 @@
 .notification-dialog > footer .button { flex: 0 1 auto; }
 .notification-group-toggle { gap: 12px; }
 .notification-group-summary { min-width: 0; }
-.notification-group-summary > b { color: var(--ink); line-height: 1.5; }
-.notification-group-reference { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.notification-group-summary > b, .notification-groups.compact .notification-group-summary > b { color: var(--ink); font-size: 14px; line-height: 1.5; }
+.notification-group-summary .notification-preview { color: var(--text-secondary); font-size: 13px; line-height: 1.6; }
+.notification-group-summary > small { color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
+.notification-group-reference { font-size: 11px; color: var(--text-secondary); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .notification-group-controls { margin-left: auto; flex: 0 0 auto; }
 .notification-counts { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 10px; font-size: 11px; color: var(--text-secondary); }
 .notification-counts > span { display: inline-flex; align-items: center; gap: 5px; }

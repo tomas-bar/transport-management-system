@@ -1,3 +1,4 @@
+import { driverVisibleTrip } from '../../domain/record-mode.ts';
 import { validateOpportunity, freightDetails } from '../../domain/freight.ts';
 import { createEmptyDatabase, createSeed } from '../../data/seed.ts';
 import { applyWorkspaceCommand, type WorkspaceCommand } from '../../domain/commands.ts';
@@ -117,7 +118,7 @@ export class DemoApi {
     const orderAccess = (id: string) => {
       const current = companyAccess();
       const order = current.snapshot.db.orders.find(o => o.id === id);
-      requireThat(order && (user.role !== 'driver' || current.snapshot.db.trips.some(t => t.id === order.tripId && t.driverId === user.driverId)), 404, 'Užsakymas nerastas.');
+      requireThat(order && (user.role !== 'driver' || current.snapshot.db.trips.some(t => t.id === order.tripId && t.driverId === user.driverId && driverVisibleTrip(t))), 404, 'Užsakymas nerastas.');
       return order;
     };
     if (endpoint === '/api/session' && method === 'GET') return this.payload(state);

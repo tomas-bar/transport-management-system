@@ -6,6 +6,7 @@ import { applyFinanceCommand, type FinanceCommand } from './trip-finance.ts';
 import { markNotificationsRead } from './notifications.ts';
 import { routeVisits } from './route-plan.ts';
 import { validateReferenceChanges } from './references.ts';
+import { historicalStopsAppendOnly, validateRecordModeChanges } from './record-mode.ts';
 import type { ModuleId } from './modules.ts';
 
 export type WorkspaceCommand =
@@ -31,6 +32,7 @@ export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, c
       next.db = validateDatabase(command.db);
       if (user.role !== 'admin' && JSON.stringify(before.db.settings) !== JSON.stringify(next.db.settings)) admin();
       validateReferenceChanges(before.db, next.db, user.role === 'admin');
+      validateRecordModeChanges(before.db, next.db);
       if (!modules.includes('finance') && (JSON.stringify(before.db.expenses) !== JSON.stringify(next.db.expenses) || next.db.orders.some(o => {
         const old = before.db.orders.find(r => r.id === o.id);
         return old ? o.price !== old.price || o.paid !== old.paid || o.priceSet !== old.priceSet : o.paid !== 0 || o.price !== 0;
@@ -42,7 +44,8 @@ export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, c
       }
       for (const old of before.db.trips.filter(t => t.status === 'completed')) {
         const changed = next.db.trips.find(t => t.id === old.id);
-        if (!changed || ['status', 'departure', 'arrival', 'driverId', 'vehicleId', 'stops'].some(key => JSON.stringify(old[key as keyof typeof old]) !== JSON.stringify(changed[key as keyof typeof old]))) throw new Error('Užbaigto reiso pakeisti negalima.');
+        if (!changed || ['status', 'departure', 'arrival', 'driverId', 'vehicleId'].some(key => JSON.stringify(old[key as keyof typeof old]) !== JSON.stringify(changed[key as keyof typeof old]))
+          || (JSON.stringify(old.stops) !== JSON.stringify(changed.stops) && !historicalStopsAppendOnly(before.db, next.db, old, changed))) throw new Error('Užbaigto reiso pakeisti negalima.');
       }
       break;
     }

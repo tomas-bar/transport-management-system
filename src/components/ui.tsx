@@ -2,6 +2,7 @@ import { useEffect, useRef, useId, isValidElement, cloneElement } from "react";
 import type { ReactNode, ButtonHTMLAttributes, HTMLAttributes, ReactElement } from "react";
 import { X, ArrowUpRight, Search, Inbox, ChevronDown } from "lucide-react";
 import { tripStatuses, orderStatuses, entityStatuses } from "../domain/models";
+import type { Trip } from '../domain/models';
 export function Button({
   children,
   variant = "primary",
@@ -33,6 +34,11 @@ export function Badge({ status, label }: { status: string; label?: string }) {
       {label ?? labels[status] ?? status}
     </span>
   );
+}
+export function TripBadge({ trip }: { trip: Trip }) {
+  return <Badge status={trip.recordMode === 'draft' && trip.status !== 'cancelled' ? 'draft' : trip.status}
+    label={trip.recordMode === 'draft' ? trip.status === 'cancelled' ? 'Juodraštis atšauktas' : 'Juodraštis'
+      : trip.recordMode === 'historical' ? 'Istorinis · Užbaigtas' : undefined} />;
 }
 export function Plate({ value }: { value: string }) {
   return (

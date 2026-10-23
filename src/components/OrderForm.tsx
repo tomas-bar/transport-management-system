@@ -1,4 +1,5 @@
 import { nextCompanyReference } from '../domain/references';
+import { isDraft, isHistorical } from '../domain/record-mode';
 import { useConfirm } from './Feedback';
 import {OrderPhotos} from './OrderPhotos';
 import { Camera } from 'lucide-react';
@@ -45,7 +46,8 @@ export function OrderForm({
           price: 0,
           priceSet: false,
           paid: 0,
-          status: "new",
+          status: selected && isHistorical(selected) ? 'completed' : 'new',
+          recordMode: selected && isHistorical(selected) ? 'historical' : undefined,
           tripId,
           notes: "",
         },
@@ -56,7 +58,9 @@ export function OrderForm({
     !!order && (order.price > 0 || order.paid > 0),
   );
   const isParcel = form.type === "parcel";
-  const locked = order?.status === "completed" && !!order.tripId;
+  const assignedTrip = db.trips.find(trip => trip.id === form.tripId);
+  const historical = form.recordMode === 'historical';
+  const locked = order?.status === "completed" && (!!order.tripId || order.recordMode === 'historical');
   return (
     <Modal
       title={order ? "Redaguoti užsakymą" : "Naujas užsakymas"}
@@ -111,6 +115,17 @@ export function OrderForm({
             </button>
           </div>
           <div className="form-grid">
+            {!order && <Field label="Įrašo tipas" full>
+              <select disabled={!!selected && isHistorical(selected)} value={historical ? 'historical' : 'operational'} onChange={event => {
+                const historical = event.target.value === 'historical';
+                setForm(previous => ({ ...previous, recordMode: historical ? 'historical' : undefined,
+                  status: historical ? 'completed' : 'new', tripId: '' }));
+              }}><option value="operational">Naujas užsakymas</option><option value="historical">Istorinis užsakymas</option></select>
+            </Field>}
+            {(historical || assignedTrip && isDraft(assignedTrip)) && <p className="record-mode-note">
+              {historical ? 'Užbaigtas ankstesnis užsakymas. Pranešimai nesiunčiami. Sumokėta suma įrašoma kaip ankstesnis likutis, naujas mokėjimo kvitas nekuriamas.'
+                : 'Juodraščio užsakymas. Vairuotojas jo nematys iki reiso paskelbimo.'}
+            </p>}
             <Field label="Užsakymo numeris" full>
               <input required maxLength={40} readOnly={user?.role !== 'admin'} value={form.number} onChange={event => set('number', event.target.value)} />
             </Field>
@@ -205,6 +220,7 @@ export function OrderForm({
             <Field label="Kelionės data *">
               <input
                 type="date"
+                max={historical ? today() : undefined}
                 required
                 disabled={locked}
                 value={form.date}
@@ -300,6 +316,7 @@ export function OrderForm({
                     min={0}
                     max={form.price / 100}
                     step="0.01"
+                    disabled={!!assignedTrip && isDraft(assignedTrip)}
                     value={form.paid / 100}
                     onChange={(e) =>
                       set("paid", Math.round(Number(e.target.value) * 100))
@@ -333,18 +350,16 @@ export function OrderForm({
                 <option value="">Kol kas nepriskirti</option>
                 {db.trips
                   .filter(
-                    (t) =>
-                      !["completed", "cancelled"].includes(t.status) ||
-                      t.id === form.tripId,
+                    (t) => t.id === form.tripId || (historical ? isHistorical(t) : !isHistorical(t) && !['completed', 'cancelled'].includes(t.status)),
                   )
                   .map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.number} · {t.name} · {t.departure.slice(0, 10)}
+                      {t.number} · {t.name} · {t.departure.slice(0, 10)}{isDraft(t) ? ' · Juodraštis' : ''}
                     </option>
                   ))}
               </select>
             </Field>
-            {!form.tripId && (
+            {!form.tripId && !historical && (
               <Field label="Užsakymo būsena">
                 <select
                   value={form.status}

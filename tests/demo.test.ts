@@ -1,3 +1,4 @@
+import { saveTrip, saveOrder } from '../src/domain/logic.ts';
 import { routeVisits } from '../src/domain/route-plan.ts';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -153,4 +154,25 @@ test('demo upgrades old link-only opportunities without resetting records and re
   const updated = (await api.request<any[]>('/api/opportunities'))[0];
   assert.equal(updated.details.status, 'contacted');
   assert.equal(updated.notes, 'Retain this contact');
+});
+
+
+test('demo drafts and historical records retain private driver and photo boundaries', async () => {
+  const { storage, api } = await fixture();
+  const admin = await login(api);
+  const db = structuredClone(admin.snapshot!.db);
+  for (const [id, number, recordMode, status] of [
+    ['draft-trip', 'DRAFT-1', 'draft', 'planned'],
+    ['history-trip', 'HISTORY-1', 'historical', 'completed'],
+  ] as const) {
+    saveTrip(db, { ...db.trips[0], id, number, recordMode, status, departure: '2026-09-01T08:00', arrival: '2026-09-01T18:00', stops: [] });
+    saveOrder(db, { ...db.orders[0], id: id + '-order', number: number + '-ORDER', tripId: id, date: '2026-09-01', paid: 0 });
+  }
+  await api.request('/api/commands', 'POST', { revision: admin.revision, command: { type: 'commit', db } });
+  const driver = client(storage), session = await login(driver.api, 'driver');
+  assert(!session.snapshot!.db.trips.some(trip => ['draft-trip', 'history-trip'].includes(trip.id)));
+  for (const id of ['draft-trip', 'history-trip']) {
+    await assert.rejects(driver.api.request('/api/photos?order=' + id + '-order'), /nerastas/);
+    await assert.rejects(driver.api.request('/api/commands', 'POST', { revision: session.revision, command: { type: 'driver', command: { type: 'start', tripId: id } } }), /nepaskelbtas|uždarytas/);
+  }
 });

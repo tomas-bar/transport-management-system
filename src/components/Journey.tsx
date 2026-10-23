@@ -17,7 +17,7 @@ export function Journey({ trip, compact = false, onVisitSelect }: {
     const container = strip.current;
     const node = container?.children[progress.focusIndex] as HTMLElement | undefined;
     if (!container || !node || container.scrollWidth <= container.clientWidth) return;
-    container.scrollTo({ left: node.offsetLeft - container.offsetLeft - (container.clientWidth - node.clientWidth) / 2,
+    container.scrollTo({ left: container.scrollLeft + node.getBoundingClientRect().left - container.getBoundingClientRect().left - (container.clientWidth - node.clientWidth) / 2,
       behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   }, [trip.id, progress.focusIndex]);
   return <div ref={strip} className={`journey ${compact ? 'compact' : ''}`} role="list" aria-label="Reiso eiga"

@@ -1,5 +1,6 @@
 import { insertOrderStops } from "./route-plan.ts";
 import { assertReferenceAvailable, validateNumbering } from './references.ts';
+import { isDraft, isHistorical } from './record-mode.ts';
 import type { Database, Order, Trip, Vehicle, Collection } from "./models.ts";
 export const uid = () => crypto.randomUUID();
 export const today = () =>
@@ -66,12 +67,12 @@ export function loadInfo(
   };
 }
 export function validateAssignment(db: Database, order: Order, trip: Trip) {
-  if (["completed", "cancelled"].includes(trip.status))
+  if (trip.status === 'cancelled' || (trip.status === 'completed' && !isHistorical(trip)))
     throw new Error("Pasirinktas reisas jau užbaigtas arba atšauktas.");
   if (order.date !== trip.departure.slice(0, 10))
     throw new Error("Užsakymo data turi sutapti su reiso išvykimo data.");
   const l = loadInfo(db, trip, order);
-  if (l.passengers > l.capacity)
+  if (trip.vehicleId && l.passengers > l.capacity)
     throw new Error(
       `Nepakanka keleivių vietų: ${l.passengers} keleiviai, ${l.capacity} vietos. Pasirinkite kitą reisą arba transporto priemonę.`,
     );
@@ -94,7 +95,7 @@ export function syncOrderStops(db: Database, order: Order) {
     );
     if (!pickupExists && !deliveryExists) {
       trip.stops = insertOrderStops(
-        trip.stops,
+        isHistorical(trip) ? trip.stops.map(stop => ({ ...stop, completed: false })) : trip.stops,
         {
           ...order.pickup,
           id: `${order.id}-pickup`,
@@ -108,6 +109,7 @@ export function syncOrderStops(db: Database, order: Order) {
           kind: "delivery",
         },
       );
+      if (isHistorical(trip)) trip.stops = trip.stops.map(stop => ({ ...stop, completed: true }));
       continue;
     }
     for (const kind of ["pickup", "delivery"] as const) {
@@ -143,6 +145,12 @@ export function saveOrder(db: Database, order: Order) {
   if (!Number.isInteger(order.quantity) || order.quantity < 1)
     throw new Error("Kiekis turi būti teigiamas sveikasis skaičius.");
   const original = db.orders.find((o) => o.id === order.id);
+  const target = db.trips.find(trip => trip.id === order.tripId);
+  if (target && isHistorical(target)) {
+    if (original && !original.recordMode && original.tripId !== target.id) throw new Error('Istoriniam reisui pridėkite naują istorinį užsakymą.');
+    order.recordMode = 'historical';
+    order.status = 'completed';
+  }
   if (original?.status === "completed" && original.tripId) {
     if (
       order.tripId !== original.tripId ||
@@ -161,7 +169,7 @@ export function saveOrder(db: Database, order: Order) {
     const trip = db.trips.find((t) => t.id === order.tripId);
     if (!trip) throw new Error("Reisas nerastas.");
     validateAssignment(db, order, trip);
-    order.status = trip.status === "active" ? "active" : "assigned";
+    order.status = isHistorical(trip) ? 'completed' : trip.status === "active" ? "active" : "assigned";
   } else {
     if (order.status === "cancelled") order.tripId = "";
     if (order.status === "assigned" || order.status === "active")
@@ -184,14 +192,16 @@ export function saveTrip(db: Database, trip: Trip) {
     );
   const v = db.vehicles.find((v) => v.id === trip.vehicleId);
   const d = db.drivers.find((d) => d.id === trip.driverId);
-  if (!v || !d)
+  if ((!v || !d) && !isDraft(trip))
     throw new Error("Pasirinkite transporto priemonę ir vairuotoją.");
-  if (!["completed", "cancelled"].includes(trip.status)) {
+  if (!isDraft(trip) && !["completed", "cancelled"].includes(trip.status)) {
+    if (!v || !d) throw new Error('Pasirinkite transporto priemonę ir vairuotoją.');
     if (v.status !== "active" || d.status !== "active")
       throw new Error("Transporto priemonė ir vairuotojas turi būti aktyvūs.");
     const conflict = db.trips.find(
       (t) =>
         t.id !== trip.id &&
+        !isDraft(t) &&
         !["completed", "cancelled"].includes(t.status) &&
         t.departure < trip.arrival &&
         t.arrival > trip.departure &&
@@ -389,6 +399,7 @@ export function validateDatabase(input: unknown): Database {
   for (const t of db.trips) {
     text(t.name, "reiso kryptis", true);
     text(t.number, "reiso numeris", true);
+    if (t.recordMode !== undefined) oneOf(t.recordMode, ['draft', 'historical'], 'reiso įrašo tipas');
     text(t.notes, "reiso pastabos");
     oneOf(t.type, ["local", "international"], "reiso tipas");
     oneOf(
@@ -399,12 +410,16 @@ export function validateDatabase(input: unknown): Database {
     day(t.departure, "išvykimas", true);
     day(t.arrival, "atvykimas", true);
     if (t.arrival <= t.departure) fail("reiso laikai");
-    if (!ids.vehicles.has(t.vehicleId) || !ids.drivers.has(t.driverId))
+    if ((!ids.vehicles.has(t.vehicleId) && !(isDraft(t) && t.vehicleId === '')) || (!ids.drivers.has(t.driverId) && !(isDraft(t) && t.driverId === '')))
       fail("reiso vairuotojas arba automobilis");
     optionalRef(t.routeId, "routes");
     stops(t.stops, t.id);
+    if (isDraft(t) && (!['planned', 'cancelled'].includes(t.status) || t.stops.some(stop => stop.completed))) fail('juodraščio būsena');
+    if (isHistorical(t) && (t.status !== 'completed' || t.arrival.slice(0, 10) > today())) fail('istorinio reiso būsena arba data');
   }
   for (const o of db.orders) {
+    if (o.recordMode !== undefined && o.recordMode !== 'historical') fail('užsakymo įrašo tipas');
+    if (o.recordMode === 'historical' && (o.status !== 'completed' || o.date > today())) fail('istorinio užsakymo būsena arba data');
     for (const key of ["number", "name"] as const) text(o[key], key, true);
     for (const key of [
       "phone",
@@ -438,6 +453,8 @@ export function validateDatabase(input: unknown): Database {
     optionalRef(o.tripId, "trips");
     if (o.tripId && o.status !== "cancelled") {
       const t = db.trips.find((t) => t.id === o.tripId)!;
+      if (isDraft(t) && o.paid > 0) fail('mokėjimas juodraščio užsakyme');
+      if ((isHistorical(t) && (o.status !== 'completed' || o.recordMode !== 'historical')) || (o.recordMode === 'historical' && !isHistorical(t))) fail('istorinio užsakymo reisas');
       if (o.date !== t.departure.slice(0, 10)) fail("užsakymo ir reiso datos");
       for (const kind of ["pickup", "delivery"])
         if (!t.stops.some((s) => s.orderId === o.id && s.kind === kind))
@@ -445,7 +462,7 @@ export function validateDatabase(input: unknown): Database {
     }
   }
   for (const t of db.trips.filter(
-    (t) => !["completed", "cancelled"].includes(t.status),
+    (t) => !isDraft(t) && !["completed", "cancelled"].includes(t.status),
   )) {
     const v = db.vehicles.find((v) => v.id === t.vehicleId)!;
     const d = db.drivers.find((d) => d.id === t.driverId)!;
@@ -459,6 +476,7 @@ export function validateDatabase(input: unknown): Database {
       db.trips.some(
         (other) =>
           other.id !== t.id &&
+          !isDraft(other) &&
           !["completed", "cancelled"].includes(other.status) &&
           other.departure < t.arrival &&
           other.arrival > t.departure &&
@@ -484,6 +502,7 @@ export function validateDatabase(input: unknown): Database {
     );
     number(e.amount, "išlaidų suma", 1, true);
     optionalRef(e.tripId, "trips");
+    if (db.trips.some(trip => trip.id === e.tripId && isDraft(trip))) fail('išlaidos juodraštyje');
     optionalRef(e.vehicleId, "vehicles");
   }
   if (!db.settings || typeof db.settings !== "object") fail("nustatymai");

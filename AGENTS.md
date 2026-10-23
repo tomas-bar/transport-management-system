@@ -37,3 +37,6 @@ This is a transport management product for small passenger and parcel operators.
 - Cloud tasks are already isolated. Use the existing checkout; do not create a Git worktree unless explicitly requested.
 
 - User preview is read-only by default. Acting mode requires explicit selection, stays within the effective user permissions, and retains the real account in server audit. Owners enter a company explicitly; company administrators cannot cross companies. Preserve return navigation and the separation from account credential changes.
+
+- Company trip/order references use optional numbering settings and remain separate from internal IDs. Preserve existing references; validate edited/new references for company-local uniqueness and manager-only renumbering. The admin permission role is labelled Įmonės vadovas in the interface.
+- New trips default to drafts. Keep drafts out of driver projections, private photo access, resource reservations and aggregate finance reports until explicit publication passes normal validation. Historical backfill is completed manager data with no operational alerts or invented receipts/arrival timestamps. Only new order stops may be appended to historical trips; preserve existing route records and completed order links. Missing record-mode fields retain the established behavior.
