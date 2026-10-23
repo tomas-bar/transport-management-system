@@ -1,3 +1,4 @@
+import { nextCompanyReference } from '../domain/references';
 import { useConfirm } from './Feedback';
 import {OrderPhotos} from './OrderPhotos';
 import { Camera } from 'lucide-react';
@@ -19,14 +20,14 @@ export function OrderForm({
   tripId?: string;
 }) {
   const confirm = useConfirm();
-  const { db, commit, busy, notify, modules, serverMode } = useApp();
+  const { db, commit, busy, notify, modules, serverMode, user } = useApp();
   const selected = db.trips.find((t) => t.id === tripId);
   const [form, setForm] = useState<Order>(
     order
       ? structuredClone(order)
       : {
           id: uid(),
-          number: `UZ-${Math.max(2000, ...db.orders.map((o) => Number(o.number.replace(/\D/g, "")) || 0)) + 1}`,
+          number: nextCompanyReference(db, 'orders'),
           type: "passenger",
           customerId: "",
           name: "",
@@ -110,6 +111,9 @@ export function OrderForm({
             </button>
           </div>
           <div className="form-grid">
+            <Field label="Užsakymo numeris" full>
+              <input required maxLength={40} readOnly={user?.role !== 'admin'} value={form.number} onChange={event => set('number', event.target.value)} />
+            </Field>
             <Field
               label={isParcel ? "Siuntėjas / klientas *" : "Klientas *"}
               full

@@ -1,4 +1,5 @@
 import { insertOrderStops } from "./route-plan.ts";
+import { assertReferenceAvailable, validateNumbering } from './references.ts';
 import type { Database, Order, Trip, Vehicle, Collection } from "./models.ts";
 export const uid = () => crypto.randomUUID();
 export const today = () =>
@@ -132,6 +133,7 @@ export function syncOrderStops(db: Database, order: Order) {
   }
 }
 export function saveOrder(db: Database, order: Order) {
+  assertReferenceAvailable(db, 'orders', order);
   if (!order.name.trim() || !order.pickup.name || !order.delivery.name)
     throw new Error(
       "Įrašykite vardą arba siuntos pavadinimą ir pasirinkite abu adresus.",
@@ -170,6 +172,7 @@ export function saveOrder(db: Database, order: Order) {
   return db;
 }
 export function saveTrip(db: Database, trip: Trip) {
+  assertReferenceAvailable(db, 'trips', trip);
   if (
     !trip.name.trim() ||
     !trip.departure ||
@@ -487,6 +490,7 @@ export function validateDatabase(input: unknown): Database {
   text(db.settings.company, "įmonės pavadinimas", true);
   text(db.settings.email, "įmonės el. paštas");
   text(db.settings.phone, "įmonės telefonas");
+  validateNumbering(db.settings);
   for (const key of ["routingUrl", "geocodingUrl"] as const) {
     text(db.settings[key], key, true);
     try {

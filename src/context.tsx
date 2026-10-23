@@ -10,6 +10,7 @@ import type { Database } from './domain/models';
 import { applyDriverCommand, createWorkspace, managerRole, notificationChanges, type DriverCommand, type ReviewSnapshot, type Workspace, type WorkspaceUser } from './domain/workspace';
 import { routeVisits } from './domain/route-plan';
 import { driverCommandMessage } from './domain/terminology';
+import { validateReferenceChanges } from './domain/references';
 import { markNotificationsRead } from './domain/notifications';
 import {applyFinanceCommand,type FinanceCommand} from './domain/trip-finance';
 import { reviewRepository } from './services/review-repository';
@@ -137,6 +138,7 @@ function LocalProvider({
     if (!managerRole(user)) throw new Error('Šis veiksmas neleidžiamas.');
     const settings = JSON.stringify(next.db.settings);
     mutate(next.db);
+    validateReferenceChanges(current.current!.db, next.db, user.role === 'admin');
     if (user.role !== 'admin' && settings !== JSON.stringify(next.db.settings)) throw new Error('Nustatymus gali keisti administratorius.');
     for (const c of current.current!.workspace.confirmations) {
       const old = current.current!.db.orders.find(o => o.id === c.orderId);

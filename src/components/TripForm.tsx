@@ -1,3 +1,4 @@
+import { nextCompanyReference } from '../domain/references';
 import { useConfirm } from './Feedback';
 import { useState } from "react";
 import type { Trip } from "../domain/models";
@@ -13,13 +14,13 @@ export function TripForm({
   onClose: () => void;
 }) {
   const confirm = useConfirm();
-  const { db, commit, busy } = useApp();
+  const { db, commit, busy, user } = useApp();
   const [form, setForm] = useState<Trip>(
     trip
       ? structuredClone(trip)
       : {
           id: uid(),
-          number: `KR-${Math.max(1000, ...db.trips.map((t) => Number(t.number.replace(/\D/g, "")) || 0)) + 1}`,
+          number: nextCompanyReference(db, 'trips'),
           name: "",
           type: "international",
           departure: today() + "T08:00",
@@ -74,6 +75,9 @@ export function TripForm({
       >
         <div className="modal-body">
           <div className="form-grid">
+            <Field label="Reiso numeris" full>
+              <input required maxLength={40} readOnly={user?.role !== 'admin'} value={form.number} onChange={event => set('number', event.target.value)} />
+            </Field>
             <Field
               label="Maršruto šablonas"
               full

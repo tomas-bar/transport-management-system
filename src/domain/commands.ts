@@ -5,6 +5,7 @@ import { createWorkspace, validateWorkspace, applyDriverCommand, notificationCha
 import { applyFinanceCommand, type FinanceCommand } from './trip-finance.ts';
 import { markNotificationsRead } from './notifications.ts';
 import { routeVisits } from './route-plan.ts';
+import { validateReferenceChanges } from './references.ts';
 import type { ModuleId } from './modules.ts';
 
 export type WorkspaceCommand =
@@ -29,6 +30,7 @@ export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, c
       if (!['admin', 'dispatcher'].includes(user.role)) throw new Error('Šis veiksmas neleidžiamas.');
       next.db = validateDatabase(command.db);
       if (user.role !== 'admin' && JSON.stringify(before.db.settings) !== JSON.stringify(next.db.settings)) admin();
+      validateReferenceChanges(before.db, next.db, user.role === 'admin');
       if (!modules.includes('finance') && (JSON.stringify(before.db.expenses) !== JSON.stringify(next.db.expenses) || next.db.orders.some(o => {
         const old = before.db.orders.find(r => r.id === o.id);
         return old ? o.price !== old.price || o.paid !== old.paid || o.priceSet !== old.priceSet : o.paid !== 0 || o.price !== 0;

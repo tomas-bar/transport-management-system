@@ -1,6 +1,7 @@
 import type { Order, Trip } from './models.ts';
 import type { ReviewSnapshot, WorkspaceUser } from './workspace.ts';
 import { saveTrip } from './logic.ts';
+import { nextCompanyReference } from './references.ts';
 
 export interface TripReviewInput {
   tripId: string;
@@ -59,14 +60,6 @@ export function reviewTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input:
   (snapshot.workspace.tripReviews ??= []).push({ ...input, note: input.note.trim(), id: crypto.randomUUID(), actorId: user.id, createdAt });
 }
 
-export function nextReference(records: { number: string }[], prefix: string, minimum: number) {
-  const used = new Set(records.map(record => record.number));
-  const serials = records.map(record => Number(record.number.replace(/\D/g, ''))).filter(value => Number.isSafeInteger(value) && value < Number.MAX_SAFE_INTEGER - 1000);
-  let serial = Math.max(minimum, ...serials) + 1;
-  while (used.has(prefix + serial)) serial++;
-  return prefix + serial;
-}
-
 /** Copy explicit bookings, route and resources; financial and execution history stay on the source. */
 export function repeatTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input: RepeatTripInput) {
   manager(snapshot, user);
@@ -83,7 +76,7 @@ export function repeatTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input:
   for (const order of selected) {
     copies.set(order.id, {
       ...structuredClone(order), id: crypto.randomUUID(),
-      number: nextReference([...db.orders, ...copies.values()], 'UZ-', 2000),
+      number: nextCompanyReference({ ...db, orders: [...db.orders, ...copies.values()] }, 'orders'),
       date: input.departure.slice(0, 10), tripId: input.tripId, status: 'assigned',
       price: input.copyPrices ? order.price : 0,
       priceSet: input.copyPrices ? (order.priceSet ?? order.price > 0) : false,
@@ -92,7 +85,7 @@ export function repeatTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input:
   }
   const trip: Trip = {
     ...structuredClone(source), id: input.tripId,
-    number: nextReference(db.trips, 'KR-', 1000),
+    number: nextCompanyReference(db, 'trips'),
     departure: input.departure, arrival: input.arrival,
     vehicleId: input.vehicleId, driverId: input.driverId,
     routeId: db.routes.some(route => route.id === source.routeId && !route.archived) ? source.routeId : '',

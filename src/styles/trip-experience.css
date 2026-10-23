@@ -171,3 +171,10 @@
 .action-inbox b, .action-inbox small { overflow-wrap: anywhere; }
 .filter-context { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; color: var(--text-secondary); font-size: 13px; }
 @media (max-width: 650px) { .operation-progress { padding: 0 18px 16px; } }
+.numbering-settings { padding: 18px; margin: 24px 0; border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+.numbering-settings legend { padding: 0 6px; color: var(--ink); font-size: 14px; font-weight: 600; }
+.numbering-settings > p { color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+.numbering-settings > div { margin-top: 18px; }
+.numbering-settings h3 { font-size: 13px; color: var(--ink); margin-bottom: 12px; }
+.numbering-settings output { display: block; margin-top: 8px; color: var(--text-secondary); font-size: 12px; line-height: 1.5; }
+.numbering-settings output b { color: var(--ink); }

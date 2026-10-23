@@ -117,12 +117,14 @@ export interface Expense {
   vehicleId: string;
   description: string;
 }
+export interface NumberSeries { prefix: string; start: number }
 export interface Settings {
   company: string;
   email: string;
   phone: string;
   routingUrl: string;
   geocodingUrl: string;
+  numbering?: { trips: NumberSeries; orders: NumberSeries };
 }
 export interface Database {
   version: 1;

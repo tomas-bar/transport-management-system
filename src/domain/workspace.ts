@@ -7,7 +7,7 @@ import { routeVisits, setVisitCompleted, visitTasks } from './route-plan.ts';
 export type Role = 'owner' | 'admin' | 'dispatcher' | 'driver';
 export const roleLabels: Record<Role, string> = {
   owner: 'Platformos savininkas',
-  admin: 'Įmonės administratorius',
+  admin: 'Įmonės vadovas',
   dispatcher: 'Vadybininkas',
   driver: 'Vairuotojas'
 };

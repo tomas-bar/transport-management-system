@@ -18,6 +18,8 @@ import { validateWorkspace, type ReviewSnapshot } from "../domain/workspace";
 import { createSeed, createEmptyDatabase } from "../data/seed";
 import { download } from "../services/export";
 import { today, validateDatabase } from "../domain/logic";
+import { nextCompanyReference, referenceSeries, validateNumbering } from '../domain/references';
+import type { NumberSeries } from '../domain/models';
 
 export function Settings() {
   const confirm = useConfirm();
@@ -25,6 +27,17 @@ export function Settings() {
   const [form, setForm] = useState({ ...db.settings });
   const [seedDate, setSeedDate] = useState(today());
   const input = useRef<HTMLInputElement>(null);
+  function setNumbering(collection: 'trips' | 'orders', change: Partial<NumberSeries>) {
+    setForm(previous => ({ ...previous, numbering: {
+      trips: { ...referenceSeries(previous, 'trips') },
+      orders: { ...referenceSeries(previous, 'orders') },
+      [collection]: { ...referenceSeries(previous, collection), ...change },
+    } }));
+  }
+  function referencePreview(collection: 'trips' | 'orders') {
+    try { validateNumbering(form); return nextCompanyReference({ ...db, settings: form }, collection); }
+    catch { return 'Patikrinkite numeravimą'; }
+  }
   async function importFile(file: File) {
     if (file.size > 15 * 1024 * 1024) {
       notify("Didžiausias kopijos dydis - 15 MB.", true);
@@ -91,6 +104,22 @@ export function Settings() {
                 />
               </Field>
             </div>
+            <fieldset className="numbering-settings">
+              <legend>Numeravimas</legend>
+              <p>Taikoma naujiems įrašams. Esami numeriai nesikeis.</p>
+              {(['trips', 'orders'] as const).map(collection => <div key={collection}>
+                <h3>{collection === 'trips' ? 'Reisai' : 'Užsakymai'}</h3>
+                <div className="form-grid">
+                  <Field label={collection === 'trips' ? 'Reiso prefiksas' : 'Užsakymo prefiksas'}>
+                    <input maxLength={16} value={referenceSeries(form, collection).prefix} onChange={event => setNumbering(collection, { prefix: event.target.value })} />
+                  </Field>
+                  <Field label={collection === 'trips' ? 'Reisų numeravimo pradžia' : 'Užsakymų numeravimo pradžia'}>
+                    <input type="number" required min={1} max={999999999} step={1} value={referenceSeries(form, collection).start} onChange={event => setNumbering(collection, { start: Number(event.target.value) })} />
+                  </Field>
+                </div>
+                <output>Kitas numeris: <b>{referencePreview(collection)}</b></output>
+              </div>)}
+            </fieldset>
             <details className="advanced-settings">
               <summary>Išplėstiniai nustatymai</summary>
               <p className="muted">

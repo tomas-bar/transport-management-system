@@ -122,10 +122,10 @@ export function Platform() {
             <input required maxLength={160} value={edit.name} onChange={event => setEdit({ ...edit, name: event.target.value })} />
           </Field>
           {!edit.id && <>
-            <Field label="Administratoriaus vardas ir pavardė" full>
+            <Field label="Įmonės vadovo vardas ir pavardė" full>
               <input required maxLength={100} value={adminName} onChange={event => setAdminName(event.target.value)} />
             </Field>
-            <Field label="Administratoriaus el. paštas" full>
+            <Field label="Įmonės vadovo el. paštas" full>
               <input type="email" required autoComplete="off" value={email} onChange={event => setEmail(event.target.value)} />
             </Field>
             <Field label="Pradinis slaptažodis" full hint="Bent 15 simbolių. Perduokite administratoriui saugiu būdu.">
