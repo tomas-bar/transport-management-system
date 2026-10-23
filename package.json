@@ -18,7 +18,8 @@
     "dev:server": "vite --mode server --host 127.0.0.1 --port 5173 --strictPort",
     "server": "node --experimental-strip-types server/start.ts",
     "account:owner": "node --experimental-strip-types scripts/owner.ts",
-    "check:server": "tsc -p tsconfig.server.json"
+    "check:server": "tsc -p tsconfig.server.json",
+    "build:sites": "node scripts/build-sites.mjs"
   },
   "dependencies": {
     "idb": "^8.0.3",
@@ -37,7 +38,8 @@
     "@types/react-dom": "^19.1.0",
     "@vitejs/plugin-react": "^4.4.1",
     "typescript": "~5.8.3",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "esbuild": "^0.25.12"
   },
   "engines": {
     "node": ">=24.0.0"

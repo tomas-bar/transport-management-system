@@ -2,6 +2,7 @@ import type { ModuleId } from '../domain/modules';
 import type { ReviewSnapshot, WorkspaceUser } from '../domain/workspace';
 import type { WorkspaceSession } from '../domain/access';
 export const serverRuntime = import.meta.env?.VITE_RUNTIME === 'server';
+export const sitesRuntime = import.meta.env?.VITE_RUNTIME === 'sites';
 export const demoRuntime = import.meta.env?.VITE_RUNTIME === 'demo';
 import { ApiError } from './api-error';
 export { ApiError } from './api-error';
@@ -19,6 +20,9 @@ export async function api<T = any>(path: string, method = 'GET', input?: unknown
   if (demoRuntime) {
     const { demoApi } = await import('./demo/browser');
     return demoApi<T>(path, method, input);
+  }
+  if (sitesRuntime && raw && input instanceof Blob) {
+    input = await (await import('./image')).normalizeImage(input);
   }
   const response = await fetch(path, {
     method,

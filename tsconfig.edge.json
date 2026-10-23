@@ -1,0 +1,1 @@
+{"extends":"./tsconfig.json","include":["edge","src/vite-env.d.ts"],"compilerOptions":{"types":["vite/client","node"]}}

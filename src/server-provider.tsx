@@ -34,7 +34,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refresh().catch(e => setError(String(e.message))).finally(() => setLoading(false));
     const changed = () => setPath(location.hash.slice(1) || 'overview');
-    const ended = () => { accept(null); navigate('overview'); };
+    const ended = () => { accept(null); if (!location.hash.startsWith('#setup=')) navigate('overview'); };
     window.addEventListener('hashchange', changed); window.addEventListener('krypta-session-ended', ended);
     return () => { window.removeEventListener('hashchange', changed); window.removeEventListener('krypta-session-ended', ended); };
   }, []);
@@ -75,7 +75,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     readNotifications: ids => send({ type: 'read', ids: typeof ids === 'string' ? [ids] : ids }),
     setInApp: enabled => send({ type: 'preference', enabled }, 'Pranešimų nuostata išsaugota'),
     setPrintMode: mode => send({ type: 'print', mode }, 'Spausdinimo nuostata išsaugota'),
-    replaceData: (db, workspace) => send({ type: 'restore', snapshot: { db, workspace: workspace ?? createWorkspace(db) } }, 'Duomenys atkurti'),
+    replaceData: (db, workspace, options) => send({ type: 'restore', discardPhotos: options?.discardPhotos, snapshot: { db, workspace: workspace ?? createWorkspace(db) } }, 'Duomenys atkurti'),
   };
   if (loading) return <div className="loading"><p>Ruošiama darbo erdvė...</p></div>;
   if (error) return <div className="boot-error"><h1>{demoRuntime ? 'Nepavyko atidaryti saugyklos' : 'Nepavyko prisijungti prie serverio'}</h1><p>{error}</p><Button onClick={() => location.reload()}>Bandyti dar kartą</Button></div>;

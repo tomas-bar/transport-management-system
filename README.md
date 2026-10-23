@@ -28,6 +28,18 @@ The demo uses `krypta-demo` IndexedDB and a tab-local session. On first launch i
 
 The earlier minimal browser mode remains available with `npm run dev:browser` and `npm run build:browser`. Both modes preserve `krypta-appearance`. On Windows or Ubuntu, install Node.js 24 and run the same npm commands; no database setup is needed for the demo.
 
+## Shared Sites test deployment
+
+`npm run build:sites` creates a Worker API plus the complete server-connected frontend. It uses Sites D1 for shared account/workspace snapshots and session verifiers, and private R2 for photos. It is an additional hosting adapter; the Node/SQLite installation remains available unchanged. Sites provisions bindings named `DB` and `BUCKET` through the deployment-only hosting manifest. Schema migrations are in `drizzle/`.
+
+Required hosted secrets are `KRYPTA_INITIAL_PASSWORD` (a unique random bootstrap password of at least 24 characters), `KRYPTA_SETUP_TOKEN` (a random one-time setup secret) and `KRYPTA_SETUP_EXPIRES` (expiry as Unix milliseconds). Store them in Sites runtime secrets, never source files. Open the site's `/#setup=<token>` link once to choose the owner email/name/password. Setup replaces the random initial passwords, invalidates existing sessions and cannot run again after its durable claim flag is set. The owner and initial company accounts share that chosen password for testing; set separate passwords before broader use. No public `admin/admin` or `owner/owner` login is created by this adapter.
+
+The shared test reuses the domain command dispatcher on the server, with server-owned company/role data. Authentication uses random HttpOnly/Secure/SameSite cookies backed by hashed tokens, an 8-hour absolute/30-minute idle lifetime, same-origin/CSRF checks, persisted login throttling and an audit trail. Password verifiers use Web Crypto PBKDF2-SHA256 with 100,000 iterations for this test adapter, rather than the Node runtime's scrypt. This is a shared evaluation deployment, not a claim of equivalent independent security review or production hardening.
+
+Phone/desktop clients read the same shared records when refreshed. Confirmed sample reset/clear saves the preceding operational snapshot and explicitly removes attached photos; unrelated JSON imports retain photo protection. Driver accounts disabled only by a clear action can be restored with the sample driver records. The adapter retains the most recent ten operational backups per company. Its single shared JSON row has a 1.8 MB bound, appropriate for small test fixtures; normalize tables before larger datasets. R2 writes and D1 metadata are coordinated with cleanup, but they are not a cross-service transaction. Full database/object-store backup and retention operations remain a hosting responsibility.
+
+The frontend login may be reachable without ChatGPT sign-in when the owner explicitly makes the Sites audience public. Application API data and private photo retrieval still require a Krypta session. Never remove the Sites gate before verifying those controls. A shorter Sites slug changes the URL label, not an independently owned domain.
+
 ## Shared server application
 
 ```sh

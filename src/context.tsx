@@ -1,7 +1,7 @@
 import { applyWorkspaceCommand, type WorkspaceCommand } from './domain/commands';
 import { Toast } from './components/Feedback';
 import { ServerProvider } from './server-provider';
-import { serverRuntime, demoRuntime } from './services/server-api';
+import { serverRuntime, demoRuntime, sitesRuntime } from './services/server-api';
 import type { ModuleId } from './domain/modules';
 import {useAppearance,type Theme} from './services/appearance';
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -41,7 +41,7 @@ export interface Context {
   setInApp: (enabled: boolean) => Promise<boolean>;
   operationalCommand: (command: Extract<WorkspaceCommand, {type: 'reviewTrip' | 'repeatTrip'}>) => Promise<boolean>;
   driverCommand: (command: DriverCommand) => Promise<boolean>;
-  replaceData: (data: Database, workspace?: Workspace) => Promise<boolean>;
+  replaceData: (data: Database, workspace?: Workspace, options?: { discardPhotos?: boolean }) => Promise<boolean>;
 }
 export const AppContext = createContext<Context | null>(null);
 export const useApp = () => {
@@ -258,5 +258,5 @@ function LocalProvider({
 }
 
 export function Provider({children}: {children: ReactNode}) {
-  return serverRuntime || demoRuntime ? <ServerProvider>{children}</ServerProvider> : <LocalProvider>{children}</LocalProvider>;
+  return serverRuntime || demoRuntime || sitesRuntime ? <ServerProvider>{children}</ServerProvider> : <LocalProvider>{children}</LocalProvider>;
 }

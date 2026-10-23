@@ -4,7 +4,7 @@ import { createWorkspace, type ReviewSnapshot } from '../../domain/workspace.ts'
 import { moduleCatalog, type ModuleId } from '../../domain/modules.ts';
 import type { PreviewMode } from '../../domain/access.ts';
 
-export interface DemoPassword { salt: string; hash: string }
+export interface DemoPassword { salt: string; hash: string; iterations?: number }
 export interface DemoAccount {
   id: string; companyId: string | null; memberId: string; email: string; name: string;
   password: DemoPassword; alias?: string;
@@ -21,6 +21,7 @@ export interface DemoPhoto {
 }
 export interface DemoState {
   version: 1; generation: number; companies: DemoCompany[]; accounts: DemoAccount[]; sessions: DemoSession[];
+  resetDisabled?: Record<string, string[]>;
   photos: DemoPhoto[];
   reminders: { id: string; companyId: string; vehicle_id: string; title: string; due_date: string; done: number }[];
   opportunities: (Omit<FreightOpportunity, 'details'> & { companyId: string; details?: FreightOpportunity['details'] })[];
@@ -34,13 +35,13 @@ export interface DemoStorage {
 
 // These credentials are for the explicitly selected, browser-only demo runtime.
 // They are never imported by the production server or used for its authentication.
-export async function demoPassword(value: string, salt: string = crypto.randomUUID()): Promise<DemoPassword> {
+export async function demoPassword(value: string, salt: string = crypto.randomUUID(), iterations = 100000): Promise<DemoPassword> {
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(value), 'PBKDF2', false, ['deriveBits']);
-  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations: 50000 }, key, 256);
-  return { salt, hash: Array.from(new Uint8Array(bits), byte => byte.toString(16).padStart(2, '0')).join('') };
+  const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: new TextEncoder().encode(salt), iterations }, key, 256);
+  return { salt, iterations, hash: Array.from(new Uint8Array(bits), byte => byte.toString(16).padStart(2, '0')).join('') };
 }
 export async function matchesPassword(value: unknown, saved: DemoPassword) {
-  return typeof value === 'string' && (await demoPassword(value, saved.salt)).hash === saved.hash;
+  return typeof value === 'string' && (await demoPassword(value, saved.salt, saved.iterations ?? 50000)).hash === saved.hash;
 }
 export async function createDemoState(existing?: ReviewSnapshot): Promise<DemoState> {
   const db = existing?.db ?? createSeed();

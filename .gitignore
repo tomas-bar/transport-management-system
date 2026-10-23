@@ -21,6 +21,7 @@ coverage/
 !.env.*.example
 !.env.server
 !.env.demo
+!.env.sites
 *.pem
 *.key
 
@@ -35,3 +36,7 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+# Shared Sites runtime
+.wrangler/
+.dev.vars*

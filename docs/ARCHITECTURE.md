@@ -60,3 +60,7 @@ Order photos, vehicle reminders and manually saved HTTPS freight opportunities a
 The shared appearance service persists light/dark mode. Semantic surfaces, text and status colors live in `src/styles/appearance.css`. PDF options use the company print preference and remain independent of UI theme and viewport.
 
 PDF templates are data-driven A4 documents. Operational documents exclude finance. Printable maps use real OSRM geometry and bundled Natural Earth country/city data, preserving geographic aspect ratio and fitting the whole route. Bundled source/asset terms are documented with the assets. Standard OpenStreetMap community tiles are not fetched for offline print export. Routing failure is reported, with the ordinary route sheet still available. Existing PDF rendering checks cover pagination and fonts.
+
+## Shared Sites testing
+
+`edge/worker.ts` executes the reusable command dispatcher with D1-backed state and private R2 blobs. The same company/module/role projections are authoritative on the Worker. A separate hashed-cookie session table wraps core sessions with CSRF and expiry; the browser never receives the bearer token through JavaScript. One-time setup claims initially random accounts. `scripts/build-sites.mjs` bundles this Worker alongside a Vite frontend with `VITE_RUNTIME=sites`, preserving the Sites build integration. The original Node server and local demo remain supported. Adapter limits and reset behavior are documented in README and SECURITY.

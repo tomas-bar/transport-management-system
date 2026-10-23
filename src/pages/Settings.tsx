@@ -228,7 +228,7 @@ export function Settings() {
                 onClick={async () => {
                   if (
                     await confirm(
-                      "Atkurti bandomuosius duomenis ir naudotojus? Dabartiniai įrašai bei patvirtinimai bus pakeisti.",
+                      "Atkurti bandomuosius duomenis ir naudotojus? Dabartiniai įrašai bei patvirtinimai bus pakeisti, užsakymų nuotraukos pašalintos.",
                     )
                   ) {
                     let seed: Data;
@@ -239,7 +239,7 @@ export function Settings() {
                       return;
                     }
                     if (
-                      await replaceData(seed)
+                      await replaceData(seed, undefined, { discardPhotos: true })
                     )
                       setForm({ ...seed.settings });
                   }
@@ -272,10 +272,10 @@ export function Settings() {
                 onClick={async () => {
                   if (
                     await confirm(
-                      "Išvalyti reisus, užsakymus, registrus ir patvirtinimus? Nustatymai išliks. Prieš tęsiant atsisiųskite kopiją.",
+                      "Išvalyti reisus, užsakymus, registrus ir patvirtinimus? Nuotraukos bus pašalintos, nustatymai išliks. Prieš tęsiant atsisiųskite kopiją.",
                     )
                   )
-                    await replaceData(createEmptyDatabase(db.settings));
+                    await replaceData(createEmptyDatabase(db.settings), undefined, { discardPhotos: true });
                 }}
               >
                 <Trash2 size={16} />

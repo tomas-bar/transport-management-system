@@ -19,7 +19,7 @@ export type WorkspaceCommand =
   | { type: 'preference'; enabled: boolean }
   | { type: 'print'; mode: 'monochrome' | 'color' }
   | { type: 'user'; user: WorkspaceUser }
-  | { type: 'restore'; snapshot: ReviewSnapshot };
+  | { type: 'restore'; snapshot: ReviewSnapshot; discardPhotos?: boolean };
 
 export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, command: WorkspaceCommand, modules: ModuleId[]): ReviewSnapshot {
   const next = structuredClone(before);

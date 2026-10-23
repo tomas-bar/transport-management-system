@@ -197,8 +197,24 @@ export class DemoApi {
       requireThat(input.revision === current.revision, 409, 'Duomenys pakeisti kitame lange. Atnaujinkite puslapį.');
       requireThat(command && typeof command.type === 'string', 400, 'Netinkamas veiksmas.');
       requireThat(!session.previewId || !['user', 'restore'].includes(command.type), 403, 'Naudotojus ir kopijas valdykite grįžę į savo paskyrą.');
+      if (command.type === 'restore' && command.discardPhotos) {
+        requireThat(user.role === 'admin' && !session.previewId, 403, 'Duomenis gali atkurti įmonės vadovas.');
+        state.photos = state.photos.filter(photo => photo.companyId !== current.id);
+      }
       if (command.type === 'restore') requireThat(!state.photos.some(p => p.companyId === current.id), 409, 'Prieš atkurdami JSON kopiją pašalinkite užsakymų nuotraukas. JSON kopijoje jų nėra.');
       const next = applyWorkspaceCommand(current.snapshot, user.id, command, current.modules);
+      if (command.type === 'restore' && command.discardPhotos) {
+        const disabled = new Set(state.resetDisabled?.[current.id] ?? []);
+        for (const previous of current.snapshot.workspace.users.filter(u => u.role === 'driver' && u.active)) {
+          if (!next.db.drivers.some(d => d.id === previous.driverId)) disabled.add(previous.id);
+        }
+        for (const member of next.workspace.users.filter(u => disabled.has(u.id))) {
+          if (next.db.drivers.some(d => d.id === member.driverId) && !next.workspace.users.some(u => u.id !== member.id && u.role === 'driver' && u.active && u.driverId === member.driverId)) {
+            member.active = true; disabled.delete(member.id);
+          }
+        }
+        state.resetDisabled ??= {}; state.resetDisabled[current.id] = [...disabled];
+      }
       if (command.type === 'user') {
         const record = command.user, email = emailAddress(record.email);
         const existing = state.accounts.find(a => a.companyId === current.id && a.memberId === record.id);
