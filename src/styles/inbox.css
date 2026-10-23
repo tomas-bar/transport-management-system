@@ -1,0 +1,78 @@
+/* The notification dialog shares modal focus management and covers mobile navigation. */
+.notification-overlay .modal-backdrop {
+  z-index: 420;
+  background: #15223970;
+  backdrop-filter: blur(2px);
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 76px 24px 20px;
+}
+.modal.notification-dialog {
+  width: 460px;
+  max-width: 100%;
+  max-height: calc(100dvh - 96px);
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  animation: inbox-enter 180ms ease-out;
+}
+.notification-dialog > header { flex-shrink: 0; padding: 18px 20px; }
+.notification-dialog > header h2 { font-size: 19px; }
+.notification-dialog > header .icon-button { width: 44px; height: 44px; flex-shrink: 0; }
+.notification-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 16px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.notification-tools > span { font-size: 12px; color: var(--text-secondary); }
+.notification-tools .button { min-height: 40px; font-size: 12px; padding: 8px; }
+.notification-dialog .notification-popover-body {
+  min-height: 0;
+  max-height: none;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.notification-dialog > footer { flex-shrink: 0; justify-content: center; padding: 10px 16px; }
+.notification-dialog > footer .button { flex: 0 1 auto; }
+.notification-group-toggle { gap: 12px; }
+.notification-group-summary { min-width: 0; }
+.notification-group-summary > b { color: var(--ink); line-height: 1.5; }
+.notification-group-reference { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.notification-group-controls { margin-left: auto; flex: 0 0 auto; }
+.notification-counts { display: flex; flex-wrap: wrap; gap: 5px 12px; margin-top: 10px; font-size: 11px; color: var(--text-secondary); }
+.notification-counts > span { display: inline-flex; align-items: center; gap: 5px; }
+.notification-counts strong { color: var(--accent-ink); font-weight: 650; }
+.notification-event-list { padding: 0 20px; }
+.notification-event { margin: 8px 0; border: 1px solid transparent; padding: 14px 12px; border-radius: 10px; }
+.notification-event.unread { padding: 14px 12px; border: 1px solid #dce4fa; border-left: 3px solid #4267d5; background: #f6f8ff; }
+.notification-event.is-read { border-top-color: var(--line); border-radius: 0; }
+.notification-event b { color: var(--ink); font-size: 14px; line-height: 1.5; }
+.notification-event p { color: var(--text-secondary); font-size: 13px; }
+.notification-event small { color: var(--text-secondary); font-size: 11px; line-height: 1.5; }
+.notification-read-state { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; font-size: 10px; color: var(--accent-ink); font-weight: 650; }
+.notification-read-state > i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.notification-read-state.is-read { color: var(--text-secondary); font-weight: 400; }
+.notification-event .event-read { display: inline-flex; gap: 6px; width: auto; padding: 8px 0; margin-top: 5px; min-height: 44px; color: var(--accent-ink); font-size: 12px; }
+.notification-group-footer { justify-content: space-between; gap: 5px 12px; padding: 10px 0; }
+.notification-group-footer button { min-height: 44px; font-size: 12px; color: var(--accent-ink); }
+.notification-groups.compact .notification-event-list { padding: 0 14px; }
+:root[data-theme=dark] .notification-event.unread { background: #1d2c46; border-color: #394e77; border-left-color: #8eaaff; }
+:root[data-theme=dark] .notification-counts strong { color: var(--accent-ink); }
+@keyframes inbox-enter { from { opacity: 0; translate: 0 -8px; } to { opacity: 1; translate: 0; } }
+@media (max-width: 650px) {
+  .notification-overlay .modal-backdrop { padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); align-items: flex-start; }
+  .modal.notification-dialog { max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); width: 100%; border-radius: 14px; }
+  .notification-dialog > header { padding: 12px 16px; }
+  .notification-dialog > footer .button { width: auto; }
+  .notification-group-toggle { padding: 18px 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .modal.notification-dialog { animation: none; } }

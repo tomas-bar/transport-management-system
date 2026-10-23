@@ -47,7 +47,7 @@ The existing Node/SQLite runtime needs an appropriate persistent Node host. Site
 
 ## Notifications and optional modules
 
-`notificationChanges` derives concise assignment, trip-outcome, delivery and finance events. Actor IDs remain in event data. Group projections show current trip state and avoid repeating header context. Expanding a group marks only captured event IDs read; recipient state remains personal. Operations and resulting notifications are committed together. No email transport or live push transport is implemented.
+`notificationChanges` derives concise assignment, trip-outcome, delivery and finance events. Actor IDs remain in event data. Group projections show current trip state and avoid repeating header context. Opening or expanding notifications never changes read state. Explicit per-event, group or all-event controls mark captured IDs read for the effective recipient only; later events retain their unread state. The bell opens a dimmed modal with keyboard focus trapping and return. Operations and resulting notifications are committed together. No email transport or live push transport is implemented.
 
 Finance commands preserve receipt/reversal history, integer cents, actor attribution and payment limits. `payment-report.ts` reports transaction dates for new receipts/reversals; older cumulative paid values keep their booking-date reporting convention. Historical totals are never converted into invented payments.
 

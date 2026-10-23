@@ -9,6 +9,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { Database } from './domain/models';
 import { applyDriverCommand, createWorkspace, managerRole, notificationChanges, type DriverCommand, type ReviewSnapshot, type Workspace, type WorkspaceUser } from './domain/workspace';
 import { routeVisits } from './domain/route-plan';
+import { driverCommandMessage } from './domain/terminology';
 import { markNotificationsRead } from './domain/notifications';
 import {applyFinanceCommand,type FinanceCommand} from './domain/trip-finance';
 import { reviewRepository } from './services/review-repository';
@@ -211,7 +212,7 @@ function LocalProvider({
       const detail=command.type==='arrive'?routeVisits(trip.stops)[command.visitIndex]?.place.name:command.type==='task'?next.db.orders.find(o=>o.id===command.orderId)?.name:'';
       for(const recipient of next.workspace.users.filter(u=>u.active&&u.role!=='driver'&&next.workspace.preferences[u.id]?.inApp!==false))next.workspace.notifications.push({id:crypto.randomUUID(),recipientId:recipient.id,type:'task',activity,title:correction?'Patvirtinimas atšauktas':command.type==='arrive'?'Atvykta į sustojimą':'Paėmimas patvirtintas',body:detail??'',actorId:user.id,entity:{type:'trip',id:trip.id},createdAt:new Date().toISOString()});
     }
-  }, command.type==='undoTask'||command.type==='undoArrival'?'Patvirtinimas atšauktas':'Veiksmas patvirtintas');
+  }, driverCommandMessage(command));
   const replaceData = (data: Database, workspace?: Workspace) => update((next, user) => {
     if (user.role !== 'admin') throw new Error('Duomenis gali atkurti administratorius.');
     next.db = structuredClone(data);

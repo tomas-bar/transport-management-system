@@ -1,4 +1,5 @@
 import { Toast } from './components/Feedback';
+import { driverCommandMessage } from './domain/terminology';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { AppContext, type Context } from './context';
@@ -69,7 +70,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     },
     saveUser: (user, password) => send({ type: 'user', user }, 'Naudotojas išsaugotas', password),
     operationalCommand: command => send(command, command.type === 'reviewTrip' ? 'Reiso suvestinė išsaugota' : 'Naujas reisas sukurtas'),
-    driverCommand: command => send({ type: 'driver', command }, 'Veiksmas patvirtintas'),
+    driverCommand: command => send({ type: 'driver', command }, driverCommandMessage(command)),
     financeCommand: command => send({ type: 'finance', command }, 'Mokėjimų ir išlaidų duomenys atnaujinti'),
     readNotifications: ids => send({ type: 'read', ids: typeof ids === 'string' ? [ids] : ids }),
     setInApp: enabled => send({ type: 'preference', enabled }, 'Pranešimų nuostata išsaugota'),
