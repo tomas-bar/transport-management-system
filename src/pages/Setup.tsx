@@ -14,7 +14,7 @@ export function Setup({ token }: { token: string }) {
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }}>
       <Field label="Vardas ir pavardė"><input required maxLength={100} value={name} onChange={e => setName(e.target.value)}/></Field>
       <Field label="El. paštas"><input type="email" required autoComplete="username" value={email} onChange={e => setEmail(e.target.value)}/></Field>
-      <Field label="Slaptažodis" hint="Bent 15 simbolių."><input type="password" required minLength={15} maxLength={1024} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)}/></Field>
+      <Field label="Slaptažodis" hint="Bent 8 simbolių."><input type="password" required minLength={8} maxLength={1024} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)}/></Field>
       {error && <p className="form-error" role="alert">{error}</p>}
       <Button type="submit" disabled={busy}>Paruošti ir prisijungti</Button>
     </form></div></section></div>;

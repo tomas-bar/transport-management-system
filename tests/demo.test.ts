@@ -97,14 +97,14 @@ test('new demo identities can sign in and change passwords without reviving revo
   const { storage, api } = await fixture();
   const session = await login(api);
   const user = { id: 'new-user', companyId: session.user.companyId, name: 'New manager', email: 'new@example.test', role: 'dispatcher', driverId: '', active: true };
-  await api.request('/api/commands', 'POST', { revision: session.revision, command: { type: 'user', user }, password: 'Initial password 123' });
+  await api.request('/api/commands', 'POST', { revision: session.revision, command: { type: 'user', user }, password: 'Test1234' });
   const fresh = client(storage), other = client(storage);
-  await login(fresh.api, user.email, 'Initial password 123');
-  await login(other.api, user.email, 'Initial password 123');
-  await fresh.api.request('/api/password', 'POST', { current: 'Initial password 123', password: 'Replacement password 456' });
+  await login(fresh.api, user.email, 'Test1234');
+  await login(other.api, user.email, 'Test1234');
+  await fresh.api.request('/api/password', 'POST', { current: 'Test1234', password: 'Next1234' });
   await assert.rejects(other.api.request('/api/session'), /Prisijunkite/);
-  await assert.rejects(login(fresh.api, user.email, 'Initial password 123'), /Neteisingas/);
-  assert.equal((await login(fresh.api, user.email, 'Replacement password 456')).user.id, user.id);
+  await assert.rejects(login(fresh.api, user.email, 'Test1234'), /Neteisingas/);
+  assert.equal((await login(fresh.api, user.email, 'Next1234')).user.id, user.id);
 });
 
 test('restoring samples retains account access and saves the previous edited snapshot', async () => {

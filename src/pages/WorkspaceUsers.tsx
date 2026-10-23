@@ -36,7 +36,7 @@ export function WorkspaceUsers() {
             })} /></Field><Field label="El. paštas" full><input type="email" required value={edit.email} onChange={e => setEdit({
               ...edit,
               email: e.target.value
-            })} /></Field>{serverMode&&<Field label="Naujas slaptažodis" full hint="Bent 15 simbolių. Privalomas naujam naudotojui."><input type="password" minLength={15} required={!workspace.users.some(u=>u.id===edit.id)} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)}/></Field>}<Field label="Rolė" full><select disabled={edit.id === user.id} value={edit.role} onChange={e => setEdit({
+            })} /></Field>{serverMode&&<Field label="Naujas slaptažodis" full hint="Bent 8 simbolių. Privalomas naujam naudotojui."><input type="password" minLength={8} required={!workspace.users.some(u=>u.id===edit.id)} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)}/></Field>}<Field label="Rolė" full><select disabled={edit.id === user.id} value={edit.role} onChange={e => setEdit({
               ...edit,
               role: e.target.value as Role,
               driverId: ''

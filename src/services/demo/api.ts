@@ -22,7 +22,7 @@ function emailAddress(value: unknown) {
   return email;
 }
 function newPassword(value: unknown) {
-  requireThat(typeof value === 'string' && value.length >= 15 && value.length <= 1024, 400, 'Slaptažodis turi būti bent 15 simbolių.');
+  requireThat(typeof value === 'string' && value.length >= 8 && value.length <= 1024, 400, 'Slaptažodis turi būti bent 8 simbolių.');
   return demoPassword(value);
 }
 interface Identity { account: DemoAccount; session: DemoSession; user: WorkspaceUser; company?: DemoCompany }

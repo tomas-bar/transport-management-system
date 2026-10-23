@@ -28,7 +28,7 @@ function fixture() {
   }
   return { env, sqlite, photos, browser };
 }
-const password = 'A private account password 123';
+const password = 'Test1234';
 async function claim(f: ReturnType<typeof fixture>) {
   const browser = f.browser();
   assert.equal((await browser.call('/api/setup', 'POST', { token: f.env.KRYPTA_SETUP_TOKEN, email: 'owner@testing.test', name: 'Owner', password })).response.status, 200);

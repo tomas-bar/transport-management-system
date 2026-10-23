@@ -128,8 +128,8 @@ export function Platform() {
             <Field label="Įmonės vadovo el. paštas" full>
               <input type="email" required autoComplete="off" value={email} onChange={event => setEmail(event.target.value)} />
             </Field>
-            <Field label="Pradinis slaptažodis" full hint="Bent 15 simbolių. Perduokite administratoriui saugiu būdu.">
-              <input type="password" required minLength={15} autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} />
+            <Field label="Pradinis slaptažodis" full hint="Bent 8 simbolių. Perduokite administratoriui saugiu būdu.">
+              <input type="password" required minLength={8} autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} />
             </Field>
           </>}
           <fieldset className="driver-permissions"><legend>Moduliai</legend>

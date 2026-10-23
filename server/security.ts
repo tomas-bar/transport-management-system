@@ -23,7 +23,7 @@ export function equalSecret(a: string, b: string) {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 export function validatePassword(value: unknown): asserts value is string {
-  if (typeof value !== 'string' || [...value].length < 15 || Buffer.byteLength(value) > 1024) throw new Error('Slaptažodis turi būti bent 15 simbolių ir ne ilgesnis kaip 1024 baitų.');
+  if (typeof value !== 'string' || [...value].length < 8 || Buffer.byteLength(value) > 1024) throw new Error('Slaptažodis turi būti bent 8 simbolių ir ne ilgesnis kaip 1024 baitų.');
 }
 export async function hashPassword(password: string) {
   validatePassword(password);

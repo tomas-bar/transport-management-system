@@ -143,7 +143,7 @@ export async function handleApi(request: Request, env: Env): Promise<Response> {
   if (setup) {
     requireThat(typeof input.token === 'string' && env.KRYPTA_SETUP_TOKEN && await sameSecret(input.token, env.KRYPTA_SETUP_TOKEN) && Date.now() < Number(env.KRYPTA_SETUP_EXPIRES), 403, 'Paskyros paruošimo nuoroda negalioja.');
     const state = await storage.read(); requireThat(!state.claimed, 409, 'Paskyra jau paruošta. Prisijunkite savo slaptažodžiu.');
-    requireThat(typeof input.password === 'string' && input.password.length >= 15 && input.password.length <= 1024, 400, 'Slaptažodis turi būti bent 15 simbolių.');
+    requireThat(typeof input.password === 'string' && input.password.length >= 8 && input.password.length <= 1024, 400, 'Slaptažodis turi būti bent 8 simbolių.');
     requireThat(typeof input.email === 'string' && /^\S+@\S+\.\S+$/.test(input.email) && input.email.length <= 254 && typeof input.name === 'string' && input.name.trim() && input.name.length <= 100, 400, 'Patikrinkite paskyros duomenis.');
     const owner = state.accounts.find(a => !a.companyId)!;
     requireThat(!state.accounts.some(a => a.id !== owner.id && a.email === input.email.toLowerCase()), 409, 'Šis el. pašto adresas jau naudojamas.');

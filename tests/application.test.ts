@@ -42,7 +42,9 @@ test('password hashes are salted, verify correctly and reject weak new passwords
   assert(await verifyPassword(password, passwordHash));
   assert(!await verifyPassword('wrong password', passwordHash));
   assert.match(passwordHash, /^scrypt\$131072\$8\$1\$/);
-  await assert.rejects(hashPassword('admin'), /15/);
+  await assert.rejects(hashPassword('1234567'), /8/);
+  const minimumHash = await hashPassword('Test1234');
+  assert(await verifyPassword('Test1234', minimumHash));
 });
 test('authentication requires a cookie, rejects forged sessions and enforces CSRF and origin', async () => {
   const f = await fixture();
