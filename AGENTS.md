@@ -18,7 +18,7 @@ This is a transport management product for small passenger and parcel operators.
 - PDF templates are data-driven A4 documents in `src/services/pdf`, independent of the selected UI tab or viewport. Operational documents exclude financial data. Verify generated PDFs with embedded fonts and pagination before delivery.
 
 - Anchor the runtime data ignore rule as `/data/`. Never ignore `src/data/`; seed data and compatibility migrations must be included in the source repository and downloadable package.
-- Keep environment overrides, runtime data and hosting identity out of clean GitHub imports. `.env.server` is tracked public build configuration and must never contain secrets. Run the checks listed in `README.md` before submitting changes; keep the CI workflow aligned with those commands. Do not select a project license on the owner's behalf.
+- Keep environment overrides, runtime data and hosting identity out of clean GitHub imports. `.env.server` is tracked public build configuration and must never contain secrets. Run appropriate manual checks from `README.md` before submitting changes. Automatic CI pipelines are disabled; do not re-enable them unless the owner requests it. Do not select a project license on the owner's behalf.
 
 - Keep phone trip statuses visible in the card view. Desktop tables and mobile cards must use the same filtered records.
 - Use `visitTasks` for optional passenger/parcel and pickup/delivery markers. Operational map details exclude financial data. Keep map controls outside the viewport and enable direct touch dragging and pinch zoom as requested; keep controls outside the map viewport.

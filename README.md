@@ -89,6 +89,8 @@ The retained `data:seed` and `data:clear` CLI commands target the old reference 
 
 ## Checks
 
+Verification commands are run manually. Automatic GitHub Actions pipelines are disabled.
+
 ```sh
 npm test
 # Focused static-demo workflow checks:
