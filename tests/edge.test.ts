@@ -167,3 +167,28 @@ test('owner acting as company manager can clear storage and restore samples with
     assert.equal((await owner.call('/api/preview', 'POST', { id: null })).data.user.role, 'owner');
   } finally { f.sqlite.close(); }
 });
+
+test('Sites calculator scenarios persist in shared state, reject stale writes and stay outside driver projections', async () => {
+  const f = fixture(); try {
+    const { emptyCalculationInput } = await import('../src/domain/calculator.ts');
+    const manager = await claim(f);
+    const login = await manager.call('/api/login', 'POST', { email: 'admin', password });
+    const command = { type: 'calculator', command: { type: 'save', id: 'edge-plan', revision: null, name: 'Shared plan', tripId: 't1', primary: true, input: emptyCalculationInput() } };
+    const saved = await manager.call('/api/commands', 'POST', { revision: login.data.revision, command });
+    assert.equal(saved.response.status, 200);
+    const second = f.browser();
+    const shared = await second.call('/api/login', 'POST', { email: 'admin', password });
+    assert.equal(shared.data.snapshot.db.planning.scenarios[0].name, 'Shared plan');
+    assert.equal((await manager.call('/api/commands', 'POST', { revision: login.data.revision, command })).response.status, 409);
+    const driver = f.browser();
+    const projected = await driver.call('/api/login', 'POST', { email: 'driver', password });
+    assert.equal(projected.data.snapshot.db.planning, undefined);
+    assert.equal((await driver.call('/api/commands', 'POST', { revision: saved.data.revision, command })).response.status, 400);
+    const restore = await manager.call('/api/commands', 'POST', { revision: saved.data.revision, command: { type: 'restore', snapshot: saved.data.snapshot } });
+    assert.equal(restore.response.status, 200);
+    assert.deepEqual(restore.data.snapshot.db.planning, saved.data.snapshot.db.planning);
+    const cleared = await manager.call('/api/company-data/reset', 'POST', { revision: restore.data.revision, mode: 'clear', confirmed: true });
+    assert.equal(cleared.response.status, 200);
+    assert.equal(cleared.data.snapshot.db.planning, undefined);
+  } finally { f.sqlite.close(); }
+});

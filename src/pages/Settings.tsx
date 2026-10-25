@@ -24,7 +24,7 @@ import type { NumberSeries } from '../domain/models';
 
 export function Settings() {
   const confirm = useConfirm();
-  const { db, workspace, user, setPrintMode, replaceData, resetCompanyData, commit, busy, notify, serverMode, session } = useApp();
+  const { db, workspace, user, setPrintMode, replaceData, resetCompanyData, commit, busy, notify, serverMode, session, modules } = useApp();
   const resetBlocked = readOnlySession(session) || user?.role !== 'admin';
   const [form, setForm] = useState({ ...db.settings });
   const [seedDate, setSeedDate] = useState(today());
@@ -51,7 +51,7 @@ export function Settings() {
       const restoredWorkspace = raw.workspace ? validateWorkspace(raw.workspace, parsed) : undefined;
       if (
         await confirm(
-          `Pakeisti dabartinius įrašus kopija? Reisų: ${parsed.trips.length}, užsakymų: ${parsed.orders.length}.`,
+          `Pakeisti dabartinius įrašus kopija? Reisų: ${parsed.trips.length}, užsakymų: ${parsed.orders.length}.${modules.includes('finance') ? ` Skaičiuoklės scenarijų: ${parsed.planning?.scenarios.length ?? 0}. Skaičiuoklės įkainiai taip pat bus pakeisti.` : ''}`,
         )
       ) {
         if (await replaceData(parsed, restoredWorkspace))
@@ -231,7 +231,7 @@ export function Settings() {
                 onClick={async () => {
                   if (
                     await confirm(
-                      "Atkurti bandomuosius duomenis? Dabartiniai įrašai bei patvirtinimai bus pakeisti, nuotraukos, priminimai ir krovinių galimybės pašalinti. Įmonės nustatymai ir paskyros išliks.",
+                      "Atkurti bandomuosius duomenis? Dabartiniai įrašai bei patvirtinimai bus pakeisti, nuotraukos, priminimai, krovinių galimybės, skaičiuoklės scenarijai ir įkainiai pašalinti. Įmonės nustatymai ir paskyros išliks.",
                     )
                   ) {
                     if (await resetCompanyData('samples', seedDate)) setForm({ ...db.settings });
@@ -265,7 +265,7 @@ export function Settings() {
                 onClick={async () => {
                   if (
                     await confirm(
-                      "Visam laikui išvalyti šios įmonės reisus, užsakymus, registrus, mokėjimus, patvirtinimus, nuotraukas, priminimus, krovinių galimybes ir ankstesnes duomenų kopijas? Įmonės nustatymai ir paskyros išliks. Šio veiksmo atšaukti negalima.",
+                      "Visam laikui išvalyti šios įmonės reisus, užsakymus, registrus, mokėjimus, patvirtinimus, nuotraukas, priminimus, krovinių galimybes, skaičiuoklės scenarijus, jos įkainius ir ankstesnes duomenų kopijas? Įmonės nustatymai ir paskyros išliks. Šio veiksmo atšaukti negalima.",
                     )
                   )
                     if (await resetCompanyData('clear')) setForm({ ...db.settings });

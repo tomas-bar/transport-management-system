@@ -83,13 +83,13 @@ export const managerRole = (user: WorkspaceUser | null) => !!user && user.active
 export function canOpen(user: WorkspaceUser | null, section: string, modules?: ModuleId[]) {
   if (!user?.active) return false;
   if (user.role === 'owner') return ['platform', 'profile'].includes(section);
-  if (modules && section === 'finances' && !modules.includes('finance')) return false;
+  if (modules && ['finances', 'calculator'].includes(section) && !modules.includes('finance')) return false;
   if (modules && section === 'maintenance' && !modules.includes('maintenance')) return false;
   if (modules && section === 'freight' && !modules.includes('freight')) return false;
   if (section === 'profile' || section === 'notifications') return true;
   if (user.role === 'driver') return section === 'my-trips';
   if (['users', 'settings'].includes(section)) return user.role === 'admin';
-  return ['overview', 'trips', 'orders', 'routes', 'vehicles', 'drivers', 'customers', 'finances', 'maintenance', 'freight'].includes(section);
+  return ['overview', 'trips', 'orders', 'routes', 'vehicles', 'drivers', 'customers', 'finances', 'calculator', 'maintenance', 'freight'].includes(section);
 }
 export function createWorkspace(db: Database): Workspace {
   const companyId = 'company-review';

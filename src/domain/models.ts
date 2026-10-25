@@ -1,3 +1,5 @@
+import type { CalculatorState } from './calculator.ts';
+
 export type TripStatus =
   | "planned"
   | "confirmed"
@@ -130,6 +132,7 @@ export interface Settings {
 }
 export interface Database {
   version: 1;
+  planning?: CalculatorState;
   trips: Trip[];
   routes: Route[];
   orders: Order[];

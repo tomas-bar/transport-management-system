@@ -72,6 +72,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
     operationalCommand: command => send(command, command.type === 'reviewTrip' ? 'Reiso suvestinė išsaugota' : 'Naujas reisas sukurtas'),
     driverCommand: command => send({ type: 'driver', command }, driverCommandMessage(command)),
     financeCommand: command => send({ type: 'finance', command }, 'Mokėjimų ir išlaidų duomenys atnaujinti'),
+    calculatorCommand: command => send({ type: 'calculator', command }, command.type === 'delete' ? 'Scenarijus pašalintas' : command.type === 'defaults' ? 'Bendri įkainiai išsaugoti' : 'Scenarijus išsaugotas'),
     readNotifications: ids => send({ type: 'read', ids: typeof ids === 'string' ? [ids] : ids }),
     setInApp: enabled => send({ type: 'preference', enabled }, 'Pranešimų nuostata išsaugota'),
     setPrintMode: mode => send({ type: 'print', mode }, 'Spausdinimo nuostata išsaugota'),

@@ -70,7 +70,7 @@ export class DemoApi {
     return {
       user: structuredClone(user), csrf: '', modules: company?.modules ?? [],
       session: { userId: user.id, ...(session.previewId ? { returnTo: account.memberId || account.id, returnRole: account.companyId ? 'admin' as const : 'owner' as const, actorName: account.name, mode: session.previewMode ?? 'read' } : {}) },
-      revision: company?.revision, snapshot: company ? projectSnapshot(structuredClone(company.snapshot), user) : null,
+      revision: company?.revision, snapshot: company ? projectSnapshot(structuredClone(company.snapshot), user, company.modules) : null,
     };
   }
   private async route(path: string, method: string, input: any) {
@@ -205,7 +205,11 @@ export class DemoApi {
         state.photos = state.photos.filter(photo => photo.companyId !== current.id);
       }
       if (command.type === 'restore') requireThat(!state.photos.some(p => p.companyId === current.id), 409, 'Prieš atkurdami JSON kopiją pašalinkite užsakymų nuotraukas. JSON kopijoje jų nėra.');
-      const next = applyWorkspaceCommand(current.snapshot, user.id, command, current.modules);
+      let next;
+      try { next = applyWorkspaceCommand(current.snapshot, user.id, command, current.modules); }
+      catch (error) {
+        throw new ApiError(400, error instanceof Error ? error.message : 'Patikrinkite veiksmo duomenis.');
+      }
       if (command.type === 'restore' && command.discardPhotos) {
         const disabled = new Set(state.resetDisabled?.[current.id] ?? []);
         for (const previous of current.snapshot.workspace.users.filter(u => u.role === 'driver' && u.active)) {
@@ -247,7 +251,7 @@ export class DemoApi {
       const current = companyAccess(); requireThat(user.role === 'admin', 403, 'Prieiga nesuteikta.');
       const rows = state.backups.filter(b => b.companyId === current.id);
       if (endpoint === '/api/backups') return rows.toReversed().map(({ id, revision, created_at }) => ({ id, revision, created_at }));
-      const backup = rows.find(b => b.id === endpoint.split('/')[3]); requireThat(backup, 404, 'Kopija nerasta.'); return structuredClone(backup.snapshot);
+      const backup = rows.find(b => b.id === endpoint.split('/')[3]); requireThat(backup, 404, 'Kopija nerasta.'); return projectSnapshot(structuredClone(backup.snapshot), user, current.modules);
     }
     if (endpoint === '/api/photos') {
       moduleAccess('photos'); const current = companyAccess(), orderId = text(url.searchParams.get('order'), 100); orderAccess(orderId);

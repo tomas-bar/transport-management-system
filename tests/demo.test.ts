@@ -176,3 +176,21 @@ test('demo drafts and historical records retain private driver and photo boundar
     await assert.rejects(driver.api.request('/api/commands', 'POST', { revision: session.revision, command: { type: 'driver', command: { type: 'start', tripId: id } } }), /nepaskelbtas|uždarytas/);
   }
 });
+
+test('demo calculator scenarios persist across clients, keep finance access separate and clear explicitly', async () => {
+  const f = await fixture();
+  const { emptyCalculationInput } = await import('../src/domain/calculator.ts');
+  let session = await f.api.request<ServerSession>('/api/login', 'POST', { email: 'admin', password: 'admin' });
+  const command = { type: 'calculator', command: { type: 'save', id: 'scenario', revision: null, name: 'Plan', tripId: '', primary: false, input: emptyCalculationInput() } };
+  session = await f.api.request('/api/commands', 'POST', { revision: session.revision, command });
+  const reopened = client(f.storage, f.session());
+  const current = await reopened.api.request<ServerSession>('/api/session');
+  assert.equal(current.snapshot!.db.planning!.scenarios.length, 1);
+  await assert.rejects(reopened.api.request('/api/commands', 'POST', { revision: 1, command }), /pakeisti/);
+  const driver = client(f.storage);
+  const restricted = await driver.api.request<ServerSession>('/api/login', 'POST', { email: 'driver', password: 'admin' });
+  assert.equal(restricted.snapshot!.db.planning, undefined);
+  await assert.rejects(driver.api.request('/api/commands', 'POST', { revision: session.revision, command }), /teisių/);
+  await f.api.request('/api/company-data/reset', 'POST', { revision: session.revision, mode: 'clear', confirmed: true });
+  assert.equal((await f.api.request<ServerSession>('/api/session')).snapshot!.db.planning, undefined);
+});

@@ -1,10 +1,19 @@
 import type { ReviewSnapshot, WorkspaceUser } from './workspace.ts';
 import { driverPermissions } from './trip-finance.ts';
 import { driverVisibleTrip } from './record-mode.ts';
+import type { ModuleId } from './modules.ts';
 
-export function projectSnapshot(snapshot: ReviewSnapshot, user: WorkspaceUser): ReviewSnapshot {
-  if (user.role !== 'driver') return snapshot;
+export function projectSnapshot(snapshot: ReviewSnapshot, user: WorkspaceUser, modules?: ModuleId[]): ReviewSnapshot {
+  if (user.role !== 'driver') {
+    if (modules && !modules.includes('finance')) {
+      const reduced = structuredClone(snapshot);
+      delete reduced.db.planning;
+      return reduced;
+    }
+    return snapshot;
+  }
   const s = structuredClone(snapshot), own = driverPermissions(user);
+  delete s.db.planning;
   s.db.trips = s.db.trips.filter(t => t.driverId === user.driverId && driverVisibleTrip(t));
   const trips = new Set(s.db.trips.map(t => t.id));
   s.db.orders = s.db.orders.filter(o => trips.has(o.tripId));

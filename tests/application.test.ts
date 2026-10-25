@@ -11,6 +11,7 @@ import { createApplication } from '../server/application.ts';
 import { hashPassword, verifyPassword, digest } from '../server/security.ts';
 import { createSeed } from '../src/data/seed.ts';
 import { createWorkspace } from '../src/domain/workspace.ts';
+import { emptyCalculationInput } from '../src/domain/calculator.ts';
 
 const password = 'A long fixture password 73!';
 const passwordHash = await hashPassword(password);
@@ -356,5 +357,39 @@ test('unpublished drafts and historical backfill stay outside driver data and pr
       assert.equal((await f.request('/api/commands', 'POST', { revision: 2, command: { type: 'driver', command: { type: 'start', tripId: id } } }, driver)).status, 400);
     }
     assert.equal(f.store.snapshot('one').revision, 2);
+  } finally { await f.close(); }
+});
+
+test('calculator snapshots persist with company isolation, server results, revision checks and finance projections', async () => {
+  const f = await fixture();
+  try {
+    const admin = await f.login(), input = emptyCalculationInput();
+    input.revenueMode = 'total'; input.totalRevenue = 25000;
+    const command = { type: 'calculator', command: { type: 'save', id: 'scenario', revision: null, name: 'Plan', tripId: 't1', primary: true, input, result: { trip: { revenue: 999999 } } } };
+    const saved = await f.request('/api/commands', 'POST', { revision: 1, command }, admin);
+    assert.equal(saved.status, 200, await saved.clone().text());
+    const state = await saved.json();
+    assert.equal(state.snapshot.db.planning.scenarios[0].result.trip.revenue, 25000);
+    assert.equal(f.store.snapshot('one').snapshot.db.planning!.scenarios.length, 1);
+    assert.equal(f.store.snapshot('two').snapshot.db.planning, undefined);
+    assert.deepEqual(state.snapshot.db.orders, admin.data.snapshot.db.orders);
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 1, command }, admin)).status, 409);
+    const other = await f.login('two-admin@example.test');
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 1, command: { type: 'calculator', command: { type: 'delete', id: 'scenario', revision: 1 } } }, other)).status, 400);
+    const driver = await f.login('one-user-d1@example.test');
+    assert.equal(driver.data.snapshot.db.planning, undefined);
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 2, command }, driver)).status, 400);
+    const restored = await f.request('/api/commands', 'POST', { revision: 2, command: { type: 'restore', snapshot: state.snapshot } }, admin);
+    assert.equal(restored.status, 200);
+    assert.deepEqual((await restored.json()).snapshot.db.planning, state.snapshot.db.planning);
+    const backupId = String(f.db.prepare("SELECT id FROM snapshot_backups WHERE company_id='one'").get()!.id);
+    f.db.prepare("UPDATE companies SET modules='[\"operations\"]' WHERE id='one'").run();
+    const reduced = await (await f.request('/api/session', 'GET', undefined, admin)).json();
+    assert.equal(reduced.snapshot.db.planning, undefined);
+    assert.equal((await (await f.request('/api/backups/' + backupId, 'GET', undefined, admin)).json()).db.planning, undefined);
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 3, command }, admin)).status, 400);
+    reduced.snapshot.db.trips[0].notes = 'Operational update';
+    assert.equal((await f.request('/api/commands', 'POST', { revision: 3, command: { type: 'commit', db: reduced.snapshot.db } }, admin)).status, 200);
+    assert.equal(f.store.snapshot('one').snapshot.db.planning!.scenarios.length, 1);
   } finally { await f.close(); }
 });

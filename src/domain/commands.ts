@@ -8,9 +8,11 @@ import { routeVisits } from './route-plan.ts';
 import { validateReferenceChanges } from './references.ts';
 import { historicalStopsAppendOnly, validateRecordModeChanges } from './record-mode.ts';
 import type { ModuleId } from './modules.ts';
+import { applyCalculatorCommand, type CalculatorCommand } from './calculator-commands.ts';
 
 export type WorkspaceCommand =
   | { type: 'commit'; db: Database }
+  | { type: 'calculator'; command: CalculatorCommand }
   | { type: 'reviewTrip'; input: TripReviewInput }
   | { type: 'repeatTrip'; input: RepeatTripInput }
   | { type: 'driver'; command: DriverCommand }
@@ -30,6 +32,9 @@ export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, c
     case 'commit': {
       if (!['admin', 'dispatcher'].includes(user.role)) throw new Error('Šis veiksmas neleidžiamas.');
       next.db = validateDatabase(command.db);
+      if (next.db.planning !== undefined && JSON.stringify(next.db.planning) !== JSON.stringify(before.db.planning)) throw new Error('Skaičiuoklę keiskite jos išsaugojimo veiksmu.');
+      // Older clients and disabled-module projections omit planning. Never erase it through an operational commit.
+      if (before.db.planning !== undefined) next.db.planning = structuredClone(before.db.planning);
       if (user.role !== 'admin' && JSON.stringify(before.db.settings) !== JSON.stringify(next.db.settings)) admin();
       validateReferenceChanges(before.db, next.db, user.role === 'admin');
       validateRecordModeChanges(before.db, next.db);
@@ -49,6 +54,10 @@ export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, c
       }
       break;
     }
+    case 'calculator':
+      if (!modules.includes('finance') || !['admin', 'dispatcher'].includes(user.role)) throw new Error('Skaičiuoklei reikia finansų modulio ir vadybininko teisių.');
+      applyCalculatorCommand(next.db, command.command, user.role === 'admin');
+      break;
     case 'reviewTrip':
       reviewTrip(next, user, command.input);
       break;
@@ -95,6 +104,10 @@ export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, c
     case 'restore': {
       admin();
       next.db = validateDatabase(command.snapshot.db);
+      if (!modules.includes('finance') && !command.discardPhotos) {
+        if (next.db.planning !== undefined) throw new Error('Scenarijams atkurti įjunkite finansų modulį.');
+        if (before.db.planning !== undefined) next.db.planning = structuredClone(before.db.planning);
+      }
       const imported = command.snapshot.workspace ?? createWorkspace(next.db);
       next.workspace = structuredClone(imported);
       next.workspace.companyId = before.workspace.companyId;
@@ -109,7 +122,7 @@ export function applyWorkspaceCommand(before: ReviewSnapshot, actorId: string, c
     }
     default: throw new Error('Nežinomas veiksmas.');
   }
-  if (!['read', 'preference', 'print', 'restore', 'user'].includes(command.type)) next.workspace.notifications.push(...notificationChanges(before.db, next.db, next.workspace, user.id));
+  if (!['read', 'preference', 'print', 'restore', 'user', 'calculator'].includes(command.type)) next.workspace.notifications.push(...notificationChanges(before.db, next.db, next.workspace, user.id));
   validateDatabase(next.db);
   for (const trip of next.db.trips) for (const order of next.db.orders.filter(o => o.tripId === trip.id && o.status !== 'cancelled')) {
     const pickup = trip.stops.findIndex(s => s.orderId === order.id && s.kind === 'pickup');

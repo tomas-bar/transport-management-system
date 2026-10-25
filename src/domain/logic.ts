@@ -1,6 +1,7 @@
 import { insertOrderStops } from "./route-plan.ts";
 import { assertReferenceAvailable, validateNumbering } from './references.ts';
 import { isDraft, isHistorical } from './record-mode.ts';
+import { validateCalculatorState } from './calculator.ts';
 import type { Database, Order, Trip, Vehicle, Collection } from "./models.ts";
 export const uid = () => crypto.randomUUID();
 export const today = () =>
@@ -260,6 +261,7 @@ export function validateDatabase(input: unknown): Database {
   if (!input || typeof input !== "object" || (input as Database).version !== 1)
     throw new Error("Nepalaikomas atsarginės kopijos formatas.");
   const db = input as Database;
+  if (db.planning !== undefined) validateCalculatorState(db.planning);
   const fail = (field: string): never => {
     throw new Error(`Netinkami duomenys: ${field}.`);
   };
@@ -522,6 +524,7 @@ export function validateDatabase(input: unknown): Database {
   }
   return {
     version: 1,
+    ...(db.planning !== undefined ? { planning: db.planning } : {}),
     trips: db.trips,
     routes: db.routes,
     orders: db.orders,

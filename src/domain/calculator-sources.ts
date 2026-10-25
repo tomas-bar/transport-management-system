@@ -5,7 +5,7 @@ import { emptyCalculator, type CalculatorInput, type CalculatorRates, type Calcu
 export function resolvedRates(db: Database, state: CalculatorState, vehicleId: string): CalculatorRates {
   const vehicle = db.vehicles.find(row => row.id === vehicleId);
   return {
-    ...structuredClone(state.defaults), ...structuredClone(state.vehicles[vehicleId] ?? {}),
+    ...structuredClone(state.defaults), ...structuredClone(Object.hasOwn(state.vehicles, vehicleId) ? state.vehicles[vehicleId] : {}),
     consumption: vehicle ? vehicle.consumption : state.defaults.consumption,
   };
 }

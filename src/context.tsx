@@ -18,6 +18,7 @@ import { reviewRepository } from './services/review-repository';
 import { Button } from './components/ui';
 import { readOnlySession, type PreviewOptions, type WorkspaceSession as Session } from './domain/access';
 import { companyResetCommand, type CompanyResetMode } from './services/company-reset';
+import type { CalculatorCommand } from './domain/calculator-commands';
 export interface Context {
   serverMode: boolean; modules: ModuleId[]; refresh: () => Promise<void>;
   theme:Theme;toggleTheme:()=>void;
@@ -38,6 +39,7 @@ export interface Context {
   saveUser: (user: WorkspaceUser, password?: string) => Promise<boolean>;
   readNotifications: (id?: string | string[]) => Promise<boolean>;
   financeCommand:(command:FinanceCommand)=>Promise<boolean>;
+  calculatorCommand: (command: CalculatorCommand) => Promise<boolean>;
   setPrintMode: (mode: 'monochrome'|'color')=>Promise<boolean>;
   setInApp: (enabled: boolean) => Promise<boolean>;
   operationalCommand: (command: Extract<WorkspaceCommand, {type: 'reviewTrip' | 'repeatTrip'}>) => Promise<boolean>;
@@ -253,6 +255,9 @@ function LocalProvider({
     setInApp,
     setPrintMode,
     financeCommand,
+    calculatorCommand: command => update((next, user) => {
+      Object.assign(next, applyWorkspaceCommand(next, user.id, { type: 'calculator', command }, ['operations', 'finance']));
+    }, command.type === 'delete' ? 'Scenarijus pašalintas' : command.type === 'defaults' ? 'Bendri įkainiai išsaugoti' : 'Scenarijus išsaugotas', false),
     operationalCommand: command => update((next, user) => { Object.assign(next, applyWorkspaceCommand(next, user.id, command, ['operations', 'finance', 'photos', 'maintenance', 'freight'])); }, command.type === 'reviewTrip' ? 'Reiso suvestinė išsaugota' : 'Naujas reisas sukurtas', false),
     driverCommand,
     replaceData,

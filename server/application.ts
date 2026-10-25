@@ -122,7 +122,8 @@ export function createApplication(options: { dbPath: string; distPath: string; o
     };
     if (!companyId) return { user, csrf: session.csrf, session: view, modules: [], snapshot: null };
     const row = store.snapshot(companyId);
-    return { user, csrf: session.csrf, session: view, modules: JSON.parse(company(companyId).modules), revision: row.revision, snapshot: projectSnapshot(row.snapshot, user) };
+    const modules = JSON.parse(company(companyId).modules) as ModuleId[];
+    return { user, csrf: session.csrf, session: view, modules, revision: row.revision, snapshot: projectSnapshot(row.snapshot, user, modules) };
   }
   function moduleAccess(companyId: string | null, user: WorkspaceUser, id: ModuleId) {
     requireThat(companyId && JSON.parse(company(companyId).modules).includes(id), 403, 'Šis modulis išjungtas.');
@@ -322,7 +323,7 @@ export function createApplication(options: { dbPath: string; distPath: string; o
       if (path.startsWith('/api/backups/') && method === 'GET') {
         requireThat(companyId && user.role === 'admin', 403, 'Prieiga nesuteikta.');
         const row = db.prepare('SELECT data FROM snapshot_backups WHERE company_id=? AND id=?').get(companyId, path.split('/')[3]) as { data: string } | undefined;
-        requireThat(row, 404, 'Kopija nerasta.'); return json(res, 200, JSON.parse(row.data));
+        requireThat(row, 404, 'Kopija nerasta.'); return json(res, 200, projectSnapshot(JSON.parse(row.data), user, JSON.parse(company(companyId).modules)));
       }
       if (path === '/api/photos') {
         moduleAccess(companyId, user, 'photos');

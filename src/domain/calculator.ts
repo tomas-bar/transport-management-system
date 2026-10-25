@@ -119,10 +119,20 @@ export function emptyCalculationInput(rates = emptyRates(), now = new Date().toI
 
 /** Peak load on actual route segments, so successive bookings do not consume seats together. */
 export function bookingPeak(bookings: BookingAssumption[], from = 0, until = Infinity): number {
-  const boundaries = [...new Set([from, ...bookings.flatMap(row => [row.pickup, row.delivery])])].sort((a, b) => a - b);
-  return Math.max(0, ...boundaries.filter(point => point >= from && point < until).map(point =>
-    bookings.filter(row => row.type === 'passenger' && row.pickup <= point && row.delivery > point)
-      .reduce((total, row) => total + row.quantity, 0)));
+  if (from >= until) return 0;
+  const events = new Map<number, number>();
+  let aboard = 0;
+  for (const row of bookings.filter(row => row.type === 'passenger')) {
+    if (row.pickup <= from && row.delivery > from) aboard += row.quantity;
+    events.set(row.pickup, (events.get(row.pickup) ?? 0) + row.quantity);
+    events.set(row.delivery, (events.get(row.delivery) ?? 0) - row.quantity);
+  }
+  let peak = aboard;
+  for (const [point, change] of [...events].sort(([a], [b]) => a - b)) {
+    if (point <= from || point >= until) continue;
+    aboard += change; peak = Math.max(peak, aboard);
+  }
+  return peak;
 }
 
 /** Version 1 formulas are frozen. Future formula changes must introduce a new version. */
