@@ -2,6 +2,7 @@ import { ArrowDownRight, ArrowUpRight, CircleHelp } from 'lucide-react';
 import { money } from '../../domain/logic';
 import { extraCostLabels, type Calculation, type CalculatorInput } from '../../domain/calculator';
 import { calculationMoney } from './format';
+import { visibleMissingGroups } from './input-guidance';
 
 const missingLabels: Record<string, string> = {
   routeKm: 'Maršruto kilometrai', extraKm: 'Papildomi kilometrai', fuel: 'Kuro sąnaudos arba kaina',
@@ -15,16 +16,15 @@ const missingLabels: Record<string, string> = {
 };
 const costLabels: Record<string, string> = { fuel: 'Kuras', wear: 'Eksploatacija be kuro', driver: 'Vairuotojo atlygis', waiting: 'Papildomas laukimas', ...extraCostLabels };
 
-export function CalculationResults({ result, input, view, dirty, savedAt }: {
+export function CalculationResults({ result, input, view, dirty, savedAt, onMissing }: {
   result: Calculation; input: CalculatorInput; view: 'trip' | 'month'; dirty: boolean; savedAt?: string;
+  onMissing: (group: string) => void;
 }) {
   const values = view === 'trip' ? result.trip : result.month;
   const max = Math.max(values.revenue ?? 0, values.totalCost ?? 0, 1);
   const percent = (value: number) => new Intl.NumberFormat('lt-LT', { style: 'percent', maximumFractionDigits: 1 }).format(value);
   const remainder = values.remainder;
-  const missing = result.missing.filter(key => view === 'month'
-    ? input.monthlyTrips === 0 ? ['monthlyTrips', 'monthlyFixed'].includes(key) : key !== 'fixedShare'
-    : !['monthlyTrips', 'monthlyFixed'].includes(key));
+  const missing = visibleMissingGroups(input, result, view);
   return <aside className="calc-results panel" id="calculation-results" tabIndex={-1} aria-label="Skaičiavimo rezultatai">
     <header><span>{view === 'trip' ? 'Reiso įvertinimas' : 'Mėnesio įvertinimas'}</span>
       <small>{dirty || !savedAt ? 'Pagal dabartines prielaidas' : `Išsaugota ${new Intl.DateTimeFormat('lt-LT', { dateStyle: 'short' }).format(new Date(savedAt))}`}</small></header>
@@ -65,7 +65,9 @@ export function CalculationResults({ result, input, view, dirty, savedAt }: {
         <p>Bilietų kainos ir ne keleivių pajamos nekinta. Abiejų krypčių užimtumas keičiamas vienodu procentu.</p>
         {result.trip.breakEvenOccupancy > 1 && <p>Reikėtų daugiau nei 100 % užimtumo. Pagal šias prielaidas vien keleiviais sąnaudų padengti nepavyktų.</p>}</details>}
     </div>}
-    {!!missing.length && <div className="calc-missing" role="status"><b>Trūksta prielaidų: {missing.length}</b><ul>{missing.map(key => <li key={key}>{missingLabels[key] ?? key}</li>)}</ul></div>}
+    {!!missing.length && <div className="calc-missing"><b>Trūksta prielaidų: {missing.length}</b><ul>{missing.map(key => <li key={key}>
+      <button type="button" onClick={() => onMissing(key)}>{missingLabels[key] ?? key}<ArrowUpRight size={13} aria-hidden="true" /></button>
+    </li>)}</ul></div>}
     {result.warnings.map(key => <p className="calc-warning" key={key} role="status">{key === 'capacity' ? 'Keleivių skaičius viršija scenarijuje nurodytas vietas.'
       : 'Nurodytos grįžimo pajamos. Patikrinkite, ar kilometruose įtrauktas ir grįžimas.'}</p>)}
     <p className="calc-footnote">Planavimo rezultatas pagal įtrauktas prielaidas. Faktiniai užsakymai, mokėjimai ir išlaidos nekeičiami.</p>

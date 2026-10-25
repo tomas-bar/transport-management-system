@@ -1,6 +1,21 @@
 import type { Database, Place, Stop, Trip } from './models.ts';
 import { routeVisits, sameLocation } from './route-plan.ts';
-import { emptyCalculator, type CalculatorInput, type CalculatorRates, type CalculatorState } from './calculator.ts';
+import { emptyCalculator, type CalculatorInput, type CalculatorRates, type CalculatorState, type ExtraCost, type OptionalCost } from './calculator.ts';
+import { sumCents } from './cost-math.ts';
+
+/** Recorded supplemental expenses only. Fuel and maintenance stay outside this copy. */
+export function tripExpenseAssumptions(db: Database, tripId: string) {
+  if (!tripId) return { extras: {} as Partial<Record<ExtraCost, OptionalCost>>, total: 0 };
+  const categories: Partial<Record<ExtraCost, string>> = {
+    tolls: 'Kelių mokesčiai', accommodation: 'Nakvynė', parking: 'Parkavimas', other: 'Kitos išlaidos',
+  };
+  const extras: Partial<Record<ExtraCost, OptionalCost>> = {};
+  for (const [key, category] of Object.entries(categories)) {
+    const rows = db.expenses.filter(row => row.tripId === tripId && row.category === category);
+    if (rows.length) extras[key as ExtraCost] = { included: true, amount: sumCents(rows.map(row => row.amount)) };
+  }
+  return { extras, total: sumCents(Object.values(extras).map(row => row.amount!)) };
+}
 
 export function resolvedRates(db: Database, state: CalculatorState, vehicleId: string): CalculatorRates {
   const vehicle = db.vehicles.find(row => row.id === vehicleId);

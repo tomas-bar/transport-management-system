@@ -32,7 +32,7 @@ export function RateSettings({ onClose, onDirty }: { onClose: () => void; onDirt
     if (busy) return;
     if (!dirty || await confirm('Uždaryti neišsaugojus įkainių pakeitimų?', { confirmLabel: 'Neišsaugoti' })) onClose();
   };
-  return <Modal title="Skaičiuoklės įkainiai" onClose={() => void close()}>
+  return <Modal title="Skaičiuoklės nustatymai" subtitle="Įmonės ir automobilio įkainiai" onClose={() => void close()}>
     <form id="calculator-rates" className="calc-rates-form" onSubmit={async event => {
       event.preventDefault();
       if (await calculatorCommand({ type: 'defaults', defaults, vehicles })) { onDirty(false); onClose(); }
@@ -47,14 +47,14 @@ export function RateSettings({ onClose, onDirty }: { onClose: () => void; onDirt
           : <NumberField label="Bendros kuro sąnaudos, l/100 km" value={defaults.consumption} max={1000} decimals={3} onChange={value => changeDefault('consumption', value)} />}
         <div className="calc-rate-list" key={target}>
           {([
-            { key: 'fuelPrice', label: 'Kuro kaina, €/l', scale: 10000, decimals: 4 },
-            { key: 'wearPerKm', label: 'Eksploatacija be kuro, €/km', scale: 10000, decimals: 4 },
-            { key: 'waitingPerHour', label: 'Papildomas laukimas, €/val.', scale: 100, decimals: 2 },
+            { key: 'fuelPrice', label: 'Kuro kaina, €/l', scale: 10000, decimals: 4, placeholder: 'Pvz. 1,80' },
+            { key: 'wearPerKm', label: 'Eksploatacija be kuro, €/km', scale: 10000, decimals: 4, placeholder: 'Pvz. 0,12' },
+            { key: 'waitingPerHour', label: 'Papildomas laukimas, €/val.', scale: 100, decimals: 2, placeholder: 'Neįrašyta' },
           ] as const).map(field => <div key={field.key}>
             {vehicle && <Toggle label={`Individualus įkainis: ${field.label}`} checked={Object.hasOwn(overrides, field.key)}
               onChange={enabled => toggleOverride([field.key], enabled)} />}
             {!vehicle || Object.hasOwn(overrides, field.key) ? <NumberField label={field.label} value={vehicle ? overrides[field.key] ?? null : defaults[field.key]}
-              scale={field.scale} decimals={field.decimals} onChange={value => vehicle ? changeOverride({ [field.key]: value }) : changeDefault(field.key, value)} />
+              scale={field.scale} decimals={field.decimals} placeholder={field.placeholder} onChange={value => vehicle ? changeOverride({ [field.key]: value }) : changeDefault(field.key, value)} />
               : <small className="calc-inherited">Pagal įmonę: {defaults[field.key] === null ? 'neįrašyta' : (defaults[field.key]! / field.scale).toLocaleString('lt-LT', { maximumFractionDigits: field.decimals })}</small>}
           </div>)}
           <div>

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { calculate, emptyCalculationInput, emptyCalculator, bookingPeak, validateCalculatorInput, validateCalculatorState, calculationUnits } from '../src/domain/calculator.ts';
-import { useVehicle, useTrip, useRoute, calculationStops } from '../src/domain/calculator-sources.ts';
+import { useVehicle, useTrip, useRoute, calculationStops, tripExpenseAssumptions } from '../src/domain/calculator-sources.ts';
 import { createSeed } from '../src/data/seed.ts';
 import { additionalCost } from '../src/domain/freight.ts';
 
@@ -157,4 +157,20 @@ test('calculator validation rejects negative, non-finite and oversized inputs wi
   }
   input.routeKm = 1000; input.monthlyTrips = 1.5;
   assert.throws(() => validateCalculatorInput(input));
+});
+
+test('supplemental expense copies exclude fuel, maintenance and other trips while retaining source records', () => {
+  const db = createSeed('2026-10-24');
+  db.expenses = ['Degalai', 'Automobilio priežiūra', 'Kelių mokesčiai', 'Nakvynė', 'Parkavimas', 'Kitos išlaidos'].map((category, index) => ({
+    id: 'cost-' + index, category, amount: (index + 1) * 100, date: '2026-10-24', tripId: 't1', vehicleId: 'v1', description: '',
+  }));
+  db.expenses.push({ ...db.expenses[2], id: 'another-trip', tripId: 't2', amount: 90000 });
+  const before = structuredClone(db);
+  const copied = tripExpenseAssumptions(db, 't1');
+  assert.equal(copied.total, 1800);
+  assert.deepEqual(Object.keys(copied.extras).sort(), ['accommodation', 'other', 'parking', 'tolls']);
+  assert.equal(copied.extras.tolls!.amount, 300);
+  assert.deepEqual(tripExpenseAssumptions(db, ''), { extras: {}, total: 0 });
+  copied.extras.tolls!.amount = 1;
+  assert.deepEqual(db, before);
 });

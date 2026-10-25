@@ -286,11 +286,13 @@ export function Field({
   children,
   hint,
   full = false,
+  controlLabel,
 }: {
-  label: string;
+  label: ReactNode;
   children: ReactNode;
   hint?: string;
   full?: boolean;
+  controlLabel?: string;
 }) {
   const labelId = useId();
   const hintId = useId();
@@ -298,8 +300,8 @@ export function Field({
     && typeof children.type === 'string'
     && ['input', 'select', 'textarea'].includes(children.type)
     ? cloneElement(children as ReactElement<HTMLAttributes<HTMLElement>>, {
-      'aria-labelledby': labelId,
-      ...(hint ? { 'aria-describedby': hintId } : {}),
+      ...(controlLabel ? { 'aria-label': controlLabel } : { 'aria-labelledby': labelId }),
+      'aria-describedby': [(children.props as HTMLAttributes<HTMLElement>)['aria-describedby'], hint ? hintId : ''].filter(Boolean).join(' ') || undefined,
     })
     : children;
   return (
