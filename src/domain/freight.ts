@@ -1,5 +1,6 @@
 import type { Database, Place, Stop, Trip } from './models.ts';
 import { loadInfo } from './logic.ts';
+import { extendedCost } from './cost-math.ts';
 
 export const opportunityStatuses = {
   new: 'Nauja', contacted: 'Susisiekta', agreed: 'Sutarta', dismissed: 'Neaktuali',
@@ -136,7 +137,7 @@ export function additionalCost(km: number, minutes: number, perKm: number | null
   if (![km, minutes].every(value => Number.isFinite(value) && value >= 0)) fail('Netinkami maršruto atstumai.');
   if ([perKm, perHour, other, price].some(value => value !== null && (!Number.isSafeInteger(value) || value < 0))) fail('Patikrinkite sąnaudas.');
   if (perKm === null || perHour === null || other === null) return { cost: null, remainder: null };
-  const cost = Math.round(km * perKm) + Math.round(minutes / 60 * perHour) + other;
+  const cost = extendedCost(km, perKm) + extendedCost(minutes / 60, perHour) + other;
   if (!Number.isSafeInteger(cost)) fail('Suma per didelė.');
   return { cost, remainder: price === null ? null : price - cost };
 }
