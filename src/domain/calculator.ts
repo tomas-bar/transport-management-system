@@ -31,7 +31,7 @@ export interface DirectionRevenue {
 }
 export interface BookingAssumption {
   id: string; name: string; type: 'passenger' | 'parcel';
-  quantity: number; price: number | null;
+  quantity: number | null; price: number | null;
   pickup: number; delivery: number;
 }
 export interface CalculatorInput {
@@ -118,11 +118,12 @@ export function emptyCalculationInput(rates = emptyRates(), now = new Date().toI
 }
 
 /** Peak load on actual route segments, so successive bookings do not consume seats together. */
-export function bookingPeak(bookings: BookingAssumption[], from = 0, until = Infinity): number {
+export function bookingPeak(bookings: BookingAssumption[], from = 0, until = Infinity): number | null {
   if (from >= until) return 0;
   const events = new Map<number, number>();
   let aboard = 0;
-  for (const row of bookings.filter(row => row.type === 'passenger')) {
+  for (const row of bookings.filter(row => row.type === 'passenger' && row.pickup < until && row.delivery > from)) {
+    if (row.quantity === null) return null;
     if (row.pickup <= from && row.delivery > from) aboard += row.quantity;
     events.set(row.pickup, (events.get(row.pickup) ?? 0) + row.quantity);
     events.set(row.delivery, (events.get(row.delivery) ?? 0) - row.quantity);
@@ -156,6 +157,7 @@ export function calculate(input: CalculatorInput): Calculation {
     revenue = need(input.totalRevenue, 'totalRevenue'); revenueParts.push(revenue);
   } else if (input.revenueMode === 'bookings') {
     if (!input.bookings.length) missing.add('bookings');
+    if (input.bookings.some(row => row.quantity === null)) missing.add('bookingQuantity');
     for (const row of input.bookings) revenueParts.push(need(row.price, 'bookingPrices'));
     revenue = input.bookings.length ? sum(revenueParts) : null;
   } else {
@@ -185,10 +187,14 @@ export function calculate(input: CalculatorInput): Calculation {
     const peak = bookingPeak(input.bookings);
     occupancy.peak = peak;
     if (input.seats !== null && input.seats > 0) {
-      occupancy.outbound = bookingPeak(input.bookings, 0, input.turnaround ?? Infinity) / input.seats;
-      if (input.turnaround !== null) occupancy.returnLeg = bookingPeak(input.bookings, input.turnaround) / input.seats;
+      const outboundPeak = bookingPeak(input.bookings, 0, input.turnaround ?? Infinity);
+      occupancy.outbound = outboundPeak === null ? null : outboundPeak / input.seats;
+      if (input.turnaround !== null) {
+        const returnPeak = bookingPeak(input.bookings, input.turnaround);
+        occupancy.returnLeg = returnPeak === null ? null : returnPeak / input.seats;
+      }
     }
-    if (input.seats !== null && peak > input.seats) warnings.push('capacity');
+    if (input.seats !== null && peak !== null && peak > input.seats) warnings.push('capacity');
   } else if (input.revenueMode === 'detailed') {
     if (input.seats !== null && input.seats > 0) {
       occupancy.outbound = input.outbound.passengers === null ? null : input.outbound.passengers / input.seats;
@@ -197,7 +203,8 @@ export function calculate(input: CalculatorInput): Calculation {
     if (input.seats !== null && (input.outbound.passengers !== null && input.outbound.passengers > input.seats
       || input.returnRevenue && input.returnLeg.passengers !== null && input.returnLeg.passengers > input.seats)) warnings.push('capacity');
   }
-  if (input.returnRevenue && !input.includesReturn) warnings.push('returnDistance');
+  if ((input.revenueMode === 'detailed' && input.returnRevenue || input.revenueMode === 'bookings' && input.turnaround !== null)
+    && !input.includesReturn) warnings.push('returnDistance');
   let breakEvenOccupancy: number | null = null;
   if (input.revenueMode === 'detailed' && input.seats !== null && input.seats > 0 && totalCost !== null
     && nonPassengerRevenue !== null && input.outbound.ticket !== null && (!input.returnRevenue || input.returnLeg.ticket !== null)) {
@@ -279,7 +286,7 @@ export function validateCalculatorInput(value: unknown): asserts value is Calcul
     object(row); text(row.id, 100, true); text(row.name, 300, true);
     if (ids.has(row.id) || !['passenger', 'parcel'].includes(String(row.type))) invalid();
     ids.add(row.id);
-    numeric(row.quantity, 100000, true, false); numeric(row.price, 10000000000, true);
+    numeric(row.quantity, 100000, true); numeric(row.price, 10000000000, true);
     numeric(row.pickup, 499, true, false); numeric(row.delivery, 499, true, false);
     if (Number(row.delivery) <= Number(row.pickup)) invalid();
   }

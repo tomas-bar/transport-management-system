@@ -1,4 +1,5 @@
 import { TripReview } from '../components/TripReview';
+import { TripScenario } from '../components/calculator/TripScenario';
 import { RepeatTrip } from '../components/RepeatTrip';
 import { useConfirm } from '../components/Feedback';
 import {contactWarnings} from '../domain/planning';
@@ -162,6 +163,7 @@ export function TripDetail({ id }: { id: string }) {
         <Button variant="secondary" disabled={busy} onClick={() => setReview(true)}>Reiso suvestinė</Button>
       </div>}
       <TripActivity tripId={t.id}/>
+      <TripScenario tripId={t.id} />
       <div className="operational-warnings">{contactWarnings(db,t.id).map(w=><p key={w.orderId+w.message}>{w.message}</p>)}</div>
       <div className="trip-kpis">
         <div>

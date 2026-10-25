@@ -27,6 +27,7 @@ export function useRoute(input: CalculatorInput, id: string, label: string, stop
   return {
     ...structuredClone(input), routeKm: null, drivingMinutes: null, turnaround: null,
     includesReturn: visits.length > 2 && sameLocation(visits[0].place, visits.at(-1)!.place),
+    bookings: [], revenueMode: input.revenueMode === 'bookings' ? 'detailed' : input.revenueMode,
     route: { kind, id, label, stops: visits.map(visit => place(visit.place)) },
   };
 }
@@ -42,6 +43,7 @@ export function useTrip(input: CalculatorInput, db: Database, trip: Trip, state 
     delivery: visits.findIndex(visit => visit.stops.some(stop => stop.orderId === row.id && stop.kind === 'delivery')),
   }));
   next.revenueMode = next.bookings.length ? 'bookings' : 'detailed';
+  next.returnRevenue = false;
   next.driverDays = Math.max(1, Math.ceil((Date.parse(trip.arrival) - Date.parse(trip.departure)) / 86400000));
   return next;
 }

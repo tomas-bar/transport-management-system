@@ -19,6 +19,7 @@ import { Button } from './components/ui';
 import { readOnlySession, type PreviewOptions, type WorkspaceSession as Session } from './domain/access';
 import { companyResetCommand, type CompanyResetMode } from './services/company-reset';
 import type { CalculatorCommand } from './domain/calculator-commands';
+import { guardedHashNavigation } from './services/navigation-guard';
 export interface Context {
   serverMode: boolean; modules: ModuleId[]; refresh: () => Promise<void>;
   theme:Theme;toggleTheme:()=>void;
@@ -83,7 +84,7 @@ function LocalProvider({
       current.current = s;
       setSnapshot(s);
     }).catch(e => setError(String(e)));
-    const update = () => setPath(location.hash.slice(1) || 'overview');
+    const update = guardedHashNavigation(next => { setPath(next); window.scrollTo(0, 0); });
     window.addEventListener('hashchange', update);
     return () => window.removeEventListener('hashchange', update);
   }, []);
@@ -98,7 +99,6 @@ function LocalProvider({
   });
   const navigate = (next: string) => {
     location.hash = next;
-    window.scrollTo(0, 0);
   };
   const actor = () => current.current?.workspace.users.find(u => u.id === sessionRef.current?.userId && u.active) ?? null;
   const storeSession = (next: Session | null) => {

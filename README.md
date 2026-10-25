@@ -75,6 +75,16 @@ Freight discovery prepares external web searches using a selected trip's cities/
 
 Company Settings provides independent trip and order prefixes and numbering starting points, with the next reference preview. Existing references are preserved. The company manager can edit individual references in their forms, including historical records; internal IDs and links never change. New or edited references must be unique within that company and record type. Existing legacy formats stay readable. Prefix digits are separate from the numeric suffix.
 
+## Planning calculator
+
+Skaičiuoklė in company navigation is available to administrators and dispatchers with the finance module. Reisas models one trip; Mėnuo repeats its variable costs and income and deducts monthly fixed costs once. This is separate from actual orders, payments, expenses and financial reports.
+
+Start without a trip by entering kilometres, passenger/parcel assumptions or a single revenue total, and the included costs. Alternatively, expand the source selector to copy a route or trip, then explicitly request road distance using the existing routing provider. Trip imports copy quoted booking totals and linked stop positions, not paid balances. The route distance checkbox states whether return travel is already included; extra kilometres are additional only. Manual distance and travel-time corrections remain available if routing fails. No market rates are prefilled.
+
+Įkainiai lets a company administrator set company defaults and per-vehicle overrides. Vehicle consumption and passenger seats reuse the transport registry. Selecting a vehicle or explicitly applying current rates copies its effective parameters into the scenario. Changing defaults or source records never overwrites saved assumptions. Save, open, copy and delete scenarios from the calculator. Optional trip links expose a compact saved estimate on the trip; multiple linked scenarios require an explicit primary choice. Reset Form affects the current form only.
+
+Scenarios and defaults are stored in the existing company snapshot in demo, Node and Sites modes. JSON workspace backups include them when finance access is enabled. An explicit company clear/sample reset removes calculator data too. No new environment variables, external API keys or server services are required. See [calculation rules and compatibility](docs/CALCULATOR.md).
+
 ## Data, accounts and backups
 
 Settings exports JSON operational/workspace backups. JSON restore and sample reset retain the previous snapshot, keep registered identities and their permissions, and increment the company revision. The explicitly confirmed Clear action instead deletes company operations, photos, reminders, freight opportunities and retained operational backups. It keeps company settings and accounts; other companies are unaffected. Administrators can retrieve prior snapshots through `GET /api/backups` and `GET /api/backups/:id` using their authenticated session. Passwords and sessions are never restored from JSON. Optional module tables and photos require an operator-level full database backup; the Settings JSON is an operational/workspace backup.

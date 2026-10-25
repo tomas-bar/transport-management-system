@@ -9,6 +9,7 @@ import { createWorkspace, type ReviewSnapshot } from './domain/workspace';
 import type { WorkspaceCommand } from './domain/commands';
 import { useAppearance } from './services/appearance';
 import { Button } from './components/ui';
+import { guardedHashNavigation } from './services/navigation-guard';
 
 function emptySnapshot(): ReviewSnapshot {
   const db = createEmptyDatabase(createSeed('2026-01-01').settings);
@@ -25,7 +26,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<{ text: string; error: boolean } | null>(null);
   const notify = (text: string, error = false) => setToast({ text, error });
   const accept = (next: ServerSession | null) => { current.current = next; setState(next); setCsrf(next?.csrf ?? ''); };
-  const navigate = (next: string) => { location.hash = next; window.scrollTo(0, 0); };
+  const navigate = (next: string) => { location.hash = next; };
   const home = (role?: string) => role === 'owner' ? 'platform' : role === 'driver' ? 'my-trips' : 'overview';
   async function refresh() {
     try { accept(await api<ServerSession>('/api/session')); setError(''); }
@@ -33,7 +34,7 @@ export function ServerProvider({ children }: { children: ReactNode }) {
   }
   useEffect(() => {
     refresh().catch(e => setError(String(e.message))).finally(() => setLoading(false));
-    const changed = () => setPath(location.hash.slice(1) || 'overview');
+    const changed = guardedHashNavigation(next => { setPath(next); window.scrollTo(0, 0); });
     const ended = () => { accept(null); if (!location.hash.startsWith('#setup=')) navigate('overview'); };
     window.addEventListener('hashchange', changed); window.addEventListener('krypta-session-ended', ended);
     return () => { window.removeEventListener('hashchange', changed); window.removeEventListener('krypta-session-ended', ended); };

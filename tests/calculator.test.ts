@@ -82,6 +82,15 @@ test('booking peaks count overlapping segments and handle a turnaround within a 
   assert.equal(bookingPeak(rows, 3), 8);
   rows[1].pickup = 1; assert.equal(bookingPeak(rows), 16);
 });
+test('unknown imported quantities never become zero or imply a safe passenger load', () => {
+  const input = complete(); input.revenueMode = 'bookings';
+  input.bookings = [{ id: 'one', name: 'Unknown count', type: 'passenger', quantity: null, price: 10000, pickup: 0, delivery: 1 }];
+  const result = calculate(input);
+  assert.equal(result.trip.revenue, 10000);
+  assert.equal(result.trip.occupancy.peak, null);
+  assert.equal(result.trip.occupancy.outbound, null);
+  assert(result.missing.includes('bookingQuantity'));
+});
 test('monthly fixed expenses are deducted once and allocated trip fixed shares are excluded', () => {
   const input = complete(); input.monthlyTrips = 5;
   input.extras.fixedShare = { included: true, amount: 10000 };

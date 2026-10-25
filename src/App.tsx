@@ -5,8 +5,8 @@ import { ConfirmationProvider } from './components/Feedback';
 import {OperationalTools} from './pages/OperationalTools';
 import {Platform} from './pages/Platform';
 import {Profile} from './pages/Profile';
-import { useEffect, useState } from 'react';
-import { RefreshCw, LayoutDashboard, Route, ClipboardList, Map, Truck, UsersRound, ContactRound, Wallet, Settings as SettingsIcon, Menu, X, ChevronRight, Search, Bell, UserRound, ArrowUpRight, LogOut, ShieldCheck, ArrowLeft, ChevronDown, Package, Moon, Sun } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { RefreshCw, LayoutDashboard, Route, ClipboardList, Map, Truck, UsersRound, ContactRound, Wallet, Settings as SettingsIcon, Menu, X, ChevronRight, Search, Calculator as CalculatorIcon, Bell, UserRound, ArrowUpRight, LogOut, ShieldCheck, ArrowLeft, ChevronDown, Package, Moon, Sun } from 'lucide-react';
 import { Provider, useApp } from './context';
 import { Overview } from './pages/Overview';
 import { Trips } from './pages/Trips';
@@ -23,6 +23,7 @@ import { Notifications } from './pages/Notifications';
 import { DriverWorkspace } from './pages/DriverWorkspace';
 import { Avatar, Modal, SearchInput, Empty, Button } from './components/ui';
 import { canOpen, roleLabels } from './domain/workspace';
+const Calculator = lazy(() => import('./pages/Calculator').then(module => ({ default: module.Calculator })));
 const navigation = [{id:'platform',label:'Įmonės',icon:ShieldCheck,group:'PLATFORMA'}, {
   id: 'overview',
   label: 'Apžvalga',
@@ -57,6 +58,10 @@ const navigation = [{id:'platform',label:'Įmonės',icon:ShieldCheck,group:'PLAT
   id: 'finances',
   label: 'Finansai',
   icon: Wallet
+}, {
+  id: 'calculator',
+  label: 'Skaičiuoklė',
+  icon: CalculatorIcon
 }, {
   id: 'my-trips',
   label: 'Mano reisai',
@@ -166,7 +171,7 @@ function Shell() {
    </div>
  </div>}
  <main id="main-content" className="main-content" key={`${user.id}-${path}`}>
- {!canOpen(user, section, modules) ? <Empty title="Puslapis nepasiekiamas" description="Jūsų rolei ši prieiga nesuteikta."><Button onClick={() => navigate(user.role === 'driver' ? 'my-trips' : user.role === 'owner' ? 'platform' : 'overview')}>Į darbo erdvę</Button></Empty> : section === 'freight' ? <FreightWorkspace/> : section === 'maintenance' ? <OperationalTools/> : section === 'platform' ? <Platform/> : section === 'profile' ? <Profile/> : section === 'overview' ? <Overview /> : section === 'my-trips' ? <DriverWorkspace id={path.startsWith('my-trips/') ? path.split('/')[1] : undefined} /> : section === 'trips' && path.startsWith('trips/') ? <TripDetail id={path.split('/')[1]} /> : section === 'trips' ? <Trips /> : section === 'orders' ? <Orders /> : section === 'routes' ? <Routes /> : ['vehicles', 'drivers', 'customers'].includes(section) ? <Registry kind={section as 'vehicles' | 'drivers' | 'customers'} /> : section === 'finances' ? <Finances /> : section === 'settings' ? <Settings /> : section === 'users' ? <WorkspaceUsers /> : section === 'notifications' ? <Notifications /> : <Empty title="Puslapis nerastas" />}
+ {!canOpen(user, section, modules) ? <Empty title="Puslapis nepasiekiamas" description="Jūsų rolei ši prieiga nesuteikta."><Button onClick={() => navigate(user.role === 'driver' ? 'my-trips' : user.role === 'owner' ? 'platform' : 'overview')}>Į darbo erdvę</Button></Empty> : section === 'freight' ? <FreightWorkspace/> : section === 'maintenance' ? <OperationalTools/> : section === 'platform' ? <Platform/> : section === 'profile' ? <Profile/> : section === 'overview' ? <Overview /> : section === 'my-trips' ? <DriverWorkspace id={path.startsWith('my-trips/') ? path.split('/')[1] : undefined} /> : section === 'trips' && path.startsWith('trips/') ? <TripDetail id={path.split('/')[1]} /> : section === 'trips' ? <Trips /> : section === 'orders' ? <Orders /> : section === 'routes' ? <Routes /> : ['vehicles', 'drivers', 'customers'].includes(section) ? <Registry kind={section as 'vehicles' | 'drivers' | 'customers'} /> : section === 'calculator' ? <Suspense fallback={<p role="status">Atidaroma skaičiuoklė...</p>}><Calculator /></Suspense> : section === 'finances' ? <Finances /> : section === 'settings' ? <Settings /> : section === 'users' ? <WorkspaceUsers /> : section === 'notifications' ? <Notifications /> : <Empty title="Puslapis nerastas" />}
  <footer className="review-footer"><span>krypta.</span></footer></main></div>
  <nav className="review-bottom-nav" aria-label="Greitoji navigacija">{(user.role === 'driver' ? [{
         id: 'my-trips',
