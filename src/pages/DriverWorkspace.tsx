@@ -13,7 +13,7 @@ import { Journey } from '../components/Journey';
 import { MapView } from '../components/MapView';
 import { HandoverIcon } from '../components/HandoverIcon';
 import { TaskDetails } from '../components/TaskDetails';
-import { dateLabel, tripOrders } from '../domain/logic';
+import { dateLabel, tripOrders, loadInfo } from '../domain/logic';
 import { tripProgress } from '../domain/trip-progress';
 import { handoverLabels, visitStateLabels } from '../domain/terminology';
 import type { Trip } from '../domain/models';
@@ -55,6 +55,7 @@ export function DriverWorkspace({ id }: { id?: string }) {
     <div className="driver-meta"><span><Clock3 size={17} />{dateLabel(trip.departure, true)}</span>
       {vehicle && <span><Truck size={17} />{vehicle.model}<Plate value={vehicle.plate} /></span>}</div>
     <Journey trip={trip} onVisitSelect={scrollToVisit} />
+    {!!((trip.unlisted?.passengers ?? 0) + (trip.unlisted?.parcels ?? 0)) && <div className="trip-count-driver"><span><Users size={18}/>{loadInfo(db, trip).passengers} keleivių</span><span><Package size={18}/>{loadInfo(db, trip).parcels} siuntų</span><p>Be sąrašo: {trip.unlisted?.passengers ?? 0} keleivių ir {trip.unlisted?.parcels ?? 0} siuntų. Atskirų paėmimo užduočių nėra; jų vežimą patvirtinsite užbaigdami reisą.</p></div>}
     <div className="driver-progress" aria-label="Reiso suvestinė">
       <span><MapPin size={16} />Atvykta <b>{progress.arrived} / {visits.length}</b></span>
       <span><CheckCircle2 size={16} />Užduotys <b>{progress.confirmedTasks} / {progress.taskCount}</b></span>
@@ -72,7 +73,7 @@ export function DriverWorkspace({ id }: { id?: string }) {
         : pendingVisit ? <Button variant="secondary" onClick={() => scrollToVisit(pendingVisit.number)}>
           {pendingVisit.pending ? 'Rodyti užduotis' : 'Rodyti sustojimą'}<ArrowRight size={18} /></Button>
         : <Button disabled={busy || unfinished.length > 0} onClick={async () => {
-          if (await confirm('Visi sustojimai ir pristatymai patvirtinti. Užbaigti reisą?', { title: 'Užbaigti reisą', confirmLabel: 'Užbaigti reisą' }))
+          if (await confirm((trip.unlisted?.passengers ?? 0) + (trip.unlisted?.parcels ?? 0) > 0 ? 'Patvirtinate, kad reisas ir vežimas be vardinio sąrašo baigti. Užbaigti reisą?' : 'Visi sustojimai ir pristatymai patvirtinti. Užbaigti reisą?', { title: 'Užbaigti reisą', confirmLabel: 'Užbaigti reisą' }))
             driverCommand({ type: 'finish', tripId: trip.id });
         }}><CheckCircle2 size={18} />Užbaigti reisą</Button>}
     </div>}
@@ -135,8 +136,8 @@ function DriverTripCard({ trip }: { trip: Trip }) {
   return <button className={`driver-trip-card ${trip.status === 'active' ? 'running' : ''}`} onClick={() => navigate(`my-trips/${trip.id}`)}>
     <header><span>{trip.number} · {dateLabel(trip.departure, true)}</span><Badge status={trip.status} /></header><h2>{trip.name}</h2>
     <Journey trip={trip} compact /><footer>{vehicle && <Plate value={vehicle.plate} />}
-      <span><Users size={17} />{orders.filter(order => order.type === 'passenger').reduce((sum, order) => sum + order.quantity, 0)}</span>
-      <span><Package size={17} />{orders.filter(order => order.type === 'parcel').reduce((sum, order) => sum + order.quantity, 0)}</span>
+      <span><Users size={17} />{loadInfo(db, trip).passengers}</span>
+      <span><Package size={17} />{loadInfo(db, trip).parcels}</span>
       <ArrowRight size={21} /></footer>
   </button>;
 }

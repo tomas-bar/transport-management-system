@@ -15,10 +15,12 @@ export function OrderForm({
   order,
   onClose,
   tripId = "",
+  fromUnlisted,
 }: {
   order?: Order;
   onClose: () => void;
   tripId?: string;
+  fromUnlisted?: Order['type'];
 }) {
   const confirm = useConfirm();
   const { db, commit, busy, notify, modules, serverMode, user } = useApp();
@@ -29,14 +31,14 @@ export function OrderForm({
       : {
           id: uid(),
           number: nextCompanyReference(db, 'orders'),
-          type: "passenger",
+          type: fromUnlisted ?? "passenger",
           customerId: "",
           name: "",
           phone: "",
           recipient: "",
           recipientPhone: "",
-          pickup: blank,
-          delivery: blank,
+          pickup: fromUnlisted && selected?.stops.length ? selected.stops[0] : blank,
+          delivery: fromUnlisted && (selected?.stops.length ?? 0) > 1 ? selected!.stops.at(-1)! : blank,
           date: selected?.departure.slice(0, 10) ?? today(),
           quantity: 1,
           luggage: "",
@@ -61,6 +63,9 @@ export function OrderForm({
   const assignedTrip = db.trips.find(trip => trip.id === form.tripId);
   const historical = form.recordMode === 'historical';
   const locked = order?.status === "completed" && (!!order.tripId || order.recordMode === 'historical');
+  const [takeFromUnlisted, setTakeFromUnlisted] = useState(!!fromUnlisted);
+  const unlisted = assignedTrip?.unlisted?.[isParcel ? 'parcels' : 'passengers'] ?? 0;
+  const canRefine = !!assignedTrip && (!order || db.orders.find(row => row.id === order.id)?.tripId !== assignedTrip.id) && unlisted > 0 && !locked;
   return (
     <Modal
       title={order ? "Redaguoti užsakymą" : "Naujas užsakymas"}
@@ -81,7 +86,7 @@ export function OrderForm({
           if (
             await commit(
               (d) => {
-                saveOrder(d, form);
+                saveOrder(d, form, { fromUnlisted: canRefine && takeFromUnlisted });
               },
               order ? "Užsakymas atnaujintas" : "Užsakymas sukurtas",
             )
@@ -101,7 +106,7 @@ export function OrderForm({
               type="button"
               disabled={locked}
               className={!isParcel ? "selected" : ""}
-              onClick={() => set("type", "passenger")}
+              onClick={() => { if (isParcel) { set("type", "passenger"); setTakeFromUnlisted(false); } }}
             >
               Keleivių vežimas
             </button>
@@ -109,7 +114,7 @@ export function OrderForm({
               type="button"
               disabled={locked}
               className={isParcel ? "selected" : ""}
-              onClick={() => set("type", "parcel")}
+              onClick={() => { if (!isParcel) { set("type", "parcel"); setTakeFromUnlisted(false); } }}
             >
               Siuntos ir kroviniai
             </button>
@@ -232,13 +237,19 @@ export function OrderForm({
                 type="number"
                 required
                 min={1}
-                max={1000}
+                max={canRefine && takeFromUnlisted ? Math.min(1000, unlisted) : 1000}
                 step={1}
                 disabled={locked}
                 value={form.quantity}
                 onChange={(e) => set("quantity", Number(e.target.value))}
               />
             </Field>
+            {canRefine && <div className="unlisted-refinement full">
+              <label><input type="checkbox" checked={takeFromUnlisted} onChange={e => setTakeFromUnlisted(e.target.checked)}/><b>Patikslinti jau suskaičiuotą kiekį</b></label>
+              <p>{takeFromUnlisted
+                ? `Šis užsakymas bus perkeltas iš kiekio be sąrašo (liko ${unlisted}). Bendras reiso kiekis nepadidės.`
+                : `Be sąrašo įrašyta: ${unlisted}. Šis užsakymas bus pridėtas papildomai.`}</p>
+            </div>}
             {isParcel ? (
               <>
                 <Field
@@ -345,6 +356,7 @@ export function OrderForm({
                     if (!accepted) return;
                   }
                   setForm(value => ({ ...value, tripId, ...(date ? { date } : {}) }));
+                  setTakeFromUnlisted(false);
                 }}
               >
                 <option value="">Kol kas nepriskirti</option>

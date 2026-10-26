@@ -53,16 +53,16 @@ export function loadInfo(
   if (candidate && candidate.status !== "cancelled") orders.push(candidate);
   const v = vehicle ?? db.vehicles.find((v) => v.id === trip.vehicleId);
   return {
-    passengers: orders
+    passengers: (trip.unlisted?.passengers ?? 0) + orders
       .filter((o) => o.type === "passenger")
       .reduce((s, o) => s + o.quantity, 0),
-    parcels: orders
+    parcels: (trip.unlisted?.parcels ?? 0) + orders
       .filter((o) => o.type === "parcel")
       .reduce((s, o) => s + o.quantity, 0),
     weight: orders
       .filter((o) => o.type === "parcel")
       .reduce((s, o) => s + (o.weight ?? 0) * o.quantity, 0),
-    unknown: orders.some((o) => o.type === "parcel" && o.weight === null),
+    unknown: (trip.unlisted?.parcels ?? 0) > 0 || orders.some((o) => o.type === "parcel" && o.weight === null),
     capacity: v?.seats ?? 0,
     payload: v?.payload ?? null,
   };
@@ -135,7 +135,7 @@ export function syncOrderStops(db: Database, order: Order) {
     }
   }
 }
-export function saveOrder(db: Database, order: Order) {
+export function saveOrder(db: Database, order: Order, options: { fromUnlisted?: boolean } = {}) {
   assertReferenceAvailable(db, 'orders', order);
   if (!order.name.trim() || !order.pickup.name || !order.delivery.name)
     throw new Error(
@@ -147,6 +147,14 @@ export function saveOrder(db: Database, order: Order) {
     throw new Error("Kiekis turi būti teigiamas sveikasis skaičius.");
   const original = db.orders.find((o) => o.id === order.id);
   const target = db.trips.find(trip => trip.id === order.tripId);
+  let remaining: Trip['unlisted'];
+  if (options.fromUnlisted) {
+    if (!target || original?.tripId === target.id || order.status === 'cancelled') throw new Error('Patikslinti galima tik naują šio reiso užsakymą arba naujai priskiriamą užsakymą.');
+    remaining = { passengers: target.unlisted?.passengers ?? 0, parcels: target.unlisted?.parcels ?? 0 };
+    const key = order.type === 'passenger' ? 'passengers' : 'parcels';
+    if (remaining[key] < order.quantity) throw new Error('Be sąrašo likęs kiekis per mažas. Sumažinkite užsakymo kiekį arba pridėkite jį kaip naują.');
+    remaining[key] -= order.quantity;
+  }
   if (target && isHistorical(target)) {
     if (original && !original.recordMode && original.tripId !== target.id) throw new Error('Istoriniam reisui pridėkite naują istorinį užsakymą.');
     order.recordMode = 'historical';
@@ -169,7 +177,7 @@ export function saveOrder(db: Database, order: Order) {
   } else if (order.tripId && order.status !== "cancelled") {
     const trip = db.trips.find((t) => t.id === order.tripId);
     if (!trip) throw new Error("Reisas nerastas.");
-    validateAssignment(db, order, trip);
+    validateAssignment(db, order, remaining ? { ...trip, unlisted: remaining } : trip);
     order.status = isHistorical(trip) ? 'completed' : trip.status === "active" ? "active" : "assigned";
   } else {
     if (order.status === "cancelled") order.tripId = "";
@@ -177,6 +185,7 @@ export function saveOrder(db: Database, order: Order) {
       order.status = "confirmed";
   }
   db.orders = db.orders.filter((o) => o.id !== order.id).concat(order);
+  if (remaining && target) target.unlisted = remaining;
   syncOrderStops(db, order);
   return db;
 }
@@ -215,7 +224,7 @@ export function saveTrip(db: Database, trip: Trip) {
     const l = loadInfo(db, trip, undefined, v);
     if (l.passengers > v.seats)
       throw new Error(
-        "Pasirinktoje transporto priemonėje nepakanka vietų esamiems užsakymams.",
+        "Pasirinktoje transporto priemonėje nepakanka vietų keleiviams, įskaitant kiekius be sąrašo.",
       );
     if (v.payload !== null && l.weight > v.payload)
       throw new Error("Pasirinkto automobilio apkrova per maža.");
@@ -399,6 +408,12 @@ export function validateDatabase(input: unknown): Database {
     stops(r.stops);
   }
   for (const t of db.trips) {
+    if (t.unlisted !== undefined) {
+      if (!t.unlisted || typeof t.unlisted !== 'object' || Array.isArray(t.unlisted)) fail('reiso kiekiai be sąrašo');
+      number(t.unlisted.passengers, 'keleiviai be sąrašo', 0, true);
+      number(t.unlisted.parcels, 'siuntos be sąrašo', 0, true);
+      if (t.unlisted.passengers > 100000 || t.unlisted.parcels > 100000) fail('per dideli reiso kiekiai');
+    }
     text(t.name, "reiso kryptis", true);
     text(t.number, "reiso numeris", true);
     if (t.recordMode !== undefined) oneOf(t.recordMode, ['draft', 'historical'], 'reiso įrašo tipas');

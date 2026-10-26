@@ -22,6 +22,7 @@ export function RepeatTrip({ sourceId, onClose }: { sourceId: string; onClose: (
   const [selected, setSelected] = useState<string[]>([]);
   const [query, setQuery] = useState('');
   const [copyPrices, setCopyPrices] = useState(false);
+  const [copyUnlisted, setCopyUnlisted] = useState(false);
   const [asDraft, setAsDraft] = useState(true);
   const orders = tripOrders(db, sourceId);
   const visible = orders.filter(order => `${order.number} ${order.name} ${order.pickup.name} ${order.delivery.name}`.toLocaleLowerCase('lt').includes(query.toLocaleLowerCase('lt')));
@@ -30,7 +31,7 @@ export function RepeatTrip({ sourceId, onClose }: { sourceId: string; onClose: (
   async function save() {
     const tripId = crypto.randomUUID();
     const ok = await operationalCommand({ type: 'repeatTrip', input: {
-      sourceId, tripId, departure, arrival, vehicleId, driverId, orderIds: selected, copyPrices, asDraft,
+      sourceId, tripId, departure, arrival, vehicleId, driverId, orderIds: selected, copyPrices, asDraft, copyUnlisted,
     } });
     if (ok) { onClose(); navigate('trips/' + tripId); }
   }
@@ -48,6 +49,7 @@ export function RepeatTrip({ sourceId, onClose }: { sourceId: string; onClose: (
             <option value="">Pasirinkite</option>{db.drivers.filter(driver => driver.status === 'active').map(driver => <option key={driver.id} value={driver.id}>{driver.firstName} {driver.lastName}</option>)}
           </select></Field>
         </div>
+        {!!((source.unlisted?.passengers ?? 0) + (source.unlisted?.parcels ?? 0)) && <label className="review-finish-check"><input type="checkbox" checked={copyUnlisted} onChange={e => setCopyUnlisted(e.target.checked)}/>Kopijuoti kiekius be sąrašo: {source.unlisted?.passengers ?? 0} keleivių, {source.unlisted?.parcels ?? 0} siuntų</label>}
         <div className="review-selection-heading"><h3>Kopijuojami užsakymai <span>{selected.length}</span></h3></div>
         <SearchInput value={query} onChange={setQuery} placeholder="Užsakymas, kontaktas arba miestas..." />
         {!!visible.length && <label className="review-finish-check">

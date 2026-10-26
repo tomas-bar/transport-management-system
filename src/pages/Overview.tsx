@@ -29,6 +29,7 @@ export function Overview() {
   const active = trips.filter(trip => trip.status === 'active');
   const passengers = orders.filter(order => order.type === 'passenger');
   const parcels = orders.filter(order => order.type === 'parcel');
+  const unlisted = (kind: 'passengers' | 'parcels', completed = false) => trips.filter(trip => !completed || trip.status === 'completed').reduce((sum, trip) => sum + (trip.unlisted?.[kind] ?? 0), 0);
   const quantity = (records: typeof orders) => records.reduce((sum, order) => sum + order.quantity, 0);
   const upcoming = db.trips.filter(trip => !isDraft(trip) && trip.departure.slice(0, 10) > day && !['completed', 'cancelled'].includes(trip.status))
     .sort((a, b) => a.departure.localeCompare(b.departure)).slice(0, 3);
@@ -52,8 +53,8 @@ export function Overview() {
     </div><button className="today-button" onClick={() => setDay(today())}>Šiandien</button></div>
     <div className="operations-metrics">
       <div><span>Reisai</span><b>{trips.length}<small>Vykdomi: {active.length} · Užbaigti: {trips.filter(trip => trip.status === 'completed').length}</small></b><Route size={21} /></div>
-      <div><span>Keleiviai reisuose</span><b>{quantity(passengers)}<small>Kelionę baigė: {quantity(passengers.filter(order => order.status === 'completed'))}</small></b><Users size={21} /></div>
-      <div><span>Siuntos reisuose</span><b>{quantity(parcels)}<small>Pristatyta: {quantity(parcels.filter(order => order.status === 'completed'))}</small></b><Package size={21} /></div>
+      <div><span>Keleiviai reisuose</span><b>{quantity(passengers) + unlisted('passengers')}<small>Kelionę baigė: {quantity(passengers.filter(order => order.status === 'completed')) + unlisted('passengers', true)}</small></b><Users size={21} /></div>
+      <div><span>Siuntos reisuose</span><b>{quantity(parcels) + unlisted('parcels')}<small>Pristatyta: {quantity(parcels.filter(order => order.status === 'completed')) + unlisted('parcels', true)}</small></b><Package size={21} /></div>
       <button onClick={() => navigate(waitingPath)}><span>Laukia reiso</span><b>{waiting.length}<small>Iki pasirinktos dienos</small></b><ArrowUpRight size={21} /></button>
     </div>
     <DueReminders day={day} />

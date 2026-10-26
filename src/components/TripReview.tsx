@@ -21,6 +21,8 @@ export function TripReview({ tripId, onClose }: { tripId: string; onClose: () =>
 
   return <Modal title="Reiso suvestinė" subtitle={trip.number + ' · ' + trip.name} onClose={onClose} wide>
     <div className="modal-body">
+      {!!((trip.unlisted?.passengers ?? 0) + (trip.unlisted?.parcels ?? 0)) && <p className="record-mode-note">Be sąrašo: {trip.unlisted?.passengers ?? 0} keleivių ir {trip.unlisted?.parcels ?? 0} siuntų. Jų vežimą patvirtinate užbaigdami visą reisą; atskiros pristatymo žymos nekuriamos.</p>}
+      {!orders.length && <p className="muted">Vardinių užsakymų nėra. Užbaigdami patvirtinkite, kad visi reiso darbai baigti.</p>}
       <div className="review-selection-heading">
         <h3>Pristatymas <span>{selected.length} / {orders.length}</span></h3>
         {!!orders.length && <Button variant="secondary" onClick={() => setSelected(orders.map(order => order.id))}>

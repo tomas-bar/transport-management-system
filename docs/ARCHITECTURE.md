@@ -15,6 +15,8 @@ React 19, TypeScript and Vite provide the common Lithuanian interface, with Luci
 
 ## Model and commands
 
+`Trip.unlisted` is an optional pair of nonnegative passenger/parcel quantities not represented by individual orders. Legacy absence means zero without a storage rewrite or SQL migration. Validated company snapshots and JSON backups retain it in every runtime. `loadInfo` adds these quantities to named orders, reserves anonymous passenger seats for the entire trip under the established capacity rule, and marks unlisted parcel weight unknown. Explicit refinement through `saveOrder` validates the remaining quantity and assignment together, then consumes it in the same snapshot commit. It creates a real order only when details are entered; no customer, stop, receipt or task is invented from a count. Completion covers unlisted work at trip level, and repeat copies counts only when explicitly requested. Calculator source imports keep prices unknown and use editable detailed quantities if no route segments exist. Operational PDFs label unlisted totals separately from named tables.
+
 - `src/domain/models.ts` defines the versioned operational schema.
 - `logic.ts` validates assignments, capacity, financial values and resource conflicts.
 - `workspace.ts` defines company membership, notifications, permissions and driver commands.

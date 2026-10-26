@@ -16,6 +16,7 @@ export interface TripReview extends TripReviewInput {
   createdAt: string;
 }
 export interface RepeatTripInput {
+  copyUnlisted?: boolean;
   asDraft?: boolean;
   sourceId: string;
   tripId: string;
@@ -68,6 +69,7 @@ export function repeatTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input:
   manager(snapshot, user);
   if (!input || typeof input !== 'object' || typeof input.departure !== 'string' || typeof input.arrival !== 'string') throw new Error('Patikrinkite naujo reiso duomenis.');
   if (input.asDraft !== undefined && typeof input.asDraft !== 'boolean') throw new Error('Patikrinkite juodraščio parinktį.');
+  if (input.copyUnlisted !== undefined && typeof input.copyUnlisted !== 'boolean') throw new Error('Patikrinkite kiekių kopijavimo parinktį.');
   const db = snapshot.db;
   const source = db.trips.find(trip => trip.id === input.sourceId);
   if (!source) throw new Error('Pradinis reisas nerastas.');
@@ -90,6 +92,7 @@ export function repeatTrip(snapshot: ReviewSnapshot, user: WorkspaceUser, input:
   }
   const trip: Trip = {
     ...structuredClone(source), id: input.tripId,
+    unlisted: input.copyUnlisted && source.unlisted ? structuredClone(source.unlisted) : undefined,
     recordMode: input.asDraft ? 'draft' : undefined,
     number: nextCompanyReference(db, 'trips'),
     departure: input.departure, arrival: input.arrival,

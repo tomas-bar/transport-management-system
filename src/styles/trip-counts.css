@@ -1,0 +1,38 @@
+.trip-count-form { margin: 8px 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-raised); }
+.trip-count-form h3,.trip-count-summary h3 { margin: 0 0 6px; font-size: 15px; color: var(--ink); }
+.trip-count-form .form-help { margin: 6px 0 12px; }
+.trip-count-fields { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+.trip-count-field { min-width: 0; border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 14px; }
+.trip-count-field>label { display: flex; gap: 8px; align-items: center; color: var(--ink); font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.trip-count-field.passengers svg,.trip-count-summary-items>div:first-child>svg { color: var(--accent-ink); }
+.trip-count-field.parcels svg,.trip-count-summary-items>div:last-child>svg { color: #168c82; }
+.trip-count-stepper { display: grid; grid-template-columns: 42px minmax(0,1fr) 42px; align-items: center; gap: 5px; }
+.trip-count-stepper button { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 8px; background: var(--accent-soft); cursor: pointer; transition: background .15s ease; }
+.trip-count-stepper button:hover:not(:disabled) { background: color-mix(in srgb,var(--accent-ink) 16%,var(--surface)); }
+.trip-count-stepper button:disabled { opacity: .4; cursor: default; }
+.trip-count-stepper input { min-width: 0; width: 100%; min-height: 44px; text-align: center; border: 0; border-radius: 7px; background: var(--surface); color: var(--ink); font-size: 24px; font-weight: 650; font-variant-numeric: tabular-nums; padding: 5px; }
+.trip-count-stepper input::-webkit-inner-spin-button { appearance: none; }
+.trip-count-stepper input:focus-visible,.trip-count-stepper button:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.trip-count-summary { padding: 18px 22px; border-bottom: 1px solid var(--line); background: var(--surface-raised); }
+.trip-count-summary-heading { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 14px; }
+.trip-count-summary-heading p,.trip-count-note { margin: 0; font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+.trip-count-summary-heading .button { flex-shrink: 0; }
+.trip-count-summary-items { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+.trip-count-summary-items>div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); font-size: 13px; }
+.trip-count-summary-items b { color: var(--ink); font-size: 20px; font-variant-numeric: tabular-nums; }
+.trip-count-summary-items .text-link { min-height: 36px; margin-left: auto; }
+.unlisted-refinement { padding: 14px 16px; border: 1px solid var(--line); border-left: 3px solid var(--accent-ink); border-radius: 9px; background: var(--accent-soft); }
+.unlisted-refinement label { display: flex; align-items: center; gap: 9px; min-height: 30px; font-size: 13px; }
+.unlisted-refinement input { flex: 0 0 auto; width: 18px; height: 18px; accent-color: var(--accent-ink); }
+.unlisted-refinement p { margin: 7px 0 0; font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+.trip-count-driver { display: flex; flex-wrap: wrap; gap: 16px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; margin: 16px 0; background: var(--accent-soft); }
+.trip-count-driver>span { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; }
+.trip-count-driver>p { flex-basis: 100%; margin: 0; color: var(--text-secondary); font-size: 12px; line-height: 1.6; }
+@media(max-width:600px) {
+  .trip-count-fields,.trip-count-summary-items { grid-template-columns: minmax(0,1fr); }
+  .trip-count-summary { padding: 16px; }
+  .trip-count-summary-heading { align-items: flex-start; flex-wrap: wrap; }
+  .trip-count-summary-heading .button { min-height: 42px; }
+  .trip-count-form { padding: 14px; }
+}
+@media(prefers-reduced-motion:reduce) { .trip-count-stepper button { transition: none; } }

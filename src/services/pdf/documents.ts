@@ -230,6 +230,15 @@ export function buildTripPdf(
   const doc = setup(fonts, titles[kind], db.settings.company, t.number, options);
   let y = tripMeta(doc, db, t);
   const orders = tripOrders(db, t.id);
+  const unlisted = t.unlisted ?? { passengers: 0, parcels: 0 };
+  const summaries = [
+    ...(unlisted.passengers > 0 && kind !== 'parcels' ? [`Keleiviai be sąrašo: ${unlisted.passengers}.`] : []),
+    ...(unlisted.parcels > 0 && kind !== 'passengers' ? [`Siuntos be sąrašo: ${unlisted.parcels}; svoris nenurodytas.`] : []),
+  ];
+  if (summaries.length) {
+    y = section(doc, 'Kiekiai be sąrašo', y + 3, 24);
+    y = paragraph(doc, summaries.join(' ') + ' Vardinėse lentelėse šie kiekiai nekartojami.', y + 3);
+  }
   if(options.route&&(kind === "route"||kind === "trip")) y=routeDiagram(doc,t,options.route,y+10,options.basemap);
   if (kind === "route" || kind === "trip") {
     y = section(doc, "Sustojimai", y + 3);

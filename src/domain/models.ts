@@ -37,6 +37,8 @@ export interface Route {
   archived?: boolean;
 }
 export interface Trip {
+  /** Quantities not represented by individual orders. Missing legacy data means zero. */
+  unlisted?: { passengers: number; parcels: number };
   recordMode?: 'draft' | 'historical';
   id: string;
   number: string;

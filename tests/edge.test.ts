@@ -7,6 +7,8 @@ import worker, { type Env, type EdgeDatabase, privateJpeg } from '../edge/worker
 import { createSeed, createEmptyDatabase } from '../src/data/seed.ts';
 import { createWorkspace } from '../src/domain/workspace.ts';
 import { apiRequestOptions } from '../src/services/api-request.ts';
+import { saveOrder } from '../src/domain/logic.ts';
+import { nextCompanyReference } from '../src/domain/references.ts';
 
 function fixture() {
   const sqlite = new DatabaseSync(':memory:'); sqlite.exec(readFileSync(new URL('../drizzle/0000_shared_workspace.sql', import.meta.url), 'utf8'));
@@ -190,5 +192,36 @@ test('Sites calculator scenarios persist in shared state, reject stale writes an
     const cleared = await manager.call('/api/company-data/reset', 'POST', { revision: restore.data.revision, mode: 'clear', confirmed: true });
     assert.equal(cleared.response.status, 200);
     assert.equal(cleared.data.snapshot.db.planning, undefined);
+  } finally { f.sqlite.close(); }
+});
+
+test('quick trip quantities persist across shared Worker sessions and refinement does not duplicate people', async () => {
+  const f = fixture();
+  try {
+    const first = await claim(f), second = f.browser();
+    const login = await first.call('/api/login', 'POST', { email: 'admin', password });
+    const db = login.data.snapshot.db;
+    const trip = { ...structuredClone(db.trips[0]), id: 'quick-api-trip', number: nextCompanyReference(db, 'trips'),
+      departure: '2027-02-01T08:00', arrival: '2027-02-01T18:00', recordMode: 'draft', status: 'planned',
+      stops: [], vehicleId: '', driverId: '', unlisted: { passengers: 4, parcels: 3 } };
+    db.trips.push(trip);
+    const saved = await first.call('/api/commands', 'POST', { revision: login.data.revision, command: { type: 'commit', db } });
+    assert.equal(saved.response.status, 200);
+    const independent = await second.call('/api/login', 'POST', { email: 'admin', password });
+    assert.deepEqual(independent.data.snapshot.db.trips.find((t: any) => t.id === trip.id).unlisted, trip.unlisted);
+    const update = saved.data.snapshot.db;
+    saveOrder(update, { ...structuredClone(update.orders[0]), id: 'quick-api-order', number: nextCompanyReference(update, 'orders'),
+      tripId: trip.id, date: '2027-02-01', quantity: 2, type: 'passenger', status: 'new', recordMode: undefined, price: 0, paid: 0, priceSet: false }, { fromUnlisted: true });
+    const refined = await first.call('/api/commands', 'POST', { revision: saved.data.revision, command: { type: 'commit', db: update } });
+    assert.equal(refined.response.status, 200);
+    const refreshed = await second.call('/api/session');
+    assert.deepEqual(refreshed.data.snapshot.db.trips.find((t: any) => t.id === trip.id).unlisted, { passengers: 2, parcels: 3 });
+    assert.equal(refreshed.data.snapshot.db.orders.filter((o: any) => o.tripId === trip.id).length, 1);
+    const driver = f.browser();
+    const driverSession = await driver.call('/api/login', 'POST', { email: 'driver', password });
+    assert(!driverSession.data.snapshot.db.trips.some((t: any) => t.id === trip.id));
+    const denied = await driver.call('/api/commands', 'POST', { revision: driverSession.data.revision, command: { type: 'commit', db: update } });
+    assert([400, 403].includes(denied.response.status));
+    assert.deepEqual((await first.call('/api/session')).data.snapshot.db.trips.find((t: any) => t.id === trip.id).unlisted, { passengers: 2, parcels: 3 });
   } finally { f.sqlite.close(); }
 });

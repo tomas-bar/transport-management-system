@@ -7,6 +7,7 @@ import { useApp } from "../context";
 import { Button, Field, Modal } from "./ui";
 import { saveTrip, today, uid } from "../domain/logic";
 import { tripStatuses } from "../domain/models";
+import { TripCountFields } from './TripCounts';
 export function TripForm({
   trip,
   onClose,
@@ -222,6 +223,12 @@ export function TripForm({
                   ))}
               </select>
             </Field>
+            <section className="trip-count-form full">
+              <h3>Keleiviai ir siuntos</h3>
+              <p className="form-help">Galite įrašyti tik kiekius. Klientų ir užsakymų sąrašas neprivalomas.</p>
+              <TripCountFields value={form.unlisted} onChange={value => set('unlisted', value)}/>
+              <p className="form-help">Vardiniai užsakymai skaičiuojami papildomai. Be sąrašo įvestiems keleiviams vietos numatomos visam reisui.</p>
+            </section>
             <Field label="Pastabos" full>
               <textarea
                 rows={3}

@@ -393,3 +393,23 @@ test('calculator snapshots persist with company isolation, server results, revis
     assert.equal(f.store.snapshot('one').snapshot.db.planning!.scenarios.length, 1);
   } finally { await f.close(); }
 });
+
+test('quick trip quantities persist in Node snapshots and remain isolated between companies', async () => {
+  const f = await fixture();
+  try {
+    const first = await f.login(), second = await f.login(), other = await f.login('two-admin@example.test');
+    const db = first.data.snapshot.db;
+    const trip = { ...structuredClone(db.trips[0]), id: 'quick-node-trip', number: 'QUICK-NODE',
+      departure: '2027-02-01T08:00', arrival: '2027-02-01T18:00', recordMode: 'draft' as const, status: 'planned' as const,
+      stops: [], vehicleId: '', driverId: '', unlisted: { passengers: 3, parcels: 4 } };
+    saveTrip(db, trip);
+    const response = await f.request('/api/commands', 'POST', { revision: first.data.revision, command: { type: 'commit', db } }, first);
+    assert.equal(response.status, 200, await response.clone().text());
+    const refreshed = await (await f.request('/api/session', 'GET', undefined, second)).json();
+    assert.deepEqual(refreshed.snapshot.db.trips.find((t: any) => t.id === trip.id).unlisted, trip.unlisted);
+    assert.deepEqual(f.store.snapshot('one').snapshot.db.trips.find(t => t.id === trip.id)!.unlisted, trip.unlisted);
+    const isolated = await (await f.request('/api/session', 'GET', undefined, other)).json();
+    assert(!isolated.snapshot.db.trips.some((t: any) => t.id === trip.id));
+    assert.equal(refreshed.snapshot.db.orders.filter((o: any) => o.tripId === trip.id).length, 0);
+  } finally { await f.close(); }
+});

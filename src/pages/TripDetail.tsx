@@ -1,4 +1,5 @@
 import { TripReview } from '../components/TripReview';
+import { TripCounts } from '../components/TripCounts';
 import { TripScenario } from '../components/calculator/TripScenario';
 import { RepeatTrip } from '../components/RepeatTrip';
 import { useConfirm } from '../components/Feedback';
@@ -66,6 +67,7 @@ export function TripDetail({ id }: { id: string }) {
   const [repeat, setRepeat] = useState(false);
   const [orderEdit, setOrderEdit] = useState<Order | undefined>();
   const [orderForm, setOrderForm] = useState(false);
+  const [fromUnlisted, setFromUnlisted] = useState<Order['type']>();
   const [tab, setTab] = useState("route");
   const [assign, setAssign] = useState(false);
   const [candidate, setCandidate] = useState("");
@@ -159,7 +161,7 @@ export function TripDetail({ id }: { id: string }) {
       {draft && <p className="record-mode-banner">Juodraštis. Vairuotojui nematomas, pranešimai nesiunčiami.</p>}
       {historical && <p className="record-mode-banner">Istorinis įrašas. Užsakymai ir išlaidos pridedami be pranešimų.</p>}
       {!closed && !draft && <div className="trip-delivery-progress">
-        <span><CheckCircle2 size={18} /><b>Pristatyta {orders.filter(order => order.status === 'completed').length} / {orders.length}</b></span>
+        <span><CheckCircle2 size={18} /><b>{orders.length ? `Pristatyta užsakymų: ${orders.filter(order => order.status === 'completed').length} / ${orders.length}` : 'Reisas be vardinių užsakymų'}</b></span>
         <Button variant="secondary" disabled={busy} onClick={() => setReview(true)}>Reiso suvestinė</Button>
       </div>}
       <TripActivity tripId={t.id}/>
@@ -198,7 +200,7 @@ export function TripDetail({ id }: { id: string }) {
         {modules.includes("finance")&&<div>
           <Wallet size={20} />
           <span>
-            <small>Planuojamos pajamos</small>
+            <small>Užsakymų vertė</small>
             <b>{money(finance.revenue)}</b>
           </span>
         </div>}
@@ -233,7 +235,7 @@ export function TripDetail({ id }: { id: string }) {
           className={tab === "orders" ? "selected" : ""}
           onClick={() => setTab("orders")}
         >
-          Keleiviai ir siuntos <span>{orders.length}</span>
+          Keleiviai ir siuntos <span>{load.passengers + load.parcels}</span>
         </button>
         <button
           className={tab === "finance" ? "selected" : ""}
@@ -298,7 +300,7 @@ export function TripDetail({ id }: { id: string }) {
       )}
       {tab === "orders" && (
         <Panel
-          title="Reiso užsakymai"
+          title="Keleiviai ir siuntos"
           subtitle={`${load.passengers} keleiviai · ${load.parcels} siuntos`}
           action={
             (!closed || historical) && (
@@ -307,6 +309,7 @@ export function TripDetail({ id }: { id: string }) {
                 <Button
                   onClick={() => {
                     setOrderEdit(undefined);
+                    setFromUnlisted(undefined);
                     setOrderForm(true);
                   }}
                 >
@@ -317,6 +320,7 @@ export function TripDetail({ id }: { id: string }) {
             )
           }
         >
+          <TripCounts trip={t} onDetail={kind => { setOrderEdit(undefined); setFromUnlisted(kind); setOrderForm(true); }}/>
           {assign && (
             <div className="extra-filters">
               <select
@@ -344,6 +348,7 @@ export function TripDetail({ id }: { id: string }) {
                     ...db.orders.find((o) => o.id === candidate)!,
                     tripId: t.id,
                   });
+                  setFromUnlisted(undefined);
                   setOrderForm(true);
                 }}
               >
@@ -356,6 +361,7 @@ export function TripDetail({ id }: { id: string }) {
             showPayments={false}
             onEdit={(o) => {
               setOrderEdit(o);
+              setFromUnlisted(undefined);
               setOrderForm(true);
             }}
           />
@@ -365,6 +371,7 @@ export function TripDetail({ id }: { id: string }) {
         <div className="detail-two-col">
           {modules.includes("finance")&&!draft&&<Panel title="Finansinė suvestinė">
             <div className="finance-lines">
+              {((t.unlisted?.passengers ?? 0) + (t.unlisted?.parcels ?? 0)) > 0 && <p className="muted">Kiekiai be sąrašo į pajamas neįtraukti. Čia rodomos tik užsakymuose įrašytos sumos.</p>}
               <div>
                 <span>Užsakymų vertė</span>
                 <b>{money(finance.revenue)}</b>
@@ -419,6 +426,7 @@ export function TripDetail({ id }: { id: string }) {
         <OrderForm
           order={orderEdit}
           tripId={t.id}
+          fromUnlisted={fromUnlisted}
           onClose={() => setOrderForm(false)}
         />
       )}

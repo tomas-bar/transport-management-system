@@ -4,7 +4,7 @@ import { useApp } from '../../context';
 import { tripExpenseAssumptions } from '../../domain/calculator-sources';
 import { extraCostLabels } from '../../domain/calculator';
 import { routeVisits } from '../../domain/route-plan';
-import { money } from '../../domain/logic';
+import { money, loadInfo } from '../../domain/logic';
 import { Button, Field, Modal } from '../ui';
 import { Toggle } from './NumberField';
 
@@ -41,9 +41,10 @@ export function SourceDialog({ initialSource, onApply, onClose }: {
         {selected && <div className="calc-source-preview">
           <dl><div><dt><Route size={16} />Sustojimai</dt><dd>{routeVisits(selected.stops).length}</dd></div>
             {vehicle && <div><dt><Truck size={16} />Automobilis</dt><dd>{vehicle.model} · {vehicle.plate}</dd></div>}
+            {trip && <div><dt>Keleiviai / siuntos</dt><dd>{loadInfo(db, trip).passengers} / {loadInfo(db, trip).parcels}</dd></div>}
             {trip && <div><dt>Užsakymų kainos</dt><dd>{db.orders.filter(row => row.tripId === trip.id && row.status !== 'cancelled').length} užsak.</dd></div>}
           </dl>
-          <p className="calc-note">Atstumą ir važiavimo laiką gausime pagal pasirinktus sustojimus.</p>
+          <p className="calc-note">{selected.stops.length > 1 ? 'Atstumą ir važiavimo laiką gausime pagal pasirinktus sustojimus.' : 'Maršrutas dar neįvestas. Atstumą galėsite įrašyti ranka.'}{trip?.unlisted && (trip.unlisted.passengers + trip.unlisted.parcels > 0) ? ' Kiekiai be sąrašo bus perkelti be kainų.' : ''}</p>
         </div>}
         {trip && Object.keys(copied.extras).length > 0 && <div className="calc-source-expenses">
           <Toggle label={`Paimti papildomas reiso išlaidas (${money(copied.total)})`} checked={expenses} onChange={setExpenses} />

@@ -57,7 +57,16 @@ export function useTrip(input: CalculatorInput, db: Database, trip: Trip, state 
     pickup: visits.findIndex(visit => visit.stops.some(stop => stop.orderId === row.id && stop.kind === 'pickup')),
     delivery: visits.findIndex(visit => visit.stops.some(stop => stop.orderId === row.id && stop.kind === 'delivery')),
   }));
+  // Copied assumptions, not invented operational bookings or revenue.
+  for (const type of ['passenger', 'parcel'] as const) {
+    const quantity = trip.unlisted?.[type === 'passenger' ? 'passengers' : 'parcels'] ?? 0;
+    if (quantity > 0 && visits.length > 1) next.bookings.push({ id: crypto.randomUUID(), name: type === 'passenger' ? 'Keleiviai be sąrašo' : 'Siuntos be sąrašo', type, quantity, price: null, pickup: 0, delivery: visits.length - 1 });
+  }
   next.revenueMode = next.bookings.length ? 'bookings' : 'detailed';
+  if (visits.length < 2 && trip.unlisted) {
+    // A quick trip may have no route yet. Do not invent segment indices just to import quantities.
+    next.outbound = { passengers: trip.unlisted.passengers, ticket: null, parcels: trip.unlisted.parcels, parcelPrice: null };
+  }
   next.returnRevenue = false;
   next.driverDays = Math.max(1, Math.ceil((Date.parse(trip.arrival) - Date.parse(trip.departure)) / 86400000));
   return next;
